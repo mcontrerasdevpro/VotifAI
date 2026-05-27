@@ -8,7 +8,8 @@ import ClientSelector from './views/clients/ClientSelector';
 import Dashboard from './views/dashboard/Dashboard';
 import MinutesAI from './views/minutes/MinutesAI';
 import VoterScreen from './views/voter/VoterScreen';
-import ProtectedRoute from './components/ProtectedRoute'; // <-- Importamos el protector
+import AltaFinca from './components/AltaFinca.jsx'; 
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   return (
@@ -29,6 +30,8 @@ function App() {
             <Route path="/hub" element={<ClientSelector />} />       
             <Route path="/admin/:fincaId" element={<Dashboard />} />
             <Route path="/acta-ia" element={<MinutesAI />} />
+            {/* ⚡ CORRECCIÓN: Registramos la ruta protegida para el alta con pantalla partida */}
+            <Route path="/alta-finca" element={<AltaFinca />} />
           </Route>
 
           {/* 🔄 REDIRECCIÓN POR DEFECTO */}

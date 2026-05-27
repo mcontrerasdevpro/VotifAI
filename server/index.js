@@ -198,6 +198,26 @@ app.post('/api/entities/create', async (req, res) => {
   }
 });
 
+app.delete('/api/entities/delete/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Ejecutamos la consulta SQL de eliminación por UUID
+    const query = 'DELETE FROM entities WHERE entity_id = $1';
+    const result = await pool.query(query, [id]);
+
+    // Si afectó a alguna fila significa que se borró con éxito
+    if (result.rowCount > 0) {
+      res.status(200).json({ success: true, message: 'Entidad purgada correctamente' });
+    } else {
+      res.status(44).json({ success: false, error: 'Finca no encontrada en pgAdmin' });
+    }
+  } catch (err) {
+    console.error("Error al purgar de PostgreSQL:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // =========================================================================
 // 📲 5. ENDPOINT POST: /api/notifications/convocar (WhatsApp Dispatcher)
 // =========================================================================

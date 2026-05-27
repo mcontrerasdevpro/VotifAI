@@ -73,14 +73,10 @@ export default function Register() {
           console.error("El servidor no devolvió el objeto tenant esperado:", resultado);
         }
        
-        // 🔒 CONSTRUCCIÓN EXPANDIDA: Sincronizamos los datos del admin y la finca inicial
-        // para alimentar el Header y la consola maestro de forma instantánea sin perder datos.
+        
         const payloadSincronizado = {
           ...resultado.tenant,
-          // Forzamos el mapeo dinámico del Administrador si la API no lo trae desglosado
-          adminNombre: tipoOrganizacion === 'administrador' ? nombreAdminFincas : razonSocial,
-          
-          // 🏢 BLINDAJE MULTITENANT: Estructuramos la finca inicial para que entre limpia al listado
+          adminNombre: tipoOrganizacion === 'administrador' ? nombreAdminFincas : razonSocial,          
           comunidadesYEmpresas: resultado.tenant?.comunidadesYEmpresas || [
             {
               id: `ent_inicial_${Math.random().toString(36).substr(2, 5)}`,

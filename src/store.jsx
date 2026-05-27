@@ -1,32 +1,39 @@
 import React, { createContext, useContext, useReducer } from 'react';
 
-// 1. ESTADO INICIAL COMPATIBLE CON PERSISTENCIA LOCAL (Estructura Blindada)
+// 1. ESTADO INICIAL COMPATIBLE CON PERSISTENCIA LOCAL Y SALA DE CONTROL
 const initialState = {
   tenant: (() => {
     const saved = localStorage.getItem('votifai_tenant');
     if (!saved) return null;
-    
-    const parsed = JSON.parse(saved);
-    // 🛡️ Aseguramos que la propiedad coleccionista de fincas siempre exista como array al arrancar
-    if (parsed && !parsed.comunidadesYEmpresas) {
-      parsed.comunidadesYEmpresas = [];
+    try {
+      const parsed = JSON.parse(saved);
+      if (parsed && !parsed.comunidadesYEmpresas) {
+        parsed.comunidadesYEmpresas = [];
+      }
+      return parsed;
+    } catch (e) {
+      return null;
     }
-    return parsed;
-  })()
-};
-
-// Simulador de generación de censo legal de 20 propietarios de España
-const generarCenso20Propietarios = () => {
-  const nombres = ["Manuel Contreras", "Carmen Ortiz", "Juan Pérez", "Ana Gómez", "Carlos Ruiz", "María José", "David León", "Laura Sanz", "Antonio López", "Elena G.", "Francisco B.", "Lucia M.", "Javier P.", "Isabel D.", "Miguel A.", "Sonia V.", "Pedro C.", "Nuria F.", "Diego R.", "Raquel H."];
-  return Array.from({ length: 20 }, (_, i) => ({
-    id: `vtr_${i + 1}`,
-    nombre: nombres[i] || `Propietario Vecino ${i + 1}`,
-    propiedad: `Piso ${Math.floor(i / 4) + 1}º${["A", "B", "C", "D"][i % 4]}`,
-    email: `${(nombres[i] || `vecino${i+1}`).toLowerCase().replace(/ /g, '')}@correo.com`,
-    telefono: `+34 6${Math.floor(10000000 + Math.random() * 90000000)}`,
-    coeficiente: (5.00).toFixed(2), // 5% equitativo cada uno para la demo (Suma 100%)
-    estadoVoto: 'pendiente'
-  }));
+  })(),
+  // ⚡ Estados añadidos para dar vida a la Sala de Control en Vivo
+  salaControl: {
+    mercado: 'comunidad',
+    puntoActivo: 0,
+    escuchandoIA: false,
+    tiempoRestante: 60,
+    votosRegistrados: 0,
+    transcripcionesIA: [],
+    puntosExpandidos: { 0: true },
+    juntasData: {
+      comunidad: {
+        puntos: [
+          { id: 1, t: "Aprobación de la reforma urgente de impermeabilización del tejado, reparación integral de las bajantes de la letra C y consolidación de grietas en la fachada norte por razones de estanqueidad estructural.", si: 0, no: 0, abs: 0, estado: "Debatiendo" },
+          { id: 2, t: "Instalación de cámaras de seguridad con grabación 4K continua y sensores de movimiento perimetrales en los tres accesos al garaje comunitario.", si: 0, no: 0, abs: 0, estado: "Pendiente" },
+          { id: 3, t: "Renovación del contrato de mantenimiento técnico del ascensor principal con la empresa Otis, incluyendo cobertura de piezas de desgaste 24/7.", si: 0, no: 0, abs: 0, estado: "Pendiente" }
+        ]
+      }
+    }
+  }
 };
 
 // 2. EL REDUCER CENTRAL DE ACCIONES RELACIONALES
@@ -34,59 +41,44 @@ function votifaiReducer(state, action) {
   switch (action.type) {
     case 'REGISTRAR_ORGANIZACION': {
       const datosServidor = action.payload;
-      
-      // 🔒 Mapeamos de forma segura para dar soporte a ambos formatos (Registro y Login)
-      // Extraemos el nombre del Admin (administrador_nombre o lo que devuelva tu API)
       const nuevoTenant = {
         tenantId: datosServidor.id || datosServidor.tenantId,
         nombreEntidad: datosServidor.nombre_entidad || datosServidor.nombreEntidad || "Despacho Profesional",
         email: datosServidor.email_maestro || datosServidor.email,
         tipoOrganizacion: datosServidor.tipo_organizacion || datosServidor.tipoOrganizacion,
         plan: datosServidor.plan_suscripcion || datosServidor.plan || 'trial_15_dias',
-        
-        // 🆕 Añadimos los datos específicos del Administrador para el Header
         admin: {
           nombre: datosServidor.admin_nombre || datosServidor.adminNombre || datosServidor.nombre || "Admin General",
           despacho: datosServidor.nombre_entidad || datosServidor.nombreEntidad || "Despacho Administrador"
         },
-        
-        // 💎 Inicializamos OBLIGATORIAMENTE el listado de fincas vacío si no viene del servidor
         comunidadesYEmpresas: datosServidor.comunidadesYEmpresas || []
       };
-      
       localStorage.setItem('votifai_tenant', JSON.stringify(nuevoTenant));
       return { ...state, tenant: nuevoTenant };
-    }
-
-    case 'AÑADIR_ENTIDAD': {
-      if (!state.tenant) return state;
-      
-      const nuevaEntidad = action.payload;
-      
-      // Aseguramos de forma reactiva que exista la lista antes de añadir
-      const fincasActuales = state.tenant.comunidadesYEmpresas || [];
-
-      const entidadEstructurada = {
-        id: `ent_${Math.random().toString(36).substr(2, 9)}`,
-        nombre: nuevaEntidad.nombre,
-        tipo: nuevaEntidad.tipo,
-        ubicacion: nuevaEntidad.ubicacion || 'Sede Local',
-        estado: 'Creada - Sin juntas activas',
-        propietarios: generarCenso20Propietarios()
-      };
-      
-      const tenantActualizado = {
-        ...state.tenant,
-        comunidadesYEmpresas: [...fincasActuales, entidadEstructurada]
-      };
-      
-      localStorage.setItem('votifai_tenant', JSON.stringify(tenantActualizado));
-      return { ...state, tenant: tenantActualizado };
     }
 
     case 'CERRAR_SESION':
       localStorage.removeItem('votifai_tenant');
       return { ...state, tenant: null };
+
+    // ⚡ ACCIONES COMPLEMENTARIAS PARA TUS NUEVOS COMPONENTES MODULARES:
+    case 'SET_SALA_STATE':
+      return {
+        ...state,
+        salaControl: { ...state.salaControl, ...action.payload }
+      };
+
+    case 'ACTUALIZAR_PUNTOS':
+      return {
+        ...state,
+        salaControl: {
+          ...state.salaControl,
+          juntasData: {
+            ...state.salaControl.juntasData,
+            [state.salaControl.mercado]: { puntos: action.payload }
+          }
+        }
+      };
 
     default:
       return state;
