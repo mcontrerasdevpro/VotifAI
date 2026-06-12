@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVotifaiStore } from '../../store.jsx';
 import { Building2, Search, Plus, FolderOpen, LogOut, Users, UserPlus, Scale } from 'lucide-react';
+import CensoPropietarios from '../../components/CensoPropietarios.jsx';
 
 export default function ClientSelector() {
   const navigate = useNavigate();
@@ -97,10 +98,10 @@ export default function ClientSelector() {
   }, [tenantIdActual]);
 
   // 🔍 Filtro limpio: Opera de forma exclusiva sobre la respuesta real del servidor
-  const entidadesFiltradas = comunidadesReales.filter(e => 
+  const entidadesFiltradas = comunidadesReales.filter(e =>
     e.nombre.toLowerCase().includes(busqueda.toLowerCase())
   );
-   // 🗳️ Registro de representación legal anticipada
+  // 🗳️ Registro de representación legal anticipada
   const handleRegistrarDelegacion = (e) => {
     e.preventDefault();
     if (!vecinoIdDelegante) return;
@@ -138,8 +139,8 @@ export default function ClientSelector() {
       const resultado = await respuesta.json();
 
       if (resultado.success) {
-        setEntidadSeleccionada({ 
-          ...entidadSeleccionada, 
+        setEntidadSeleccionada({
+          ...entidadSeleccionada,
           nombre: editNombre, cif: editCif, direccion: editDireccion,
           metadatos_legales: { presidente: editPresidente, tesorero: editTesorero }
         });
@@ -249,8 +250,8 @@ export default function ClientSelector() {
               👤 {adminGlobal.nombre}
             </span>
           )}
-          <button 
-            onClick={() => navigate('/alta-finca')} 
+          <button
+            onClick={() => navigate('/alta-finca')}
             className="bg-blue-600 hover:bg-blue-500 transition-colors text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md"
           >
             Dar de Alta Nueva Finca
@@ -293,7 +294,7 @@ export default function ClientSelector() {
             )}
           </div>
         </div>
-         {/* COLUMNA 2: EXPEDIENTE E INFORMACIÓN REAL DE LA FINCA SELECCIONADA */}
+        {/* COLUMNA 2: EXPEDIENTE E INFORMACIÓN REAL DE LA FINCA SELECCIONADA */}
         <div className="w-full lg:w-7/12 bg-slate-950/40 border border-slate-900 rounded-2xl p-5 flex flex-col h-full overflow-hidden justify-between">
           {entidadSeleccionada ? (
             <div className="flex flex-col h-full overflow-hidden justify-between">
@@ -390,36 +391,12 @@ export default function ClientSelector() {
                 </div>
 
                 {/* TABLA DEL CENSO LEGAL */}
-                <div className="flex-grow overflow-y-auto custom-scrollbar mb-3 border border-slate-900 rounded-xl bg-slate-950">
-                  <table className="w-full text-left font-sans text-4xs">
-                    <thead className="bg-slate-900 text-slate-400 sticky top-0 border-b border-slate-800 font-bold z-10">
-                      <tr>
-                        <th className="py-2 px-3">Propiedad</th>
-                        <th className="py-2 px-3">Propietario</th>
-                        <th className="py-2 px-3">Email</th>
-                        <th className="py-2 px-3">Representante Legal</th>
-                        <th className="py-2 px-3 text-right">Coef.</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-900 text-slate-300">
-                      {entidadSeleccionada?.propietarios?.map((v) => (
-                        <tr key={v.id} className="hover:bg-slate-900/30 transition-colors">
-                          <td className="py-2 px-3 font-bold text-blue-400">{v.propiedad}</td>
-                          <td className="py-2 px-3 text-white font-bold">{v.nombre}</td>
-                          <td className="py-2 px-3 text-slate-400 truncate max-w-[100px]">{v.email}</td>
-                          <td className="py-2 px-3">
-                            {v.representative ? (
-                              <span className="bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded font-bold uppercase tracking-wider">{v.representative}</span>
-                            ) : (
-                              <span className="text-slate-600 font-medium">Asiste en persona</span>
-                            )}
-                          </td>
-                          <td className="py-2 px-3 text-right font-black text-emerald-400">{v.coeficiente}%</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+
+                <CensoPropietarios
+                  fincaId={entidadSeleccionada?.id}
+                  nombreFinca={entidadSeleccionada?.nombre}
+                />
+
               </div>
 
               {/* PIE METRIFICADO DINÁMICO */}
@@ -434,7 +411,7 @@ export default function ClientSelector() {
             <div className="flex flex-col items-center justify-center text-center h-full text-slate-500 p-6">
               <Building2 size={32} className="text-slate-700 animate-pulse" />
               <h3 className="text-3xs font-black uppercase text-slate-500 mt-2 tracking-widest">Visor Inactivo</h3>
-                  <p className="text-5xs text-slate-600 mt-1 max-w-[180px]">Selecciona una finca para interrogar sus credenciales.</p>
+              <p className="text-5xs text-slate-600 mt-1 max-w-[180px]">Selecciona una finca para interrogar sus credenciales.</p>
             </div>
           )}
         </div>
@@ -452,10 +429,10 @@ export default function ClientSelector() {
             </div>
             <div>
               <label className="block text-4xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Seleccionar Propietario Ausente</label>
-              <select 
-                required 
-                value={vecinoIdDelegante} 
-                onChange={(e) => setVecinoIdDelegante(e.target.value)} 
+              <select
+                required
+                value={vecinoIdDelegante}
+                onChange={(e) => setVecinoIdDelegante(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-3 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
               >
                 <option value="">-- Elige un vecino --</option>
@@ -468,24 +445,24 @@ export default function ClientSelector() {
             </div>
             <div>
               <label className="block text-4xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Nombre del Apoderado / Representante</label>
-              <input 
-                type="text" 
-                required 
-                value={representanteNombre} 
-                onChange={(e) => setRepresentanteNombre(e.target.value)} 
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-3 text-xs text-slate-200 focus:outline-none focus:border-blue-500" 
+              <input
+                type="text"
+                required
+                value={representanteNombre}
+                onChange={(e) => setRepresentanteNombre(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-3 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
               />
             </div>
             <div className="flex gap-2 pt-2">
-              <button 
-                type="button" 
-                onClick={() => setMostrarModalDelegar(false)} 
+              <button
+                type="button"
+                onClick={() => setMostrarModalDelegar(false)}
                 className="flex-1 bg-slate-950 text-slate-400 py-2.5 rounded-xl text-xs font-bold border border-slate-900"
               >
                 Cancelar
               </button>
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 className="flex-1 bg-blue-600 text-white py-2.5 rounded-xl text-xs font-bold"
               >
                 Emitir Apoderamiento

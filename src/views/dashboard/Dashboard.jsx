@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useVotifaiStore } from '../../store.jsx';
 
 // Importación de submódulos independientes
@@ -10,24 +11,28 @@ import PanelEscrutinio from '../../components/PanelEscrutinio.jsx';
 import ModalConvocatoria from '../../components/ModalConvocatoria.jsx';
 
 export default function Dashboard() {
+  const { fincaId } = useParams(); // ⚡ Capturamos el UUID real de la URL del navegador
+  const navigate = useNavigate();
+
   // Consumo del Reducer del Contexto global
   const { state, dispatch } = useVotifaiStore() || { state: { tenant: null, salaControl: {} } };
   const tenantGlobal = state?.tenant;
   const { jactiva, mercado, puntoActivo } = state?.salaControl || {};
 
-  // Estados locales mínimos de visibilidad de modales
+  // Estados locales mínimos unificados y corregidos
   const [mostrarModalConvocatoria, setMostrarModalConvocatoria] = useState(false);
   const [datosAdmin, setDatosAdmin] = useState(null);
   const [fincaSeleccionada, setFincaSeleccionada] = useState(null);
+  const [fincasReales, setFincasReales] = useState([]); // ⚡ CORRECCIÓN: Declaramos el estado que faltaba
   const [cargandoFincas, setCargandoFincas] = useState(true);
 
-  // 📡 Pasarela de Red: Carga inicial de datos de Neon Cloud
+  // 📡 Pasarela de Red: Interroga la API basándose de forma estricta en el ID seleccionado
   useEffect(() => {
-    let idRealDeNeon = tenantGlobal?.tenantId;
+    let idRealDeNeon = tenantGlobal?.tenantId || tenantGlobal?.id;
     if (!idRealDeNeon) {
       const sesionGuardada = localStorage.getItem('votifai_tenant');
       if (sesionGuardada) {
-        try { idRealDeNeon = JSON.parse(sesionGuardada)?.tenantId; } catch (e) {}
+        try { idRealDeNeon = JSON.parse(sesionGuardada)?.tenantId || JSON.parse(sesionGuardada)?.id; } catch (e) { }
       }
     }
     if (!idRealDeNeon) return;
@@ -41,7 +46,10 @@ export default function Dashboard() {
         if (data.administrador) setDatosAdmin(data.administrador);
         if (data.fincas && data.fincas.length > 0) {
           setFincasReales(data.fincas);
-          setFincaSeleccionada(data.fincas[0]);
+
+          // ⚡ Sincronización: Buscamos la finca exacta de la URL, si no, fallback a la primera
+          const fincaActual = data.fincas.find(f => f.id === fincaId) || data.fincas[0];
+          setFincaSeleccionada(fincaActual);
         }
         setCargandoFincas(false);
       })
@@ -49,10 +57,10 @@ export default function Dashboard() {
         console.error("Fallo al recuperar catálogo de Neon:", err);
         setCargandoFincas(false);
       });
-  }, [tenantGlobal]);
-
-  // Variables calculadas de contexto normativo
+  }, [tenantGlobal, fincaId]);
+  // Variables calculadas de contexto normativo basadas en la LPH
   const puntosActuales = state?.salaControl?.juntasData?.[mercado || 'comunidad']?.puntos || [];
+
   const datosConvocatoria = fincaSeleccionada ? {
     entidad: fincaSeleccionada.nombre,
     convocatoria: "Junta General Extraordinaria (Neon Cloud)",
@@ -71,22 +79,22 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col h-screen overflow-hidden relative font-sans antialiased">
-      
+
       {/* Navegación Superior Institucional */}
       <HeaderDashboard admin={tenantGlobal?.admin || datosAdmin} />
 
       {/* Barra de Contexto y Acciones de Convocatoria */}
-      <SubNavContexto 
-        setMostrarModalConvocatoria={setMostrarModalConvocatoria} 
+      <SubNavContexto
+        setMostrarModalConvocatoria={setMostrarModalConvocatoria}
         dispatch={dispatch}
         mercado={mercado}
       />
 
       {/* Distribución Panorámica de Control Interactivo */}
       <div className="flex-grow flex flex-col lg:flex-row overflow-hidden p-4 gap-4">
-        
+
         {/* Columna 1: Agenda y Acordeón Legislativo */}
-        <ColumnaOrdenDia 
+        <ColumnaOrdenDia
           cargandoFincas={cargandoFincas}
           datosAdmin={datosAdmin}
           tenantGlobal={tenantGlobal}
@@ -98,9 +106,8 @@ export default function Dashboard() {
           dispatch={dispatch}
           state={state}
         />
-
         {/* Columna 2: Monitor Central, Reloj y Barómetro Móvil */}
-        <ColumnaMonitorCentral 
+        <ColumnaMonitorCentral
           datos={datosConvocatoria}
           puntoActivo={puntoActivo || 0}
           dispatch={dispatch}
@@ -108,7 +115,7 @@ export default function Dashboard() {
         />
 
         {/* Columna 3: Diarización por IA y Captura Asíncrona */}
-        <PanelEscrutinio 
+        <PanelEscrutinio
           puntoActivo={puntoActivo || 0}
           dispatch={dispatch}
           state={state}
@@ -117,7 +124,7 @@ export default function Dashboard() {
       </div>
 
       {/* Modal Inteligente Condicional */}
-      <ModalConvocatoria 
+      <ModalConvocatoria
         mostrarModalConvocatoria={mostrarModalConvocatoria}
         setMostrarModalConvocatoria={setMostrarModalConvocatoria}
         fincaSeleccionada={fincaSeleccionada}

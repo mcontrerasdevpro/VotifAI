@@ -311,6 +311,168 @@ app.put('/api/entities/update', async (req, res) => {
   }
 });
 
+// =========================================================================
+// 👤 8. ENDPOINT POST: /api/propietarios/create (CORREGIDO SIN COLUMNA DNI)
+// =========================================================================
+app.post('/api/propietarios/create', async (req, res) => {
+  const { entity_id, nombre_completo, direccion_postal, telefono, email, coeficiente } = req.body;
+
+  if (!entity_id || !nombre_completo || !coeficiente) {
+    return res.status(400).json({ error: 'Faltan campos obligatorios para registrar al propietario.' });
+  }
+
+  // Validación estricta Ley de Propiedad Horizontal: Teléfono o Email obligatorio
+  if (!telefono && !email) {
+    return res.status(400).json({ error: 'Según la normativa LPH, debe facilitar un teléfono o un email de contacto.' });
+  }
+
+  try {
+    // ⚡ Quitamos la columna "dni" de la query para amoldarnos milimétricamente a tu pgAdmin real
+    const resultado = await query(
+      `INSERT INTO propietarios (entity_id, nombre_completo, propiedad_detalle, telefono, email, coeficiente)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING *`,
+      [
+        String(entity_id).trim(), 
+        nombre_completo, 
+        direccion_postal || 'Vivienda', 
+        telefono || null, 
+        email || null, 
+        coeficiente
+      ]
+    );
+
+    res.status(201).json({
+      success: true,
+      mensaje: 'Propietario dado de alta de forma conforme en el censo legal.',
+      propietario: resultado.rows
+    });
+  } catch (err) {
+    console.error('❌ ERROR REAL EN POSTGRESQL (CREATE):', err.message);
+    res.status(500).json({ error: `Error en base de datos: ${err.message}` });
+  }
+});
+
+
+// =========================================================================
+// 🔄 9. ENDPOINT POST: /api/propietarios/cambio-titular (TRASPASO CORREGIDO SIN DNI)
+// =========================================================================
+app.post('/api/propietarios/cambio-titular', async (req, res) => {
+  const { propietario_id, nuevo_nombre, nuevo_telefono, nuevo_email, motivo_cambio, detalles } = req.body;
+
+  if (!propietario_id || !nuevo_nombre || !motivo_cambio) {
+    return res.status(400).json({ error: 'Faltan parámetros esenciales para procesar el cambio de titularidad.' });
+  }
+
+  if (!nuevo_telefono && !nuevo_email) {
+    return res.status(400).json({ error: 'El nuevo titular debe disponer obligatoriamente de teléfono o email.' });
+  }
+
+  try {
+    await query('BEGIN');
+
+    // A. Recuperamos el nombre del titular actual para dejar constancia en la auditoría
+    const propietarioActual = await query('SELECT nombre_completo FROM propietarios WHERE id = $1', [propietario_id]);
+    if (propietarioActual.rows.length === 0) {
+      await query('ROLLBACK');
+      return res.status(404).json({ error: 'No se encuentra el propietario a sustituir.' });
+    }
+    const anteriorTitularNombre = propietarioActual.rows[0].nombre_completo;
+
+    // B. Actualizamos la ficha del censo con los datos del nuevo titular (sin DNI)
+    await query(
+      `UPDATE propietarios 
+       SET nombre_completo = $1, telefono = $2, email = $3
+       WHERE id = $4`,
+      [nuevo_nombre, nuevo_telefono || null, nuevo_email || null, propietario_id]
+    );
+
+    // C. Insertamos la fila en la tabla de historial con el motivo legal (venta, alquiler, herencia)
+    await query(
+      `INSERT INTO historial_titularidad (propietario_id, anterior_titular, nuevo_titular, motivo_cambio, detalles)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [propietario_id, anteriorTitularNombre, nuevo_nombre, motivo_cambio, detalles || 'Sustitución ordinaria de titularidad']
+    );
+
+    await query('COMMIT');
+
+    res.status(200).json({
+      success: true,
+      mensaje: 'Cambio de titularidad procesado e inscrito con éxito.'
+    });
+
+  } catch (err) {
+    await query('ROLLBACK');
+    console.error('Fallo en la transacción de cambio de titular:', err.message);
+    res.status(500).json({ error: 'Fallo interno al procesar el cambio de titularidad legal.' });
+  }
+});
+
+// =========================================================================
+// 🗑️ 10. ENDPOINT DELETE: /api/entities/delete/:id (Purga Real de Fincas por ID)
+// =========================================================================
+app.delete('/api/entities/delete/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // ⚡ Corrección: Usamos 'query' en lugar de 'pool.query' y filtramos por la columna real 'id'
+    const result = await query('DELETE FROM entities WHERE id = $1', [String(id).trim()]);
+
+    // Si afectó a alguna fila significa que se borró con éxito en Neon Cloud
+    if (result.rowCount > 0) {
+      res.status(200).json({ success: true, message: 'Entidad purgada correctamente de Neon Cloud.' });
+    } else {
+      res.status(404).json({ success: false, error: 'Finca no encontrada en pgAdmin.' });
+    }
+  } catch (err) {
+    console.error("Error al purgar de PostgreSQL:", err.message);
+    res.status(500).json({ success: false, error: 'Fallo interno al intentar purgar el registro.' });
+  }
+});
+
+// =========================================================================
+// 📊 11. ENDPOINT GET: /api/propietarios/lista/:entityId (CENSO BLINDADO)
+// =========================================================================
+app.get('/api/propietarios/lista/:entityId', async (req, res) => {
+  const { entityId } = req.params;
+
+  try {
+    // ⚡ CORRECCIÓN CLAVE: Aplicamos '::uuid' al parámetro para forzar la compatibilidad relacional
+    const censoResultado = await query(
+      `SELECT id, nombre_completo, propiedad_detalle, telefono, email, coeficiente, es_moroso 
+       FROM propietarios 
+       WHERE entity_id = $1::uuid 
+       ORDER BY propiedad_detalle ASC`,
+      [String(entityId).trim()]
+    );
+
+    let historialFilas = [];
+    try {
+      // Aplicamos también el cast al historial por si acaso
+      const historialResultado = await query(
+        `SELECT h.historial_id, h.propietario_id, h.anterior_titular, h.nuevo_titular, h.motivo_cambio, h.detalles, h.fecha_cambio, p.propiedad_detalle
+         FROM historial_titularidad h
+         JOIN propietarios p ON h.propietario_id = p.id
+         WHERE p.entity_id = $1::uuid
+         ORDER BY h.fecha_cambio DESC`,
+        [String(entityId).trim()]
+      );
+      historialFilas = historialResultado.rows;
+    } catch (histError) {
+      console.log("⚠️ Nota: Omitiendo carga del historial por esquema alternativo.");
+    }
+
+    res.status(200).json({
+      success: true,
+      propietarios: censoResultado.rows,
+      historial: historialFilas
+    });
+
+  } catch (err) {
+    console.error('❌ ERROR REAL EN POSTGRESQL (LISTA):', err.message);
+    res.status(500).json({ error: `Fallo crítico de red en el catálogo: ${err.message}` });
+  }
+});
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Servidor unificado de VotifAI abierto en el puerto ${PORT}`);

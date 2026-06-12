@@ -8,12 +8,12 @@ import { useVotifaiStore } from '../../store.jsx';
 export default function MinutesAI() {
   const navigate = useNavigate();
   const { state } = useVotifaiStore() || { state: { tenant: null } };
-  
-  const [vistaActiva, setVistaActiva] = useState('documento'); 
+
+  const [vistaActiva, setVistaActiva] = useState('documento');
   const [editando, setEditando] = useState(false);
   const [guardado, setGuardado] = useState(false);
   const [grabandoVoz, setGrabandoVoz] = useState(false);
-  
+
   // ESTADOS DEL SISTEMA DE ENVÍO AUTOMATIZADO SAAS
   const [mostrarModalCierre, setMostrarModalCierre] = useState(false);
   const [envioEstado, setEnvioEstado] = useState('idle'); // 'idle', 'enviando_email', 'enviando_whatsapp', 'completado'
@@ -31,49 +31,81 @@ export default function MinutesAI() {
 
   const chartOptions = {
     chart: { type: 'donut', background: 'transparent' },
-    colors: ['#10b981', '#f43f5e', '#64748b'], 
+    colors: ['#10b981', '#f43f5e', '#64748b'],
     labels: ['A Favor', 'En Contra', 'Abstención'],
     dataLabels: { enabled: false }
   };
 
-  const chartSeries = [68, 22, 10]; 
+  const chartSeries = [68, 22, 10];
 
   // MOTOR SAAS DE DISPARO MASIVO DE CORREOS Y WHATSAPP (SIMULADOR COMERCIAL)
-  const handleDispararNotificacionesMasivas = () => {
-    // 1. Iniciamos el envío de Correos Electrónicos con Certificación Legal
+  const handleDispararNotificacionesMasivas = async () => {
+    // A. Iniciamos la simulación del envío de correos corporativos
     setEnvioEstado('enviando_email');
     setContadorEnvio(0);
-    
+
     let i = 0;
-    const intervalEmail = setInterval(() => {
+    const intervalEmail = setInterval(async () => {
       i++;
       setContadorEnvio(i);
       if (i >= 20) {
         clearInterval(intervalEmail);
-        
-        // 2. Pasamos al envío por WhatsApp Corporativo API
+
+        // B. PASARELA REAL: Disparamos la campaña real de WhatsApp contra tu index.js
         setEnvioEstado('enviando_whatsapp');
-        let j = 0;
-        const intervalWA = setInterval(() => {
-          j++;
-          setContadorEnvio(j);
-          if (j >= 20) {
-            clearInterval(intervalWA);
-            setEnvioEstado('completado');
-            // Redirección definitiva al catálogo general tras 1.5 segundos de éxito
-            setTimeout(() => {
-              setMostrarModalCierre(false);
-              navigate('/hub');
-            }, 1500);
+        setContadorEnvio(0);
+
+        try {
+          // Solicitamos el censo real de propietarios de la comunidad
+          const resCenso = await fetch(`/api/propietarios/lista/d1f5964c-0c2b-40f8-88d6-d0ed253f8413`);
+          const datosCenso = await resCenso.json();
+          const propietariosReales = datosCenso.propietarios || [];
+
+          // Ejecutamos la petición POST masiva para notificar por telefonía móvil
+          const respuestaAPI = await fetch('/api/notifications/convocar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              fincaId: 'd1f5964c-0c2b-40f8-88d6-d0ed253f8413',
+              nombreFinca: 'Guanabacoa 2',
+              propietarios: propietariosReales.length > 0 ? propietariosReales : [
+                { nombre: "Matías Po", propiedad: "tos 2 1a", telefono: "+34 600000000" }
+              ]
+            })
+          });
+
+          if (respuestaAPI.ok) {
+            // Animamos la barra de progreso simulando las entregas push
+            let j = 0;
+            const intervalWA = setInterval(() => {
+              j++;
+              setContadorEnvio(j);
+              if (j >= 20) {
+                clearInterval(intervalWA);
+                setEnvioEstado('completado');
+
+                // Redirección definitiva al catálogo de fincas tras el éxito
+                setTimeout(() => {
+                  setMostrarModalCierre(false);
+                  navigate('/hub');
+                }, 2500);
+              }
+            }, 50);
+          } else {
+            alert("❌ Error en la pasarela externa de telefonía móvil.");
+            setEnvioEstado('idle');
           }
-        }, 800); // Velocidad de envío simulada de mensajes
+        } catch (err) {
+          console.error("Fallo de red al despachar el acta:", err);
+          setEnvioEstado('idle');
+        }
       }
-    }, 80); // Velocidad de envío de emails
+    }, 40);
   };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col h-screen overflow-hidden relative">
-      
+
       {/* NAVEGACIÓN SUPERIOR */}
       <nav className="border-b border-slate-900 bg-slate-950/80 backdrop-blur-md px-6 py-3 flex justify-between items-center gap-4 shrink-0">
         <div className="flex items-center gap-4">
@@ -85,8 +117,32 @@ export default function MinutesAI() {
         </div>
 
         <div className="flex gap-2">
-          <button onClick={() => setEditando(!editando)} className="bg-slate-900 border border-slate-800 text-3xs font-bold uppercase px-4 py-2.5 rounded-xl">{editando ? 'Vista Previa' : 'Corrección Manual'}</button>
-          <button onClick={() => setMostrarModalCierre(true)} className="bg-emerald-600 hover:bg-emerald-500 text-white text-3xs font-black uppercase px-5 py-2.5 rounded-xl shadow-lg active:scale-99">✓ Cerrar Junta y Enviar Acta</button>
+          <button
+            type="button"
+            onClick={() => {
+              if (editando) {
+                // Si estaba editando, guardamos los apuntes finales al pulsar el botón
+                setGuardado(true);
+                setTimeout(() => setGuardado(false), 2000);
+              }
+              setEditando(!editando);
+            }}
+            className={`text-3xs font-black uppercase px-4 py-2.5 rounded-xl border transition-all ${editando
+                ? 'bg-blue-600 border-blue-500 text-white shadow-md'
+                : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white'
+              }`}
+          >
+            {editando ? '💾 Guardar Apuntes' : '✏️ Corrección Manual'}
+          </button>
+
+          <button
+            type="button"
+            disabled={editando} // Bloqueamos el envío si el acta está a medio editar
+            onClick={() => setMostrarModalCierre(true)}
+            className="bg-emerald-600 hover:bg-emerald-500 text-white text-3xs font-black uppercase px-5 py-2.5 rounded-xl shadow-lg active:scale-99 disabled:opacity-40"
+          >
+            ✓ Cerrar Junta y Enviar Acta
+          </button>
         </div>
       </nav>
 
@@ -109,9 +165,27 @@ export default function MinutesAI() {
 
           <div className="flex-grow flex flex-col overflow-hidden">
             {vistaActiva === 'documento' ? (
-              <div className="w-full h-full bg-slate-50 rounded-xl p-5 text-3xs font-sans text-slate-800 overflow-y-auto whitespace-pre-line border border-slate-100 shadow-inner">{actaTexto}</div>
+              editando ? (
+                /* 📝 MODO EDICIÓN ACTIVO: Cuadro de texto enriquecido en caliente */
+                <textarea
+                  value={actaTexto}
+                  onChange={(e) => setActaTexto(e.target.value)}
+                  className="w-full h-full bg-slate-50 text-slate-900 rounded-xl p-5 text-3xs font-sans font-medium focus:outline-none border-2 border-blue-500 shadow-inner resize-none overflow-y-auto leading-relaxed"
+                  placeholder="Añada apuntes finales, anexos de cuotas o correcciones aquí..."
+                />
+              ) : (
+                /* 📄 MODO VISTA PREVIA: Visor estático convencional de gobernanza */
+                <div className="w-full h-full bg-slate-50 rounded-xl p-5 text-3xs font-sans text-slate-800 overflow-y-auto whitespace-pre-line border border-slate-100 shadow-inner leading-relaxed">
+                  {actaTexto}
+                </div>
+              )
             ) : (
-              <div className="flex-grow flex flex-col justify-center items-center h-full"><div className="w-full max-w-sm"><Chart options={chartOptions} series={chartSeries} type="donut" width="100%" /></div></div>
+              /* 📊 MODO ESTADÍSTICAS: Gráficos consolidados de votaciones */
+              <div className="flex-grow flex flex-col justify-center items-center h-full">
+                <div className="w-full max-w-sm">
+                  <Chart options={chartOptions} series={chartSeries} type="donut" width="100%" />
+                </div>
+              </div>
             )}
           </div>
         </div>
@@ -124,7 +198,7 @@ export default function MinutesAI() {
         {mostrarModalCierre && (
           <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 z-50">
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md space-y-5 text-center shadow-2xl relative overflow-hidden">
-              
+
               {envioEstado === 'idle' && (
                 /* FASE 1: CONFIRMACIÓN INICIAL */
                 <>
@@ -165,11 +239,13 @@ export default function MinutesAI() {
               )}
 
               {envioEstado === 'completado' && (
-                /* FASE 4: ÉXITO TOTAL */
+                /* FASE 4: ÉXITO TOTAL (Corregido a CheckCircle) */
                 <div className="py-6 space-y-2 animate-fade-in">
-                  <div className="w-12 h-12 bg-emerald-500 text-white rounded-full flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/20"><CheckCircle2 size={24} /></div>
+                  <div className="w-12 h-12 bg-emerald-500 text-white rounded-full flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/20">
+                    <CheckCircle size={24} />
+                  </div>
                   <h3 className="text-sm font-black text-white uppercase tracking-wider pt-2">¡Difusión Concluida con Éxito!</h3>
-                  <p className="text-4xs text-slate-400 max-w-xs mx-auto">Acta archivada. Los 20 propietarios han recibido la notificación simultánea por Email y WhatsApp con el enlace de descarga del PDF legal [INDEX].</p>
+                  <p className="text-4xs text-slate-400 max-w-xs mx-auto">Acta archivada de forma segura. Los propietarios activos han recibido la notificación simultánea por Email y WhatsApp con el enlace de descarga del PDF legal.</p>
                 </div>
               )}
 

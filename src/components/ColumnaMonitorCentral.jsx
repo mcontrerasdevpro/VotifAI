@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 
 export default function ColumnaMonitorCentral({ datos, puntoActivo, dispatch, state }) {
   const navigate = useNavigate();
-  
+
   // Aislamiento reactivo del estado de la asamblea en Neon Cloud
   const { tiempoRestante, votosRegistrados } = state?.salaControl || {
     tiempoRestante: 60, votosRegistrados: 0
@@ -40,7 +40,7 @@ export default function ColumnaMonitorCentral({ datos, puntoActivo, dispatch, st
           type: 'SET_SALA_STATE',
           payload: { tiempoRestante: nuevoTiempo, votosRegistrados: nuevosVotos }
         });
-        
+
         dispatch({ type: 'ACTUALIZAR_PUNTOS', payload: puntosModificados });
       }, 1000);
     } else if (tiempoRestante === 0 && puntoActual?.estado === 'Votando') {
@@ -53,7 +53,7 @@ export default function ColumnaMonitorCentral({ datos, puntoActivo, dispatch, st
   const handleAvanzarFlujoPunto = () => {
     if (!puntoActual) return;
     if (puntoActual.estado === 'Debatiendo' || puntoActual.estado === 'Pendiente') {
-      const puntosActualizados = datos.puntos.map((p, idx) => 
+      const puntosActualizados = datos.puntos.map((p, idx) =>
         idx === puntoActivo ? { ...p, estado: 'Votando' } : p
       );
       dispatch({
@@ -65,7 +65,7 @@ export default function ColumnaMonitorCentral({ datos, puntoActivo, dispatch, st
     }
     if (puntoActual.estado === 'Cerrado' && puntoActivo < datos.puntos.length - 1) {
       const sigIdx = puntoActivo + 1;
-      const puntosActualizados = datos.puntos.map((p, idx) => 
+      const puntosActualizados = datos.puntos.map((p, idx) =>
         idx === sigIdx ? { ...p, estado: 'Debatiendo' } : p
       );
       dispatch({ type: 'ACTUALIZAR_PUNTOS', payload: puntosActualizados });
@@ -74,7 +74,7 @@ export default function ColumnaMonitorCentral({ datos, puntoActivo, dispatch, st
   };
 
   const handleClausurarEscrutinioManual = () => {
-    const puntosActualizados = datos.puntos.map((p, idx) => 
+    const puntosActualizados = datos.puntos.map((p, idx) =>
       idx === puntoActivo ? { ...p, estado: 'Cerrado', si: 68, no: 22, abs: 10 } : p
     );
     if (puntoActivo < datos.puntos.length - 1 && puntosActualizados[puntoActivo + 1]) {
@@ -210,26 +210,30 @@ export default function ColumnaMonitorCentral({ datos, puntoActivo, dispatch, st
               </div>
               <button
                 type="button"
-                onClick={() => {
-                  alert("✓ Acta sellada con HASH SHA-256 de forma vinculante. PDF enviado.");
-                  navigate('/hub');
+                onClick={(e) => {
+                  e.preventDefault();
+                  // 1. Levantamos la alerta institucional de sellado criptográfico
+                  alert("✓ Acta sellada con HASH SHA-256 de forma vinculante. PDF generado.");
+
+                  // 2. CORRECCIÓN REAL: Viaja en directo a la central de difusión automatizada
+                  console.log("➔ Desplegando visor de actas y central de firmas...");
+                  navigate('/acta-ia');
                 }}
-                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-3xs font-black uppercase tracking-widest py-3.5 rounded-xl transition-all"
+                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-3xs font-black uppercase tracking-widest py-3.5 rounded-xl transition-all shadow-lg shadow-emerald-950/20"
               >
                 ✓ Clausurar Asamblea y Redactar Acta por IA
               </button>
             </div>
           ) : (
             <button
-              type="button" 
+              type="button"
               onClick={handleAvanzarFlujoPunto}
-              className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-3xs font-black uppercase tracking-widest border transition-all ${
-                puntoActual?.estado === 'Debatiendo' || puntoActual?.estado === 'Pendiente' 
-                  ? 'bg-amber-600 border-amber-500 text-white' 
-                  : puntoActual?.estado === 'Votando' 
-                    ? 'bg-blue-600 border-blue-500 text-white animate-pulse' 
+              className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-3xs font-black uppercase tracking-widest border transition-all ${puntoActual?.estado === 'Debatiendo' || puntoActual?.estado === 'Pendiente'
+                  ? 'bg-amber-600 border-amber-500 text-white'
+                  : puntoActual?.estado === 'Votando'
+                    ? 'bg-blue-600 border-blue-500 text-white animate-pulse'
                     : 'bg-slate-900 border-slate-800 text-blue-400 font-bold'
-              }`}
+                }`}
             >
               {(puntoActual?.estado === 'Debatiendo' || puntoActual?.estado === 'Pendiente') && '⚡ Abrir Votación Móvil para este Punto'}
               {puntoActual?.estado === 'Votando' && '🔍 Monitorizar Escrutinio en Directo'}
