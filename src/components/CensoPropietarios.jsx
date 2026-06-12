@@ -102,7 +102,8 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
 
     const handleRegistrarPropietarioInicial = async (e) => {
         e.preventDefault();
-        if (!altaNombre || !altaDni || !altaDireccion || !altaCoeficiente) return;
+        // ⚡ CORRECCIÓN 1: Quitamos altaDni de la validación obligatoria para que no frene la función
+        if (!altaNombre || !altaDireccion || !altaCoeficiente) return;
 
         if (!altaTelefono && !altaEmail) {
             alert("❌ Error de Normativa LPH:\n\nDebe facilitar obligatoriamente un Teléfono o un Correo electrónico.");
@@ -114,8 +115,7 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
         const payload = {
             entity_id: fincaId,
             nombre_completo: altaNombre,
-            dni: altaDni,
-            direccion_postal: altaDireccion,
+            direccion_postal: altaDireccion, // 🏠 Esto viajará al backend y se registrará en propiedad_detalle
             telefono: altaTelefono || null,
             email: altaEmail || null,
             coeficiente: parseFloat(altaCoeficiente)
@@ -133,7 +133,11 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
             if (res.ok && data.success) {
                 alert("✓ Propietario inscrito correctamente en el censo legal.");
                 setMostrarModalAlta(false);
-                setAltaNombre(''); setAltaDni(''); setAltaDireccion(''); setAltaTelefono(''); setAltaEmail(''); setAltaCoeficiente('5.00');
+                // Limpiamos los estados locales
+                setAltaNombre(''); setAltaDireccion(''); setAltaTelefono(''); setAltaEmail(''); setAltaCoeficiente('5.00');
+                if (typeof setAltaDni === 'function') setAltaDni('');
+                
+                // 🔄 Volvemos a interrogar a Neon Cloud para actualizar el listado lateral en caliente
                 await consultarCensoNeon(); 
             } else {
                 alert(`❌ Error: ${data.error || 'No se pudo registrar.'}`);
