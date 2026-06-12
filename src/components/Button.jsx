@@ -2,7 +2,6 @@ import React from 'react';
 import { motion } from 'framer-motion';
 
 export default function Button({ children, onClick, variant = 'vecino', type = 'button', disabled = false }) {
-  // Colores dinámicos según el tipo de mercado
   const estilosVariante = variant === 'vecino'
     ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/10'
     : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/10';

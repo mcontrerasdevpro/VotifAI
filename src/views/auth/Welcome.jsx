@@ -52,7 +52,7 @@ export default function Welcome() {
         {/* REJILLA EXPANDIDA A TODA PANTALLA */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
 
-          {/* TARJETA 1: VECINOS (Mucho más espaciosa) */}
+          {/* TARJETA 1: VECINOS */}
           <motion.button
             whileHover={{ scale: 1.01, y: -2 }}
             whileActive={{ scale: 0.99 }}
@@ -79,7 +79,7 @@ export default function Welcome() {
             </div>
           </motion.button>
 
-          {/* TARJETA 2: CORPORATIVO (Mucho más espaciosa) */}
+          {/* TARJETA 2: CORPORATIVO */}
           <motion.button
             whileHover={{ scale: 1.01, y: -2 }}
             whileActive={{ scale: 0.99 }}
@@ -108,7 +108,7 @@ export default function Welcome() {
 
         </div>
 
-        {/* BANNER DE REGISTRO INTEGRADO EN EL ANCHO TOTAL */}
+        {/* BANNER DE REGISTRO INTEGRADO */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

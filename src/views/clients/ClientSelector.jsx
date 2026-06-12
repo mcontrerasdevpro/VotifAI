@@ -8,13 +8,11 @@ export default function ClientSelector() {
   const navigate = useNavigate();
   const { state, dispatch } = useVotifaiStore() || { state: { tenant: null }, dispatch: () => { } };
 
-  // Catálogo controlado única y exclusivamente por los datos de la base de datos
   const [busqueda, setBusqueda] = useState('');
   const [comunidadesReales, setComunidadesReales] = useState([]);
   const [entidadSeleccionada, setEntidadSeleccionada] = useState(null);
   const [cargandoFincas, setCargandoFincas] = useState(true);
 
-  // Control para apoderamientos y modificaciones del censo
   const [mostrarModalDelegar, setMostrarModalDelegar] = useState(false);
   const [vecinoIdDelegante, setVecinoIdDelegante] = useState('');
   const [representanteNombre, setRepresentanteNombre] = useState('Presidente (Voto Delegado)');
@@ -29,7 +27,6 @@ export default function ClientSelector() {
   const tenantIdActual = state.tenant?.tenantId || state.tenant?.id;
   const adminGlobal = state.tenant?.admin;
   const nombreDespacho = adminGlobal?.despacho || state.tenant?.nombreEntidad || "Mi Despacho SaaS";
-  // 📡 Efecto 1: Sincronización analítica de metadatos registrales
   useEffect(() => {
     if (entidadSeleccionada) {
       setEditNombre(entidadSeleccionada.nombre || '');
@@ -51,7 +48,6 @@ export default function ClientSelector() {
     }
   }, [entidadSeleccionada]);
 
-  // 📡 Efecto 2: Carga asíncrona real desde Neon Cloud
   useEffect(() => {
     const cargarFincasDesdeNeon = async () => {
       if (!tenantIdActual) { setCargandoFincas(false); return; }
@@ -97,11 +93,9 @@ export default function ClientSelector() {
     cargarFincasDesdeNeon();
   }, [tenantIdActual]);
 
-  // 🔍 Filtro limpio: Opera de forma exclusiva sobre la respuesta real del servidor
   const entidadesFiltradas = comunidadesReales.filter(e =>
     e.nombre.toLowerCase().includes(busqueda.toLowerCase())
   );
-  // 🗳️ Registro de representación legal anticipada
   const handleRegistrarDelegacion = (e) => {
     e.preventDefault();
     if (!vecinoIdDelegante) return;
@@ -117,7 +111,6 @@ export default function ClientSelector() {
     setVecinoIdDelegante('');
   };
 
-  // 💾 Actualización del expediente en la nube
   const handleGuardarCambiosFinca = async () => {
     if (!entidadSeleccionada) return;
     const payload = {
@@ -151,7 +144,6 @@ export default function ClientSelector() {
     } catch (error) { console.error(error); }
   };
 
-  // 📲 Notificación automatizada WhatsApp API
   const handleDispararConvocatoria = async () => {
     if (!entidadSeleccionada) return;
     const payload = {
@@ -179,7 +171,6 @@ export default function ClientSelector() {
     }
   };
 
-  // 📁 Transformación Base64 e inmutabilidad de PDFs
   const handleSubirPDFOriginal = async (e) => {
     const archivo = e.target.files[0];
     if (!archivo || !entidadSeleccionada) return;
@@ -202,7 +193,6 @@ export default function ClientSelector() {
     };
   };
 
-  // 🗑️ Eliminación registral real en PostgreSQL
   const handleEliminarFinca = async () => {
     if (!entidadSeleccionada) return;
 

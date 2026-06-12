@@ -6,7 +6,6 @@ import { useNavigate } from 'react-router-dom';
 export default function ColumnaMonitorCentral({ datos, puntoActivo, dispatch, state }) {
   const navigate = useNavigate();
 
-  // Aislamiento reactivo del estado de la asamblea en Neon Cloud
   const { tiempoRestante, votosRegistrados } = state?.salaControl || {
     tiempoRestante: 60, votosRegistrados: 0
   };
@@ -14,7 +13,6 @@ export default function ColumnaMonitorCentral({ datos, puntoActivo, dispatch, st
   const totalAsistentesSala = 48;
   const puntoActual = datos?.puntos?.[puntoActivo];
 
-  // ⏱️ Efecto unificado para descontar el segundero legal e inflar votos móviles
   useEffect(() => {
     let intervalo = null;
 
@@ -212,10 +210,7 @@ export default function ColumnaMonitorCentral({ datos, puntoActivo, dispatch, st
                 type="button"
                 onClick={(e) => {
                   e.preventDefault();
-                  // 1. Levantamos la alerta institucional de sellado criptográfico
                   alert("✓ Acta sellada con HASH SHA-256 de forma vinculante. PDF generado.");
-
-                  // 2. CORRECCIÓN REAL: Viaja en directo a la central de difusión automatizada
                   console.log("➔ Desplegando visor de actas y central de firmas...");
                   navigate('/acta-ia');
                 }}

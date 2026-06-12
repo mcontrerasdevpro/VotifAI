@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Users, FileText, ArrowLeftRight, UserPlus, Scale, AlertCircle, RefreshCw, ClipboardList } from 'lucide-react';
 
 export default function CensoPropietarios({ fincaId, nombreFinca }) {
-    // Catálogo reactivo cruzado cargado desde index.js
     const [propietarios, setPropietarios] = useState([]);
     const [historial, setHistorial] = useState([]);
     const [cargando, setCargando] = useState(true);
@@ -18,7 +17,6 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
     const [altaCoeficiente, setAltaCoeficiente] = useState('5.00');
     const [guardandoAlta, setGuardandoAlta] = useState(false);
 
-    // Estados para abrir el formulario de Cambio de Titular legal
     const [propietarioSustituir, setPropietarioSustituir] = useState(null);
     const [nuevoNombre, setNuevoNombre] = useState('');
     const [nuevoDni, setNuevoDni] = useState('');
@@ -28,7 +26,6 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
     const [detalles, setDetalles] = useState('');
     const [procesandoTransaccion, setProcesandoTransaccion] = useState(false);
 
-    // 📡 Pasarela de Red: Interroga los endpoints 11 de Express
     const consultarCensoNeon = async () => {
         if (!fincaId) return;
         setCargando(true);
@@ -50,12 +47,10 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
         consultarCensoNeon();
     }, [fincaId]);
 
-    // 🔄 Transacción: Tramita la sustitución ordinaria de titularidad
     const handleTramitarCambioTitular = async (e) => {
         e.preventDefault();
         if (!propietarioSustituir || !nuevoNombre || !nuevoDni || !motivoCambio) return;
 
-        // Validación estricta Ley de Propiedad Horizontal: Contacto obligatorio
         if (!nuevoTelefono && !nuevoEmail) {
             alert("❌ Error de Normativa LPH:\n\nEl nuevo titular debe disponer obligatoriamente de al menos un método de contacto (Teléfono o Correo electrónico).");
             return;
@@ -86,7 +81,6 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
             if (respuesta.ok && resultado.success) {
                 alert("✓ Cambio de titularidad procesado e inscrito con éxito en Neon Cloud.");
 
-                // Cerramos el formulario flotante y limpiamos campos
                 setPropietarioSustituir(null);
                 setNuevoNombre('');
                 setNuevoDni('');
@@ -94,7 +88,6 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
                 setNuevoEmail('');
                 setDetalles('');
 
-                // 🔄 Refrescamos los datos en caliente interrogando a la API
                 await consultarCensoNeon();
             } else {
                 alert(`❌ Error en la pasarela: ${resultado.error || 'No se pudo completar el trámite.'}`);
@@ -107,7 +100,6 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
         }
     };
 
-    // 👤 Envía el nuevo propietario al endpoint de tu index.js
     const handleRegistrarPropietarioInicial = async (e) => {
         e.preventDefault();
         if (!altaNombre || !altaDni || !altaDireccion || !altaCoeficiente) return;
@@ -142,7 +134,7 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
                 alert("✓ Propietario inscrito correctamente en el censo legal.");
                 setMostrarModalAlta(false);
                 setAltaNombre(''); setAltaDni(''); setAltaDireccion(''); setAltaTelefono(''); setAltaEmail(''); setAltaCoeficiente('5.00');
-                await consultarCensoNeon(); // Recarga la tabla de inmediato
+                await consultarCensoNeon(); 
             } else {
                 alert(`❌ Error: ${data.error || 'No se pudo registrar.'}`);
             }
@@ -196,7 +188,7 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
                         </div>
                     ) : vistaActiva === 'censo' ? (
                          /* ========================================================================= */
-            /* VISTA A: TABLA DEL CENSO LEGAL ACTUALIZADO (LPH CORREGIDA)               */
+            /* VISTA A: TABLA DEL CENSO LEGAL ACTUALIZADO              */
             /* ========================================================================= */
             <table className="w-full text-left font-sans text-4xs">
               <thead className="bg-slate-900 text-slate-400 sticky top-0 border-b border-slate-800 font-bold z-10">
@@ -211,7 +203,6 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
               <tbody className="divide-y divide-slate-900 text-slate-300">
                 {propietarios && propietarios.length > 0 ? (
                   propietarios.map((v, index) => (
-                    // ⚡ Usamos index como fallback de la key para asegurar el renderizado
                     <tr key={v.id || `prop_${index}`} className="hover:bg-slate-900/30 transition-colors">
                       <td className="py-2.5 px-3 font-bold text-blue-400">{v.propiedad_detalle || 'Vivienda'}</td>
                       <td className="py-2.5 px-3 text-white font-bold">{v.nombre_completo}</td>

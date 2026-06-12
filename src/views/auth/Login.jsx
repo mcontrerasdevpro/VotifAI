@@ -10,21 +10,17 @@ export default function Login() {
   const { dispatch } = useVotifaiStore() || { dispatch: () => { } };
   const esComunidad = perfil === 'comunidad';
 
-  // CONTROL DE RED EN TIEMPO REAL
   const [cargando, setCargando] = useState(false);
   const [errorMensaje, setErrorMensaje] = useState('');
 
-  // Datos para Comunidad de Vecinos
   const [codigoJunta, setCodigoJunta] = useState('');
   const [nombreVecino, setNombreVecino] = useState('');
   const [pisoPuerta, setPisoPuerta] = useState('');
 
-  // Datos para Área Corporativa / Administrador de Fincas
   const [cifEmpresa, setCifEmpresa] = useState('');
   const [emailSocio, setEmailSocio] = useState('');
   const [password, setPassword] = useState('');
 
-  // 🔌 CONEXIÓN ASÍNCRONA REAL CON EL SERVIDOR DE RENDER Y NEON
    const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMensaje('');
@@ -55,8 +51,6 @@ export default function Login() {
           return;
         }
 
-        // 🔒 BLINDAJE DE PERSISTENCIA MULTITENANT
-        // Creamos y formateamos el objeto que tu store.jsx sabe interceptar al arrancar
         if (resultado.tenant) {
           const nuevoTenantCaché = {
             tenantId: resultado.tenant.id || resultado.tenant.tenantId,
@@ -65,20 +59,16 @@ export default function Login() {
             tipoOrganizacion: resultado.tenant.tipo_organizacion || resultado.tenant.tipoOrganizacion || 'administrador',
             plan: resultado.tenant.plan_suscripcion || resultado.tenant.plan || 'trial_15_dias',
             
-            // 🆕 Mapeamos los datos del administrador para alimentar el Header del Dashboard de inmediato
             admin: {
               nombre: resultado.tenant.admin_nombre || resultado.tenant.adminNombre || resultado.tenant.nombre || "Admin General",
               despacho: resultado.tenant.nombre_entidad || resultado.tenant.nombreEntidad || "Despacho Administrador"
             },
             
-            // Sincronizamos las fincas cargadas desde PostgreSQL para evitar el parpadeo de lista vacía
             comunidadesYEmpresas: resultado.tenant.comunidadesYEmpresas || []
           };
 
-          // Guardamos con la clave exacta que lee la raíz de tu arquitectura ('votifai_tenant')
           localStorage.setItem('votifai_tenant', JSON.stringify(nuevoTenantCaché));
           
-          // Mantenemos tu clave secundaria por si tu backend la utiliza en otras consultas
           localStorage.setItem('tenantId', resultado.tenant.id);
         }
 

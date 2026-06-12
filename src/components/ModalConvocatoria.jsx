@@ -61,7 +61,6 @@ export default function ModalConvocatoria({
                     </p>
                   </div>
 
-                  {/* Recorrido de las tarjetas de los puntos */}
                   <div className="space-y-2.5">
                     {datos?.puntos?.map((punto) => (
                       <div
@@ -87,7 +86,6 @@ export default function ModalConvocatoria({
                     ))}
                   </div>
 
-                  {/* Sello criptográfico legal de respaldo */}
                   <div className="border border-slate-850 bg-slate-900/40 p-4 rounded-2xl flex items-center gap-4 mt-2 shrink-0">
                     <Shield size={18} className="text-emerald-500 shrink-0" />
                     <div className="space-y-0.5">
@@ -101,7 +99,6 @@ export default function ModalConvocatoria({
               )}
             </div>
 
-            {/* Barra de acciones inferior */}
             <div className="p-4 border-t border-slate-800 bg-slate-950/40 flex justify-end gap-3 shrink-0">
               <button
                 type="button"

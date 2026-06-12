@@ -14,9 +14,8 @@ export default function MinutesAI() {
   const [guardado, setGuardado] = useState(false);
   const [grabandoVoz, setGrabandoVoz] = useState(false);
 
-  // ESTADOS DEL SISTEMA DE ENVÍO AUTOMATIZADO SAAS
   const [mostrarModalCierre, setMostrarModalCierre] = useState(false);
-  const [envioEstado, setEnvioEstado] = useState('idle'); // 'idle', 'enviando_email', 'enviando_whatsapp', 'completado'
+  const [envioEstado, setEnvioEstado] = useState('idle'); 
   const [contadorEnvio, setContadorEnvio] = useState(0);
 
   const [actaTexto, setActaTexto] = useState(
@@ -38,44 +37,41 @@ export default function MinutesAI() {
 
   const chartSeries = [68, 22, 10];
 
-  // MOTOR SAAS DE DISPARO MASIVO DE CORREOS Y WHATSAPP (SIMULADOR COMERCIAL)
   const handleDispararNotificacionesMasivas = async () => {
-    // A. Iniciamos la simulación del envío de correos corporativos
     setEnvioEstado('enviando_email');
     setContadorEnvio(0);
-
+    
     let i = 0;
     const intervalEmail = setInterval(async () => {
       i++;
       setContadorEnvio(i);
       if (i >= 20) {
         clearInterval(intervalEmail);
-
-        // B. PASARELA REAL: Disparamos la campaña real de WhatsApp contra tu index.js
+        
         setEnvioEstado('enviando_whatsapp');
         setContadorEnvio(0);
 
         try {
-          // Solicitamos el censo real de propietarios de la comunidad
-          const resCenso = await fetch(`/api/propietarios/lista/d1f5964c-0c2b-40f8-88d6-d0ed253f8413`);
-          const datosCenso = await resCenso.json();
-          const propietariosReales = datosCenso.propietarios || [];
-
-          // Ejecutamos la petición POST masiva para notificar por telefonía móvil
-          const respuestaAPI = await fetch('/api/notifications/convocar', {
+          const resClausura = await fetch('/api/meetings/clausurar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               fincaId: 'd1f5964c-0c2b-40f8-88d6-d0ed253f8413',
-              nombreFinca: 'Guanabacoa 2',
-              propietarios: propietariosReales.length > 0 ? propietariosReales : [
-                { nombre: "Matías Po", propiedad: "tos 2 1a", telefono: "+34 600000000" }
-              ]
+              acta_texto: actaTexto 
             })
           });
 
-          if (respuestaAPI.ok) {
-            // Animamos la barra de progreso simulando las entregas push
+          if (resClausura.ok) {
+            await fetch('/api/notifications/convocar', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                fincaId: 'd1f5964c-0c2b-40f8-88d6-d0ed253f8413',
+                nombreFinca: 'Guanabacoa 2',
+                propietarios: [{ nombre: "Matías Po", propiedad: "tos 2 1a", telefono: "+34 600000000" }]
+              })
+            });
+
             let j = 0;
             const intervalWA = setInterval(() => {
               j++;
@@ -83,24 +79,23 @@ export default function MinutesAI() {
               if (j >= 20) {
                 clearInterval(intervalWA);
                 setEnvioEstado('completado');
-
-                // Redirección definitiva al catálogo de fincas tras el éxito
+                
                 setTimeout(() => {
                   setMostrarModalCierre(false);
                   navigate('/hub');
-                }, 2500);
+                }, 2000);
               }
-            }, 50);
+            }, 40);
           } else {
-            alert("❌ Error en la pasarela externa de telefonía móvil.");
+            alert("❌ Fallo crítico: No se pudo sellar la junta en el servidor.");
             setEnvioEstado('idle');
           }
         } catch (err) {
-          console.error("Fallo de red al despachar el acta:", err);
+          console.error("Error al clausurar asamblea:", err);
           setEnvioEstado('idle');
         }
       }
-    }, 40);
+    }, 30);
   };
 
   return (
@@ -121,7 +116,6 @@ export default function MinutesAI() {
             type="button"
             onClick={() => {
               if (editando) {
-                // Si estaba editando, guardamos los apuntes finales al pulsar el botón
                 setGuardado(true);
                 setTimeout(() => setGuardado(false), 2000);
               }
@@ -137,7 +131,7 @@ export default function MinutesAI() {
 
           <button
             type="button"
-            disabled={editando} // Bloqueamos el envío si el acta está a medio editar
+            disabled={editando} 
             onClick={() => setMostrarModalCierre(true)}
             className="bg-emerald-600 hover:bg-emerald-500 text-white text-3xs font-black uppercase px-5 py-2.5 rounded-xl shadow-lg active:scale-99 disabled:opacity-40"
           >
@@ -166,7 +160,6 @@ export default function MinutesAI() {
           <div className="flex-grow flex flex-col overflow-hidden">
             {vistaActiva === 'documento' ? (
               editando ? (
-                /* 📝 MODO EDICIÓN ACTIVO: Cuadro de texto enriquecido en caliente */
                 <textarea
                   value={actaTexto}
                   onChange={(e) => setActaTexto(e.target.value)}
@@ -174,13 +167,11 @@ export default function MinutesAI() {
                   placeholder="Añada apuntes finales, anexos de cuotas o correcciones aquí..."
                 />
               ) : (
-                /* 📄 MODO VISTA PREVIA: Visor estático convencional de gobernanza */
                 <div className="w-full h-full bg-slate-50 rounded-xl p-5 text-3xs font-sans text-slate-800 overflow-y-auto whitespace-pre-line border border-slate-100 shadow-inner leading-relaxed">
                   {actaTexto}
                 </div>
               )
             ) : (
-              /* 📊 MODO ESTADÍSTICAS: Gráficos consolidados de votaciones */
               <div className="flex-grow flex flex-col justify-center items-center h-full">
                 <div className="w-full max-w-sm">
                   <Chart options={chartOptions} series={chartSeries} type="donut" width="100%" />
@@ -200,7 +191,6 @@ export default function MinutesAI() {
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md space-y-5 text-center shadow-2xl relative overflow-hidden">
 
               {envioEstado === 'idle' && (
-                /* FASE 1: CONFIRMACIÓN INICIAL */
                 <>
                   <div className="w-14 h-14 bg-blue-600/10 text-blue-400 rounded-full flex items-center justify-center mx-auto border border-blue-500/10"><Send size={24} /></div>
                   <div>
@@ -215,7 +205,6 @@ export default function MinutesAI() {
               )}
 
               {envioEstado === 'enviando_email' && (
-                /* FASE 2: SIMULADOR DE ENVÍO MASIVO DE EMAILS CERTIFICADOS */
                 <div className="py-6 space-y-4 animate-fade-in">
                   <div className="w-12 h-12 bg-blue-600/10 text-blue-400 rounded-xl flex items-center justify-center mx-auto animate-pulse border border-blue-500/20"><Mail size={22} /></div>
                   <div>
@@ -227,7 +216,6 @@ export default function MinutesAI() {
               )}
 
               {envioEstado === 'enviando_whatsapp' && (
-                /* FASE 3: SIMULADOR DE ENVÍO DE WHATSAPP API DIRECTO AL MÓVIL */
                 <div className="py-6 space-y-4 animate-fade-in">
                   <div className="w-12 h-12 bg-emerald-600/10 text-emerald-400 rounded-xl flex items-center justify-center mx-auto animate-bounce border border-emerald-500/20"><MessageSquare size={22} /></div>
                   <div>
@@ -239,7 +227,6 @@ export default function MinutesAI() {
               )}
 
               {envioEstado === 'completado' && (
-                /* FASE 4: ÉXITO TOTAL (Corregido a CheckCircle) */
                 <div className="py-6 space-y-2 animate-fade-in">
                   <div className="w-12 h-12 bg-emerald-500 text-white rounded-full flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/20">
                     <CheckCircle size={24} />

@@ -10,11 +10,9 @@ export default function Register() {
   const [paso, setPaso] = useState(1);
   const [tipoOrganizacion, setTipoOrganizacion] = useState('administrador');
 
-  // DATOS PASO 1
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  // DATOS PASO 2: EMPRESA
   const [razonSocial, setRazonSocial] = useState('');
   const [cifEmpresa, setCifEmpresa] = useState('');
   const [direccionEmpresa, setDireccionEmpresa] = useState('');
@@ -24,7 +22,6 @@ export default function Register() {
   const [numAcciones, setNumAcciones] = useState('');
   const [regimenMayoria, setRegimenMayoria] = useState('simple');
 
-  // DATOS PASO 2: COMUNIDAD
   const [nombreAdminFincas, setNombreAdminFincas] = useState('');
   const [nombreComunidad, setNombreComunidad] = useState('');
   const [cifComunidad, setCifComunidad] = useState('');
@@ -33,7 +30,6 @@ export default function Register() {
   const [totalPropiedades, setTotalPropiedades] = useState('');
   const [recargoMora, setRecargoMora] = useState('');
 
-  // DATOS PASO 3
   const [titularCuenta, setTitularCuenta] = useState('');
   const [iban, setIban] = useState('');
 

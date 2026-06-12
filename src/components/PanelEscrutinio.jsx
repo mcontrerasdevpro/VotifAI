@@ -42,7 +42,6 @@ export default function PanelEscrutinio({ puntoActivo, dispatch, state }) {
       intervaloIA = setInterval(() => {
         if (indiceFrase < frasesDisponibles.length) {
           const fraseValida = frasesDisponibles[indiceFrase];
-          // Usamos una función constructora para añadir la frase sin destruir las anteriores
           dispatch({
             type: 'SET_SALA_STATE',
             payload: { 

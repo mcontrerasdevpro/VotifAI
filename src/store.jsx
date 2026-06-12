@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useReducer } from 'react';
 
-// 1. ESTADO INICIAL COMPATIBLE CON PERSISTENCIA LOCAL Y SALA DE CONTROL
 const initialState = {
   tenant: (() => {
     const saved = localStorage.getItem('votifai_tenant');
@@ -15,7 +14,6 @@ const initialState = {
       return null;
     }
   })(),
-  // ⚡ Estados añadidos para dar vida a la Sala de Control en Vivo
   salaControl: {
     mercado: 'comunidad',
     puntoActivo: 0,
@@ -36,7 +34,6 @@ const initialState = {
   }
 };
 
-// 2. EL REDUCER CENTRAL DE ACCIONES RELACIONALES
 function votifaiReducer(state, action) {
   switch (action.type) {
     case 'REGISTRAR_ORGANIZACION': {
@@ -61,7 +58,6 @@ function votifaiReducer(state, action) {
       localStorage.removeItem('votifai_tenant');
       return { ...state, tenant: null };
 
-    // ⚡ ACCIONES COMPLEMENTARIAS PARA TUS NUEVOS COMPONENTES MODULARES:
     case 'SET_SALA_STATE':
       return {
         ...state,

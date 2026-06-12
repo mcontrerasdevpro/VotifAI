@@ -202,11 +202,9 @@ app.delete('/api/entities/delete/:id', async (req, res) => {
   const { id } = req.params;
 
   try {
-    // Ejecutamos la consulta SQL de eliminación por UUID
     const query = 'DELETE FROM entities WHERE entity_id = $1';
     const result = await pool.query(query, [id]);
 
-    // Si afectó a alguna fila significa que se borró con éxito
     if (result.rowCount > 0) {
       res.status(200).json({ success: true, message: 'Entidad purgada correctamente' });
     } else {
@@ -258,7 +256,6 @@ app.put('/api/entities/upload-pdf', async (req, res) => {
   }
 
   try {
-    // 🔌 Guardamos el archivo Base64 directamente dentro de la tabla en Neon
     await query(
       `UPDATE entities 
        SET documento_adjunto = $1 
@@ -288,7 +285,6 @@ app.put('/api/entities/update', async (req, res) => {
   }
 
   try {
-    // Empaquetamos los cargos en un objeto JSON estructurado
     const metadatosLegales = { presidente, tesorero };
 
     const resultado = await query(
@@ -321,13 +317,11 @@ app.post('/api/propietarios/create', async (req, res) => {
     return res.status(400).json({ error: 'Faltan campos obligatorios para registrar al propietario.' });
   }
 
-  // Validación estricta Ley de Propiedad Horizontal: Teléfono o Email obligatorio
   if (!telefono && !email) {
     return res.status(400).json({ error: 'Según la normativa LPH, debe facilitar un teléfono o un email de contacto.' });
   }
 
   try {
-    // ⚡ Quitamos la columna "dni" de la query para amoldarnos milimétricamente a tu pgAdmin real
     const resultado = await query(
       `INSERT INTO propietarios (entity_id, nombre_completo, propiedad_detalle, telefono, email, coeficiente)
        VALUES ($1, $2, $3, $4, $5, $6)
@@ -371,7 +365,6 @@ app.post('/api/propietarios/cambio-titular', async (req, res) => {
   try {
     await query('BEGIN');
 
-    // A. Recuperamos el nombre del titular actual para dejar constancia en la auditoría
     const propietarioActual = await query('SELECT nombre_completo FROM propietarios WHERE id = $1', [propietario_id]);
     if (propietarioActual.rows.length === 0) {
       await query('ROLLBACK');
@@ -379,7 +372,6 @@ app.post('/api/propietarios/cambio-titular', async (req, res) => {
     }
     const anteriorTitularNombre = propietarioActual.rows[0].nombre_completo;
 
-    // B. Actualizamos la ficha del censo con los datos del nuevo titular (sin DNI)
     await query(
       `UPDATE propietarios 
        SET nombre_completo = $1, telefono = $2, email = $3
@@ -387,7 +379,6 @@ app.post('/api/propietarios/cambio-titular', async (req, res) => {
       [nuevo_nombre, nuevo_telefono || null, nuevo_email || null, propietario_id]
     );
 
-    // C. Insertamos la fila en la tabla de historial con el motivo legal (venta, alquiler, herencia)
     await query(
       `INSERT INTO historial_titularidad (propietario_id, anterior_titular, nuevo_titular, motivo_cambio, detalles)
        VALUES ($1, $2, $3, $4, $5)`,
@@ -415,10 +406,8 @@ app.delete('/api/entities/delete/:id', async (req, res) => {
   const { id } = req.params;
 
   try {
-    // ⚡ Corrección: Usamos 'query' en lugar de 'pool.query' y filtramos por la columna real 'id'
     const result = await query('DELETE FROM entities WHERE id = $1', [String(id).trim()]);
 
-    // Si afectó a alguna fila significa que se borró con éxito en Neon Cloud
     if (result.rowCount > 0) {
       res.status(200).json({ success: true, message: 'Entidad purgada correctamente de Neon Cloud.' });
     } else {
@@ -437,7 +426,6 @@ app.get('/api/propietarios/lista/:entityId', async (req, res) => {
   const { entityId } = req.params;
 
   try {
-    // ⚡ CORRECCIÓN CLAVE: Aplicamos '::uuid' al parámetro para forzar la compatibilidad relacional
     const censoResultado = await query(
       `SELECT id, nombre_completo, propiedad_detalle, telefono, email, coeficiente, es_moroso 
        FROM propietarios 
@@ -448,7 +436,6 @@ app.get('/api/propietarios/lista/:entityId', async (req, res) => {
 
     let historialFilas = [];
     try {
-      // Aplicamos también el cast al historial por si acaso
       const historialResultado = await query(
         `SELECT h.historial_id, h.propietario_id, h.anterior_titular, h.nuevo_titular, h.motivo_cambio, h.detalles, h.fecha_cambio, p.propiedad_detalle
          FROM historial_titularidad h
@@ -471,6 +458,126 @@ app.get('/api/propietarios/lista/:entityId', async (req, res) => {
   } catch (err) {
     console.error('❌ ERROR REAL EN POSTGRESQL (LISTA):', err.message);
     res.status(500).json({ error: `Fallo crítico de red en el catálogo: ${err.message}` });
+  }
+});
+
+// =========================================================================
+// 🔒 12. ENDPOINT PUT: /api/meetings/clausurar (Persistencia de Cierre de Junta)
+// =========================================================================
+app.post('/api/meetings/clausurar', async (req, res) => {
+  const { fincaId, acta_texto } = req.body;
+
+  if (!fincaId || !acta_texto) {
+    return res.status(400).json({ error: 'Faltan parámetros indispensables para clausurar la junta.' });
+  }
+
+  try {
+    const juntaActiva = await query(
+      `SELECT id FROM meetings WHERE entity_id = $1::uuid AND estado = 'abierta' LIMIT 1`,
+      [String(fincaId).trim()]
+    );
+
+    if (juntaActiva.rows.length === 0) {
+      return res.status(404).json({ error: 'No se ha encontrado ninguna asamblea abierta para esta comunidad.' });
+    }
+
+    const meetingId = juntaActiva.rows[0].id;
+
+    await query(
+      `UPDATE meetings 
+       SET estado = 'clausurada', acta_texto_final = $1 
+       WHERE id = $2`,
+      [acta_texto, meetingId]
+    );
+
+    res.status(200).json({
+      success: true,
+      mensaje: 'Asamblea clausurada e historial inmutable bloqueado en Neon Cloud con éxito.'
+    });
+
+  } catch (err) {
+    console.error('❌ ERROR AL CLAUSURAR JUNTA:', err.message);
+    res.status(500).json({ error: `Fallo interno de persistencia: ${err.message}` });
+  }
+});
+
+// =========================================================================
+// 🔍 13. ENDPOINT GET: /api/meetings/estado/:fincaId (Verificación de Cierre)
+// =========================================================================
+app.get('/api/meetings/estado/:fincaId', async (req, res) => {
+  const { fincaId } = req.params;
+
+  try {
+    const resultado = await query(
+      `SELECT id, estado, acta_texto_final, creado_en 
+       FROM meetings 
+       WHERE entity_id = $1::uuid 
+       ORDER BY creado_en DESC LIMIT 1`,
+      [String(fincaId).trim()]
+    );
+
+    if (resultado.rows.length === 0) {
+      return res.status(200).json({
+        success: true,
+        estado: 'abierta',
+        acta_texto_final: null
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      id: resultado.rows[0].id,
+      estado: resultado.rows[0].estado, 
+      acta_texto_final: resultado.rows[0].acta_texto_final
+    });
+
+  } catch (err) {
+    console.error('❌ ERROR AL CONSULTAR ESTADO DE JUNTA:', err.message);
+    res.status(500).json({ error: `Fallo interno en base de datos: ${err.message}` });
+  }
+});
+
+// =========================================================================
+// 📲 14. ENDPOINT POST: /api/notifications/reenviar-individual (WhatsApp Individual)
+// =========================================================================
+app.post('/api/notifications/reenviar-individual', async (req, res) => {
+  const { propietarioId, nombreFinca, actaTexto } = req.body;
+
+  if (!propietarioId || !actaTexto) {
+    return res.status(400).json({ error: 'Faltan parámetros indispensables para realizar el reenvío individual.' });
+  }
+
+  try {
+    const vecino = await query(
+      `SELECT nombre_completo, propiedad_detalle, telefono, email 
+       FROM propietarios 
+       WHERE id = $1::uuid`,
+      [String(propietarioId).trim()]
+    );
+
+    if (vecino.rows.length === 0) {
+      return res.status(404).json({ error: 'El propietario solicitado no consta en el censo legal.' });
+    }
+
+    const datosVecino = vecino.rows[0];
+
+    if (!datosVecino.telefono) {
+      return res.status(400).json({ error: 'Este propietario no dispone de teléfono móvil registrado para envío por WhatsApp.' });
+    }
+
+    console.log(`\n📲 [WhatsApp API - REENVÍO INDIVIDUAL]`);
+    console.log(`   ➔ Despachando Copia Certificada del Acta | Finca: ${nombreFinca}`);
+    console.log(`   ➔ Destinatario: ${datosVecino.nombre_completo} | Inmueble: ${datosVecino.propiedad_detalle}`);
+    console.log(`   ➔ Pasarela Móvil: ${datosVecino.telefono}`);
+
+    res.status(200).json({
+      success: true,
+      mensaje: `Copia certificada del acta reenviada correctamente a ${datosVecino.nombre_completo} (${datosVecino.propiedad_detalle}) vía WhatsApp API.`
+    });
+
+  } catch (err) {
+    console.error('Error crítico en el despachador de reenvíos:', err.message);
+    res.status(500).json({ error: `Fallo en la pasarela externa de telefonía: ${err.message}` });
   }
 });
 

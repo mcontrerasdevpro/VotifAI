@@ -16,25 +16,17 @@ function App() {
     <StoreProvider>
       <BrowserRouter>
         <Routes>
-          {/* 🔓 RUTAS PÚBLICAS */}
           <Route path="/" element={<Welcome />} />
           <Route path="/login/:perfil" element={<Login />} />
-          <Route path="/register" element={<Register />} /> 
-          
-          {/* 🗳️ PANTALLAS DE VOTO (Acceso directo para propietarios) */}
+          <Route path="/register" element={<Register />} />           
           <Route path="/voto-vecino" element={<VoterScreen tipoUsuario="vecino" />} />
           <Route path="/voto-socio" element={<VoterScreen tipoUsuario="empresa" />} />
-
-          {/* 🔒 RUTAS PRIVADAS (Solo Administradores Autenticados) */}
           <Route element={<ProtectedRoute />}>
             <Route path="/hub" element={<ClientSelector />} />       
             <Route path="/admin/:fincaId" element={<Dashboard />} />
             <Route path="/acta-ia" element={<MinutesAI />} />
-            {/* ⚡ CORRECCIÓN: Registramos la ruta protegida para el alta con pantalla partida */}
             <Route path="/alta-finca" element={<AltaFinca />} />
           </Route>
-
-          {/* 🔄 REDIRECCIÓN POR DEFECTO */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
