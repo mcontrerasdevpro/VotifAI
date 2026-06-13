@@ -51,8 +51,14 @@ export default function MinutesAI() {
         setEnvioEstado('enviando_whatsapp');
         setContadorEnvio(0);
 
-        try {
-          const resClausura = await fetch('/api/meetings/clausurar', {
+       try {
+          // ⚡ CONFIGURACIÓN DE PASARELA DIRECTA PARA CODESPACES (PUERTO 3000)
+          // Obtenemos la URL de tu entorno y cambiamos el puerto 5173 de la UI por el 3000 de la API
+          const urlBaseBackend = window.location.origin.replace('-5173.', '-3000.');
+          console.log("📡 Conectando directamente con la API unificada de Node en:", urlBaseBackend);
+
+          // Invocamos el cierre apuntando a la dirección absoluta del servidor
+          const resClausura = await fetch(`${urlBaseBackend}/api/meetings/clausurar`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -62,7 +68,8 @@ export default function MinutesAI() {
           });
 
           if (resClausura.ok) {
-            await fetch('/api/notifications/convocar', {
+            // Invocamos el envío masivo de notificaciones oficiales por WhatsApp
+            await fetch(`${urlBaseBackend}/api/notifications/convocar`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({

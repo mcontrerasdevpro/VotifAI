@@ -29,9 +29,6 @@ export default function Welcome() {
             Acceso Administradores
           </button>
 
-          <div className="text-4xs bg-blue-500/10 text-blue-400 px-3 py-2 rounded-xl border border-blue-500/20 font-bold tracking-wider">
-            # Certificación Legal Automatizada
-          </div>
         </div>
 
       </header>
@@ -126,6 +123,13 @@ export default function Welcome() {
             Registrar mi Despacho Profesional
           </button>
         </motion.div>
+
+        <div className="w-full text-center pb-6 shrink-0 z-10">
+          <span className="inline-flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-full text-[16px] font-black uppercase tracking-widest text-amber-400 shadow-md animate-pulse">
+            <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-ping"></span>
+            ACTAS AUTOMATIZADAS CON IA Y ENVIO AL INSTANTE
+          </span>
+        </div>
 
       </main>
 

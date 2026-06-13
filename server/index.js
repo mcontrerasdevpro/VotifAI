@@ -472,17 +472,19 @@ app.post('/api/meetings/clausurar', async (req, res) => {
   }
 
   try {
+    // ⚡ Corrección 1: Quitamos el filtro restrictivo de estado para capturar la asamblea actual
     const juntaActiva = await query(
-      `SELECT id FROM meetings WHERE entity_id = $1::uuid AND estado = 'abierta' LIMIT 1`,
+      `SELECT id FROM meetings WHERE entity_id = $1::uuid ORDER BY id DESC LIMIT 1`,
       [String(fincaId).trim()]
     );
 
     if (juntaActiva.rows.length === 0) {
-      return res.status(404).json({ error: 'No se ha encontrado ninguna asamblea abierta para esta comunidad.' });
+      return res.status(404).json({ error: 'No se ha encontrado ninguna asamblea registrada para esta comunidad.' });
     }
 
     const meetingId = juntaActiva.rows[0].id;
 
+    // ⚡ Ejecutamos el sellado definitivo en Neon Cloud
     await query(
       `UPDATE meetings 
        SET estado = 'clausurada', acta_texto_final = $1 
