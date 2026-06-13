@@ -291,61 +291,61 @@ export default function ClientSelector() {
               <div className="flex flex-col flex-grow overflow-hidden">
 
                 {/* CABECERA DEL EXPEDIENTE CON BOTÓN DE EDICIÓN EN CALIENTE */}
-                <div className="border-b border-slate-900 pb-3 flex justify-between items-center shrink-0">
+                 <div className="border-b border-slate-900 pb-3 flex flex-col md:flex-row md:items-center justify-between gap-3 shrink-0">
+                  {/* Bloque Izquierdo: Identificación e Título */}
                   <div>
                     <h3 className="text-xs font-black uppercase text-slate-400 flex items-center gap-1.5">
-                      <Users size={14} /> Expediente y Censo de la Finca
+                      <Users size={14} className="text-blue-500" /> Expediente y Censo de la Finca
                     </h3>
                     <p className="text-4xs text-blue-400 font-mono mt-0.5 uppercase tracking-wider">
                       {editandoFinca ? "Modificando Registro en Neon Cloud" : entidadSeleccionada.nombre}
                     </p>
                   </div>
 
-                  <div className="flex gap-2 flex-wrap items-center">
-                    <label className="bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 hover:text-white text-5xs font-black px-3 py-2 rounded-xl transition-colors flex items-center gap-1 cursor-pointer shadow-sm">
-                      <Plus size={10} className="text-blue-400" /> Adjuntar PDF Original
-                      <input type="file" accept="application/pdf" onChange={handleSubirPDFOriginal} className="hidden" />
-                    </label>
+                  {/* Bloque Derecho: Agrupación Estratégica de Botones */}
+                  <div className="flex flex-wrap items-center gap-1.5 justify-start md:justify-end">
+                    
+                    {/* Grupo A: Gestión Documental y Datos */}
+                    <div className="flex items-center bg-slate-900/60 p-1 rounded-xl border border-slate-900 gap-1">
+                      <label className="bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white text-5xs font-black px-2.5 py-1.5 rounded-lg transition-colors flex items-center gap-1 cursor-pointer">
+                        <Plus size={10} className="text-blue-400" /> PDF
+                        <input type="file" accept="application/pdf" onChange={handleSubirPDFOriginal} className="hidden" />
+                      </label>
 
-                    {editandoFinca ? (
-                      <div className="flex gap-1.5">
-                        <button
-                          type="button" onClick={() => setEditandoFinca(false)}
-                          className="bg-slate-900 border border-slate-800 text-slate-400 hover:text-white text-5xs font-black px-3 py-2 rounded-xl transition-all uppercase tracking-wider"
-                        >
-                          Cancelar
+                      {editandoFinca ? (
+                        <>
+                          <button type="button" onClick={() => setEditandoFinca(false)} className="bg-slate-950 text-slate-400 hover:text-white text-5xs font-black px-2.5 py-1.5 rounded-lg transition-all uppercase">
+                            X
+                          </button>
+                          <button type="button" onClick={handleGuardarCambiosFinca} className="bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-5xs font-black px-2.5 py-1.5 rounded-lg transition-all uppercase font-bold">
+                            💾 Guardar
+                          </button>
+                        </>
+                      ) : (
+                        <button type="button" onClick={() => setEditandoFinca(true)} className="bg-slate-950 text-slate-400 hover:text-white text-5xs font-black px-2.5 py-1.5 rounded-lg transition-colors uppercase">
+                          ✏️ Editar
                         </button>
-                        <button
-                          type="button" onClick={handleGuardarCambiosFinca}
-                          className="bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-5xs font-black px-3 py-2 rounded-xl transition-all uppercase tracking-wider font-bold shadow-md"
-                        >
-                          💾 Guardar Cambios
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex gap-1.5">
-                        <button
-                          type="button" onClick={() => setEditandoFinca(true)}
-                          className="bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white text-5xs font-black px-3 py-2 rounded-xl transition-colors"
-                        >
-                          ✏️ Editar Datos
-                        </button>
-                        <button
-                          type="button" onClick={handleEliminarFinca}
-                          className="bg-rose-950/40 border border-rose-900/50 hover:bg-rose-900 text-rose-400 hover:text-white text-5xs font-black px-3 py-2 rounded-xl transition-colors shadow-sm"
-                        >
-                          🗑️ Eliminar Finca
-                        </button>
-                      </div>
+                      )}
+                    </div>
+
+                    {/* Grupo B: Trámites Jurídicos de Asamblea */}
+                    <div className="flex items-center bg-slate-900/60 p-1 rounded-xl border border-slate-900 gap-1">
+                      <button type="button" onClick={() => alert("Pasarela de representación activa")} className="bg-slate-950 text-purple-400 hover:text-purple-300 text-5xs font-black px-2.5 py-1.5 rounded-lg transition-colors uppercase flex items-center gap-1">
+                        👤 Representación
+                      </button>
+                      
+                      <button type="button" onClick={() => alert("Enviando convocatoria masiva por WA...")} className="bg-blue-600 hover:bg-blue-500 text-white text-5xs font-black px-2.5 py-1.5 rounded-lg transition-colors uppercase flex items-center gap-1 font-bold shadow-md shadow-blue-600/10">
+                        📞 Convocar WA
+                      </button>
+                    </div>
+
+                    {/* Acción Crítica: Eliminar (Aislado para evitar clics accidentales) */}
+                    {!editandoFinca && (
+                      <button type="button" onClick={handleEliminarFinca} className="bg-rose-950/20 border border-rose-900/40 hover:bg-rose-900 text-rose-400 hover:text-white text-5xs font-black px-2.5 py-1.5 rounded-lg transition-colors">
+                        🗑️
+                      </button>
                     )}
 
-                    <button onClick={() => setMostrarModalDelegar(true)} className="bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 hover:text-white text-5xs font-black px-3 py-2 rounded-xl transition-colors flex items-center gap-1">
-                      <UserPlus size={10} className="text-indigo-400" /> Registrar Representación
-                    </button>
-
-                    <button onClick={handleDispararConvocatoria} className="bg-blue-600/10 hover:bg-blue-600/20 border border-blue-500/30 text-blue-400 text-5xs font-black px-3 py-2 rounded-xl transition-all">
-                      Convocar por WA
-                    </button>
                   </div>
                 </div>
 
@@ -381,7 +381,6 @@ export default function ClientSelector() {
                 </div>
 
                 {/* TABLA DEL CENSO LEGAL */}
-
                 <CensoPropietarios
                   fincaId={entidadSeleccionada?.id}
                   nombreFinca={entidadSeleccionada?.nombre}

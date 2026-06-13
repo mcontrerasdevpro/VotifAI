@@ -29,6 +29,9 @@ export default function Register() {
   const [nombrePresidente, setNombrePresidente] = useState('');
   const [totalPropiedades, setTotalPropiedades] = useState('');
   const [recargoMora, setRecargoMora] = useState('');
+  const [cpComunidad, setCpComunidad] = useState('');
+  const [ciudadComunidad, setCiudadComunidad] = useState('');
+  const [provinciaComunidad, setProvinciaComunidad] = useState('');
 
   const [titularCuenta, setTitularCuenta] = useState('');
   const [iban, setIban] = useState('');
@@ -38,14 +41,25 @@ export default function Register() {
     if (paso < 3) {
       setPaso(paso + 1);
     } else {
-      const payload = {
+       const payload = {
         tipoOrganizacion,
         nombreEntidad: tipoOrganizacion === 'empresa' ? razonSocial : nombreComunidad,
         email,
         plan: 'trial_15_dias',
         metadatosFiscales: tipoOrganizacion === 'empresa'
           ? { cifEmpresa, direccionEmpresa, administradores, sector, capitalSocial, numAcciones, regimenMayoria }
-          : { nombreAdminFincas, nombreComunidad, cifComunidad, direccionComunidad, nombrePresidente, totalPropiedades, recargoMora },
+          : { 
+              nombreAdminFincas, 
+              nombreComunidad, 
+              cifComunidad, 
+              direccionComunidad, 
+              nombrePresidente, 
+              totalPropiedades, 
+              recargoMora,
+              codigo_postal: cpComunidad,
+              ciudad: ciudadComunidad,
+              provincia: provinciaComunidad
+            },
         banco: { titularCuenta, iban }
       };
 
@@ -322,6 +336,23 @@ export default function Register() {
                 <label className="block text-3xs font-bold text-slate-400 tracking-widest uppercase mb-1.5">Dirección Geográfica de la Finca</label>
                 <input type="text" required placeholder="Ej: Calle de la Gran Vía 12, Madrid" value={direccionComunidad} onChange={(e) => setDireccionComunidad(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 px-4 text-xs text-slate-200 focus:outline-none focus:border-blue-500" />
               </div>
+
+              {/* 🏠 NUEVO BLOQUE: GEOLOCALIZACIÓN COMPLETA REQUERIDA (AMOLDADO A TU DISEÑO) */}
+               <div className="sm:col-span-1">
+                <label className="block text-3xs font-bold text-slate-400 tracking-widest uppercase mb-1.5">Código Postal</label>
+                <input type="text" required placeholder="Ej: 28907" value={cpComunidad} onChange={(e) => setCpComunidad(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 px-4 text-xs text-slate-200 focus:outline-none focus:border-blue-500 font-mono font-bold" />
+              </div>
+              
+              <div className="sm:col-span-1">
+                <label className="block text-3xs font-bold text-slate-400 tracking-widest uppercase mb-1.5">Ciudad / Municipio</label>
+                <input type="text" required placeholder="Ej: Getafe" value={ciudadComunidad} onChange={(e) => setCiudadComunidad(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 px-4 text-xs text-slate-200 focus:outline-none focus:border-blue-500" />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-3xs font-bold text-slate-400 tracking-widest uppercase mb-1.5">Provincia</label>
+                <input type="text" required placeholder="Ej: Madrid" value={provinciaComunidad} onChange={(e) => setProvinciaComunidad(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 px-4 text-xs text-slate-200 focus:outline-none focus:border-blue-500" />
+              </div>
+
             </div>
           )}
 
