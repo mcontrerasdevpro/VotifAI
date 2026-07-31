@@ -29,9 +29,6 @@ export default function Welcome() {
             Acceso Administradores
           </button>
 
-          <div className="text-4xs bg-blue-500/10 text-blue-400 px-3 py-2 rounded-xl border border-blue-500/20 font-bold tracking-wider">
-            # Certificación Legal Automatizada
-          </div>
         </div>
 
       </header>
@@ -52,7 +49,7 @@ export default function Welcome() {
         {/* REJILLA EXPANDIDA A TODA PANTALLA */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
 
-          {/* TARJETA 1: VECINOS (Mucho más espaciosa) */}
+          {/* TARJETA 1: VECINOS */}
           <motion.button
             whileHover={{ scale: 1.01, y: -2 }}
             whileActive={{ scale: 0.99 }}
@@ -79,7 +76,7 @@ export default function Welcome() {
             </div>
           </motion.button>
 
-          {/* TARJETA 2: CORPORATIVO (Mucho más espaciosa) */}
+          {/* TARJETA 2: CORPORATIVO */}
           <motion.button
             whileHover={{ scale: 1.01, y: -2 }}
             whileActive={{ scale: 0.99 }}
@@ -108,7 +105,7 @@ export default function Welcome() {
 
         </div>
 
-        {/* BANNER DE REGISTRO INTEGRADO EN EL ANCHO TOTAL */}
+        {/* BANNER DE REGISTRO INTEGRADO */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -126,6 +123,13 @@ export default function Welcome() {
             Registrar mi Despacho Profesional
           </button>
         </motion.div>
+
+        <div className="w-full text-center pb-6 shrink-0 z-10">
+          <span className="inline-flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-full text-[16px] font-black uppercase tracking-widest text-amber-400 shadow-md animate-pulse">
+            <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-ping"></span>
+            ACTAS AUTOMATIZADAS CON IA Y ENVIO AL INSTANTE
+          </span>
+        </div>
 
       </main>
 
