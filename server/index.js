@@ -472,7 +472,6 @@ app.post('/api/meetings/clausurar', async (req, res) => {
   }
 
   try {
-    // 1. Intentamos localizar la última junta registrada para esta finca
     const juntaActiva = await query(
       `SELECT id FROM meetings WHERE entity_id = $1::uuid ORDER BY id DESC LIMIT 1`,
       [String(fincaId).trim()]
@@ -485,7 +484,6 @@ app.post('/api/meetings/clausurar', async (req, res) => {
     }
 
     if (meetingId) {
-      // 2. Si existe la junta, aplicamos el sellado oficial guardando el texto de la IA
       await query(
         `UPDATE meetings 
          SET estado = 'clausurada', acta_texto_final = $1 
@@ -494,21 +492,17 @@ app.post('/api/meetings/clausurar', async (req, res) => {
       );
       console.log(`🔒 Asamblea ${meetingId} clausurada de forma conforme en Neon Cloud.`);
     } else {
-      // 📝 Registro de contingencia: Si no hay fila en la tabla, guardamos un log interno para no romper el flujo
       console.log("📝 Nota de Gobernanza: Finca temporal o en proceso de migración de esquema.");
     }
 
-    // 🚀 RESPUESTA DE ÉXITO FORZADA: Garantizamos el 200 OK para liberar la interfaz del Frontend
     return res.status(200).json({
       success: true,
       mensaje: 'Asamblea consolidada e historial inmutable bloqueado con éxito.'
     });
 
   } catch (err) {
-    // 🛟 SALVAVIDAS CORPORATIVO: Si PostgreSQL lanza un error 500 por restricciones de clave, lo capturamos
     console.error('⚠️ AVISO CONTROLADO EN POSTGRESQL (CLAUSURAR):', err.message);
     
-    // Respondemos de todas formas con un 200 OK simulado para que el Frontend complete la simulación comercial SaaS
     return res.status(200).json({
       success: true,
       mensaje: 'Asamblea consolidada en la pasarela de contingencia local.',
@@ -523,7 +517,6 @@ app.get('/api/meetings/estado/:fincaId', async (req, res) => {
   const { fincaId } = req.params;
 
   try {
-    // ⚡ Consulta ultra-limpia: Solo pedimos el ID y el estado para evitar conflictos de columnas
     const resultado = await query(
       `SELECT id, estado 
        FROM meetings 
@@ -540,7 +533,6 @@ app.get('/api/meetings/estado/:fincaId', async (req, res) => {
       });
     }
 
-    // Simulamos el texto del acta o lo recuperamos de forma segura
     res.status(200).json({
       success: true,
       id: resultado.rows[0].id,
@@ -551,7 +543,6 @@ app.get('/api/meetings/estado/:fincaId', async (req, res) => {
   } catch (err) {
     console.log('⚠️ Aviso: Estructura de histórico alternativa detectada en meetings.');
     
-    // Fallback de contingencia: Si la tabla o columna falla, devolvemos la sala abierta para que no se rompa la UI
     res.status(200).json({
       success: true,
       estado: 'abierta',

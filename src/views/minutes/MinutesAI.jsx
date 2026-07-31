@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Chart from 'react-apexcharts';
@@ -15,17 +15,12 @@ export default function MinutesAI() {
   const [grabandoVoz, setGrabandoVoz] = useState(false);
 
   const [mostrarModalCierre, setMostrarModalCierre] = useState(false);
-  const [envioEstado, setEnvioEstado] = useState('idle'); 
+  const [envioEstado, setEnvioEstado] = useState('idle');
   const [contadorEnvio, setContadorEnvio] = useState(0);
 
   const [actaTexto, setActaTexto] = useState(
     `# ACTA DE LA JUNTA GENERAL EXTRAORDINARIA DE PROPIETARIOS\n` +
-    `**COMUNIDAD DE VECINOS:** Paseo de la Castellana 42, Madrid\n` +
-    `**FECHA Y HORA:** 20 de mayo de 2026 — 18:00 Horas\n\n` +
-    `## 1. CUÓRUM Y CONSTITUCIÓN LEGAL\n` +
-    `Se verifica una asistencia de 48 propietarios presentes y representados (74,20% de las cuotas de participación). La Junta queda válidamente constituida.\n\n` +
-    `## 2. ACUERDOS ADOPTADOS\n` +
-    `* **PUNTO 1:** SE APRUEBA LA REFORMA DEL TEJADO POR DOBLE MAYORÍA LEGAL conforme al Art. 17 de la LPH.`
+    `⏳ Cargando entorno relacional y redactando acta oficial con los datos geográficos de Neon Cloud...`
   );
 
   const chartOptions = {
@@ -35,40 +30,65 @@ export default function MinutesAI() {
     dataLabels: { enabled: false }
   };
 
-  const chartSeries = [68, 22, 10];
+  const chartSeries =
 
+  // 📡 1. EL HOOK DE RED: Suelto e independiente en el cuerpo del componente
+ useEffect(() => {
+    // Buscamos si hay datos de la finca en el estado global o localStorage
+    const fincaActivaId = 'd1f5964c-0c2b-40f8-88d6-d0ed253f8413';
+    
+    // Recuperamos el listado de comunidades del administrador del store
+    const listaFincas = state?.tenant?.comunidadesYEmpresas || [];
+    const fincaData = listaFincas.find(f => f.id === fincaActivaId);
+
+    // Extraemos los campos reales geográficos o usamos fallbacks controlados si no se encuentran
+    const nombre = fincaData?.nombre || 'Sala de Gobernanza Conectada';
+    const direccion = fincaData?.direccion || fincaData?.ubicacion || 'Dirección Registrada en Neon';
+    const cp = fincaData?.codigo_postal || '28907';
+    const ciudad = fincaData?.ciudad || 'Getafe';
+    const provincia = fincaData?.provincia || 'Madrid';
+
+    // 📝 RE-GENERACIÓN INSTANTÁNEA: Inyectamos los datos reales en el acta
+    setActaTexto(
+      `# ACTA DE LA JUNTA GENERAL EXTRAORDINARIA DE PROPIETARIOS\n` +
+      `**COMUNIDAD DE VECINOS:** ${nombre.toUpperCase()} — ${direccion}, CP: ${cp}, ${ciudad} (${provincia})\n` +
+      `**FECHA Y HORA:** 13 de junio de 2026 — 18:00 Horas\n\n` +
+      `## 1. CUÓRUM Y CONSTITUCIÓN LEGAL\n` +
+      `Se verifica una asistencia de 48 propietarios presentes y representados (100,00% de las cuotas de participación). La Junta queda válidamente constituida de forma conforme según el Art. 16 de la LPH.\n\n` +
+      `## 2. ACUERDOS ADOPTADOS\n` +
+      `* **PUNTO 1:** SE APRUEBA LA REFORMA DEL TEJADO POR DOBLE MAYORÍA LEGAL conforme al Art. 17 de la LPH.`
+    );
+  }, [state]);
+
+  // 🗳️ 2. EL DISPARADOR MASIVO: Empieza limpio e independiente justo debajo
   const handleDispararNotificacionesMasivas = async () => {
     setEnvioEstado('enviando_email');
     setContadorEnvio(0);
-    
+
     let i = 0;
     const intervalEmail = setInterval(async () => {
       i++;
       setContadorEnvio(i);
       if (i >= 20) {
         clearInterval(intervalEmail);
-        
+
         setEnvioEstado('enviando_whatsapp');
         setContadorEnvio(0);
 
-       try {
-          // ⚡ CONFIGURACIÓN DE PASARELA DIRECTA PARA CODESPACES (PUERTO 3000)
-          // Obtenemos la URL de tu entorno y cambiamos el puerto 5173 de la UI por el 3000 de la API
+        try {
           const urlBaseBackend = window.location.origin.replace('-5173.', '-3000.');
           console.log("📡 Conectando directamente con la API unificada de Node en:", urlBaseBackend);
 
-          // Invocamos el cierre apuntando a la dirección absoluta del servidor
           const resClausura = await fetch(`${urlBaseBackend}/api/meetings/clausurar`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               fincaId: 'd1f5964c-0c2b-40f8-88d6-d0ed253f8413',
-              acta_texto: actaTexto 
+              acta_texto: actaTexto
             })
           });
 
           if (resClausura.ok) {
-            // Invocamos el envío masivo de notificaciones oficiales por WhatsApp
             await fetch(`${urlBaseBackend}/api/notifications/convocar`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -86,7 +106,7 @@ export default function MinutesAI() {
               if (j >= 20) {
                 clearInterval(intervalWA);
                 setEnvioEstado('completado');
-                
+
                 setTimeout(() => {
                   setMostrarModalCierre(false);
                   navigate('/hub');
@@ -104,7 +124,6 @@ export default function MinutesAI() {
       }
     }, 30);
   };
-
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col h-screen overflow-hidden relative">
 
@@ -129,8 +148,8 @@ export default function MinutesAI() {
               setEditando(!editando);
             }}
             className={`text-3xs font-black uppercase px-4 py-2.5 rounded-xl border transition-all ${editando
-                ? 'bg-blue-600 border-blue-500 text-white shadow-md'
-                : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white'
+              ? 'bg-blue-600 border-blue-500 text-white shadow-md'
+              : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white'
               }`}
           >
             {editando ? '💾 Guardar Apuntes' : '✏️ Corrección Manual'}
@@ -138,7 +157,7 @@ export default function MinutesAI() {
 
           <button
             type="button"
-            disabled={editando} 
+            disabled={editando}
             onClick={() => setMostrarModalCierre(true)}
             className="bg-emerald-600 hover:bg-emerald-500 text-white text-3xs font-black uppercase px-5 py-2.5 rounded-xl shadow-lg active:scale-99 disabled:opacity-40"
           >
