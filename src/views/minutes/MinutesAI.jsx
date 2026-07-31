@@ -32,23 +32,17 @@ export default function MinutesAI() {
 
   const chartSeries =
 
-  // 📡 1. EL HOOK DE RED: Suelto e independiente en el cuerpo del componente
  useEffect(() => {
-    // Buscamos si hay datos de la finca en el estado global o localStorage
-    const fincaActivaId = 'd1f5964c-0c2b-40f8-88d6-d0ed253f8413';
-    
-    // Recuperamos el listado de comunidades del administrador del store
+    const fincaActivaId = 'd1f5964c-0c2b-40f8-88d6-d0ed253f8413';    
     const listaFincas = state?.tenant?.comunidadesYEmpresas || [];
     const fincaData = listaFincas.find(f => f.id === fincaActivaId);
 
-    // Extraemos los campos reales geográficos o usamos fallbacks controlados si no se encuentran
     const nombre = fincaData?.nombre || 'Sala de Gobernanza Conectada';
     const direccion = fincaData?.direccion || fincaData?.ubicacion || 'Dirección Registrada en Neon';
     const cp = fincaData?.codigo_postal || '28907';
     const ciudad = fincaData?.ciudad || 'Getafe';
     const provincia = fincaData?.provincia || 'Madrid';
 
-    // 📝 RE-GENERACIÓN INSTANTÁNEA: Inyectamos los datos reales en el acta
     setActaTexto(
       `# ACTA DE LA JUNTA GENERAL EXTRAORDINARIA DE PROPIETARIOS\n` +
       `**COMUNIDAD DE VECINOS:** ${nombre.toUpperCase()} — ${direccion}, CP: ${cp}, ${ciudad} (${provincia})\n` +
@@ -60,7 +54,6 @@ export default function MinutesAI() {
     );
   }, [state]);
 
-  // 🗳️ 2. EL DISPARADOR MASIVO: Empieza limpio e independiente justo debajo
   const handleDispararNotificacionesMasivas = async () => {
     setEnvioEstado('enviando_email');
     setContadorEnvio(0);

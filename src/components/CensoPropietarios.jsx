@@ -102,7 +102,6 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
 
     const handleRegistrarPropietarioInicial = async (e) => {
         e.preventDefault();
-        // ⚡ CORRECCIÓN 1: Quitamos altaDni de la validación obligatoria para que no frene la función
         if (!altaNombre || !altaDireccion || !altaCoeficiente) return;
 
         if (!altaTelefono && !altaEmail) {
@@ -115,7 +114,7 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
         const payload = {
             entity_id: fincaId,
             nombre_completo: altaNombre,
-            direccion_postal: altaDireccion, // 🏠 Esto viajará al backend y se registrará en propiedad_detalle
+            direccion_postal: altaDireccion, 
             telefono: altaTelefono || null,
             email: altaEmail || null,
             coeficiente: parseFloat(altaCoeficiente)
@@ -133,11 +132,8 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
             if (res.ok && data.success) {
                 alert("✓ Propietario inscrito correctamente en el censo legal.");
                 setMostrarModalAlta(false);
-                // Limpiamos los estados locales
                 setAltaNombre(''); setAltaDireccion(''); setAltaTelefono(''); setAltaEmail(''); setAltaCoeficiente('5.00');
-                if (typeof setAltaDni === 'function') setAltaDni('');
-                
-                // 🔄 Volvemos a interrogar a Neon Cloud para actualizar el listado lateral en caliente
+                if (typeof setAltaDni === 'function') setAltaDni('');                
                 await consultarCensoNeon(); 
             } else {
                 alert(`❌ Error: ${data.error || 'No se pudo registrar.'}`);

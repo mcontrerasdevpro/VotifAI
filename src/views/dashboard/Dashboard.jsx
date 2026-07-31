@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useVotifaiStore } from '../../store.jsx';
-
-// Importación de submódulos independientes
 import HeaderDashboard from '../../components/HeaderDashboard.jsx';
 import SubNavContexto from '../../components/SubNavContexto.jsx';
 import ColumnaOrdenDia from '../../components/ColumnaOrdenDia.jsx';
@@ -11,19 +9,17 @@ import PanelEscrutinio from '../../components/PanelEscrutinio.jsx';
 import ModalConvocatoria from '../../components/ModalConvocatoria.jsx';
 
 export default function Dashboard() {
-  const { fincaId } = useParams(); // ⚡ Capturamos el UUID real de la URL del navegador
+  const { fincaId } = useParams(); 
   const navigate = useNavigate();
 
-  // Consumo del Reducer del Contexto global
   const { state, dispatch } = useVotifaiStore() || { state: { tenant: null, salaControl: {} } };
   const tenantGlobal = state?.tenant;
   const { jactiva, mercado, puntoActivo } = state?.salaControl || {};
 
-  // Estados locales mínimos unificados y corregidos
   const [mostrarModalConvocatoria, setMostrarModalConvocatoria] = useState(false);
   const [datosAdmin, setDatosAdmin] = useState(null);
   const [fincaSeleccionada, setFincaSeleccionada] = useState(null);
-  const [fincasReales, setFincasReales] = useState([]); // ⚡ CORRECCIÓN: Declaramos el estado que faltaba
+  const [fincasReales, setFincasReales] = useState([]);
   const [cargandoFincas, setCargandoFincas] = useState(true);
 
   const [propietarios, setPropietarios] = useState([]);
@@ -32,7 +28,6 @@ export default function Dashboard() {
   const [propietarioDestinatario, setPropietarioDestinatario] = useState('');
   const [reenviandoPush, setReenviandoPush] = useState(false);
 
-  // 📡 Pasarela de Red: Interroga la API basándose de forma estricta en el ID seleccionado
   useEffect(() => {
     let idRealDeNeon = tenantGlobal?.tenantId || tenantGlobal?.id;
     if (!idRealDeNeon) {
@@ -45,7 +40,6 @@ export default function Dashboard() {
 
     const inicializarSalaJuntas = async () => {
       try {
-        // A. Consultamos el catálogo de fincas del administrador
         const resCat = await fetch(`/api/entities/${idRealDeNeon}`);
         const dataCat = await resCat.json();
 
@@ -54,7 +48,6 @@ export default function Dashboard() {
           const fincaActual = dataCat.fincas.find(f => f.id === fincaId) || dataCat.fincas[0];
           setFincaSeleccionada(fincaActual);
 
-          // B. INTERROGACIÓN LEGAL: Validamos si la junta está abierta o cerrada por el Art. 17 LPH
           const resEstado = await fetch(`/api/meetings/estado/${fincaId}`);
           const dataEstado = await resEstado.json();
 
@@ -68,7 +61,6 @@ export default function Dashboard() {
           }
         }
 
-        // C. Descargamos el censo de propietarios activos para el selector de reenvíos
         const resCenso = await fetch(`/api/propietarios/lista/${fincaId}`);
         const dataCenso = await resCenso.json();
         if (resCenso.ok) {
@@ -118,7 +110,6 @@ export default function Dashboard() {
       setReenviandoPush(false);
     }
   };
-  // Variables calculadas de contexto normativo basadas en la LPH
   const puntosActuales = state?.salaControl?.juntasData?.[mercado || 'comunidad']?.puntos || [];
 
   const datosConvocatoria = fincaSeleccionada ? {
@@ -140,20 +131,15 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col h-screen overflow-hidden relative font-sans antialiased">
 
-      {/* Navegación Superior Institucional */}
       <HeaderDashboard admin={tenantGlobal?.admin || datosAdmin} />
-
-      {/* Barra de Contexto y Acciones de Convocatoria */}
       <SubNavContexto
         setMostrarModalConvocatoria={setMostrarModalConvocatoria}
         dispatch={dispatch}
         mercado={mercado}
       />
 
-      {/* Distribución Panorámica de Control Interactivo */}
       <div className="flex-grow flex flex-col lg:flex-row overflow-hidden p-4 gap-4">
 
-        {/* Columna 1: Agenda y Acordeón Legislativo */}
         <ColumnaOrdenDia
           cargandoFincas={cargandoFincas}
           datosAdmin={datosAdmin}
@@ -166,7 +152,6 @@ export default function Dashboard() {
           dispatch={dispatch}
           state={state}
         />
-        {/* Columna 2: Monitor Central, Reloj y Barómetro Móvil */}
         <ColumnaMonitorCentral
           datos={datosConvocatoria}
           puntoActivo={puntoActivo || 0}
@@ -174,8 +159,6 @@ export default function Dashboard() {
           state={state}
         />
 
-
-        {/* Columna 3: Diarización por IA y Captura Asíncrona */}
         <PanelEscrutinio
           puntoActivo={puntoActivo || 0}
           dispatch={dispatch}
@@ -184,7 +167,6 @@ export default function Dashboard() {
 
       </div>
 
-      {/* Modal Inteligente Condicional */}
       <ModalConvocatoria
         mostrarModalConvocatoria={mostrarModalConvocatoria}
         setMostrarModalConvocatoria={setMostrarModalConvocatoria}
