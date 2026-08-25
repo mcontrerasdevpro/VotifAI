@@ -72,5 +72,5 @@ El entorno opera bajo encriptación de grado bancario para la custodia de los IB
 
 ---
 <div align="center">
-  <p><strong>VotifAI Inc. © 2026 — El Futuro de la Gobernanza Digital Corporativa y Vecinal</strong></p>
+  <p><strong>VotifAI Inc. © 2026 — Sistema de voto electrónico con automatización con IA</strong></p>
 </div>
