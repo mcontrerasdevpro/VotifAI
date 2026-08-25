@@ -9,8 +9,11 @@ import PanelEscrutinio from '../../components/PanelEscrutinio.jsx';
 import ModalConvocatoria from '../../components/ModalConvocatoria.jsx';
 
 export default function Dashboard() {
-  const { fincaId } = useParams(); 
+  const { fincaId, empresaId } = useParams(); 
   const navigate = useNavigate();
+
+  const esEmpresa = !!empresaId;
+  const entidadIdActiva = esEmpresa ? empresaId : fincaId;
 
   const { state, dispatch } = useVotifaiStore() || { state: { tenant: null, salaControl: {} } };
   const tenantGlobal = state?.tenant;
@@ -18,14 +21,13 @@ export default function Dashboard() {
 
   const [mostrarModalConvocatoria, setMostrarModalConvocatoria] = useState(false);
   const [datosAdmin, setDatosAdmin] = useState(null);
-  const [fincaSeleccionada, setFincaSeleccionada] = useState(null);
-  const [fincasReales, setFincasReales] = useState([]);
-  const [cargandoFincas, setCargandoFincas] = useState(true);
-
-  const [propietarios, setPropietarios] = useState([]);
+  const [entidadSeleccionada, setEntidadSeleccionada] = useState(null);
+  const [entidadesReales, setEntidadesReales] = useState([]); 
+  const [cargandoEntidades, setCargandoEntidades] = useState(true);
+  const [censoPersonas, setCensoPersonas] = useState([]);
   const [modoAuditoria, setModoAuditoria] = useState(false);
   const [actaHistoricaTexto, setActaHistoricaTexto] = useState('');
-  const [propietarioDestinatario, setPropietarioDestinatario] = useState('');
+  const [personaDestinataria, setPersonaDestinataria] = useState(''); 
   const [reenviandoPush, setReenviandoPush] = useState(false);
 
   useEffect(() => {
@@ -36,19 +38,21 @@ export default function Dashboard() {
         try { idRealDeNeon = JSON.parse(sesionGuardada)?.tenantId || JSON.parse(sesionGuardada)?.id; } catch (e) { }
       }
     }
-    if (!idRealDeNeon) return;
+    if (!idRealDeNeon || !entidadIdActiva) return;
 
     const inicializarSalaJuntas = async () => {
       try {
         const resCat = await fetch(`/api/entities/${idRealDeNeon}`);
         const dataCat = await resCat.json();
 
-        if (resCat.ok && dataCat.fincas && dataCat.fincas.length > 0) {
-          setFincasReales(dataCat.fincas);
-          const fincaActual = dataCat.fincas.find(f => f.id === fincaId) || dataCat.fincas[0];
-          setFincaSeleccionada(fincaActual);
+        const listaFiltrada = esEmpresa ? (dataCat.empresas || []) : (dataCat.fincas || []);
+        
+        if (resCat.ok && listaFiltrada.length > 0) {
+          setEntidadesReales(listaFiltrada);
+          const actual = listaFiltrada.find(e => e.id === entidadIdActiva) || listaFiltrada[0];
+          setEntidadSeleccionada(actual);
 
-          const resEstado = await fetch(`/api/meetings/estado/${fincaId}`);
+          const resEstado = await fetch(`/api/meetings/estado/${entidadIdActiva}`);
           const dataEstado = await resEstado.json();
 
           if (resEstado.ok && dataEstado.estado === 'clausurada') {
@@ -61,26 +65,30 @@ export default function Dashboard() {
           }
         }
 
-        const resCenso = await fetch(`/api/propietarios/lista/${fincaId}`);
+        const endpointCenso = esEmpresa 
+          ? `/api/socios/lista/${entidadIdActiva}` 
+          : `/api/propietarios/lista/${entidadIdActiva}`;
+
+        const resCenso = await fetch(endpointCenso);
         const dataCenso = await resCenso.json();
         if (resCenso.ok) {
-          setPropietarios(dataCenso.propietarios || []);
+          setCensoPersonas(esEmpresa ? (dataCenso.socios || []) : (dataCenso.propietarios || []));
         }
 
       } catch (err) {
         console.error("Fallo crítico al inicializar la sesión:", err);
       } finally {
-        setCargandoFincas(false);
+        setCargandoEntidades(false);
       }
     };
 
     inicializarSalaJuntas();
-  }, [tenantGlobal, fincaId]);
+  }, [tenantGlobal, entidadIdActiva, esEmpresa]);
 
-   const handleReenviarCopiaActa = async (e) => {
+  const handleReenviarCopiaActa = async (e) => {
     e.preventDefault();
-    if (!propietarioDestinatario || !actaHistoricaTexto) {
-      alert("⚠️ Selecciona un propietario del censo para procesar el despacho.");
+    if (!personaDestinataria || !actaHistoricaTexto) {
+      alert(esEmpresa ? "⚠️ Selecciona un socio del censo para procesar el despacho." : "⚠️ Selecciona un propietario del censo para procesar el despacho.");
       return;
     }
 
@@ -90,8 +98,8 @@ export default function Dashboard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          propietarioId: propietarioDestinatario,
-          nombreFinca: fincaSeleccionada?.nombre || 'Comunidad Activa',
+          propietarioId: personaDestinataria,
+          nombreFinca: entidadSeleccionada?.nombre || (esEmpresa ? 'Sociedad Activa' : 'Comunidad Activa'),
           actaTexto: actaHistoricaTexto
         })
       });
@@ -99,7 +107,7 @@ export default function Dashboard() {
       const resultado = await respuesta.json();
       if (respuesta.ok && resultado.success) {
         alert(`✓ Pasarela Telefónica VotifAI:\n\n${resultado.mensaje}`);
-        setPropietarioDestinatario('');
+        setPersonaDestinataria('');
       } else {
         alert(`❌ Error en el despacho: ${resultado.error || 'No se pudo tramitar.'}`);
       }
@@ -110,20 +118,21 @@ export default function Dashboard() {
       setReenviandoPush(false);
     }
   };
-  const puntosActuales = state?.salaControl?.juntasData?.[mercado || 'comunidad']?.puntos || [];
 
-  const datosConvocatoria = fincaSeleccionada ? {
-    entidad: fincaSeleccionada.nombre,
-    convocatoria: "Junta General Extraordinaria (Neon Cloud)",
+  const puntosActuales = state?.salaControl?.juntasData?.[mercado || (esEmpresa ? 'empresa' : 'comunidad')]?.puntos || [];
+
+  const datosConvocatoria = entidadSeleccionada ? {
+    entidad: entidadSeleccionada.nombre,
+    convocatoria: esEmpresa ? "Asamblea General de Socios (Neon Cloud)" : "Junta General Extraordinaria (Neon Cloud)",
     cuorum: "100%",
-    subCuorum: `Finca con CIF: ${fincaSeleccionada.cif}`,
-    coeficiente: `Dirección: ${fincaSeleccionada.direccion}`,
+    subCuorum: esEmpresa ? `Sociedad con CIF: ${entidadSeleccionada.cif}` : `Finca con CIF: ${entidadSeleccionada.cif}`,
+    coeficiente: esEmpresa ? `Domicilio Social: ${entidadSeleccionada.direccion}` : `Dirección: ${entidadSeleccionada.direccion}`,
     puntos: puntosActuales
   } : {
     entidad: "Cargando entorno...",
-    convocatoria: "Buscando asambleas...",
+    convocatoria: esEmpresa ? "Buscando asambleas..." : "Buscando juntas...",
     cuorum: "0.00%",
-    subCuorum: "Buscando fincas en la nube...",
+    subCuorum: esEmpresa ? "Buscando empresas en la nube..." : "Buscando fincas en la nube...",
     coeficiente: "—",
     puntos: puntosActuales
   };
@@ -131,38 +140,45 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col h-screen overflow-hidden relative font-sans antialiased">
 
-      <HeaderDashboard admin={tenantGlobal?.admin || datosAdmin} />
+      <HeaderDashboard admin={tenantGlobal?.admin || datosAdmin} />      
+      
       <SubNavContexto
         setMostrarModalConvocatoria={setMostrarModalConvocatoria}
         dispatch={dispatch}
         mercado={mercado}
+        esEmpresa={esEmpresa} 
       />
 
       <div className="flex-grow flex flex-col lg:flex-row overflow-hidden p-4 gap-4">
 
         <ColumnaOrdenDia
-          cargandoFincas={cargandoFincas}
+          cargandoFincas={cargandoEntidades}
           datosAdmin={datosAdmin}
           tenantGlobal={tenantGlobal}
-          fincasReales={fincasReales}
-          fincaSeleccionada={fincaSeleccionada}
-          setFincaSeleccionada={setFincaSeleccionada}
+          fincasReales={entidadesReales}
+          fincaSeleccionada={entidadSeleccionada}
+          setFincaSeleccionada={setEntidadSeleccionada}
           datos={datosConvocatoria}
           puntoActivo={puntoActivo || 0}
           dispatch={dispatch}
           state={state}
+          esEmpresa={esEmpresa}
         />
+        
         <ColumnaMonitorCentral
           datos={datosConvocatoria}
           puntoActivo={puntoActivo || 0}
           dispatch={dispatch}
           state={state}
+          esEmpresa={esEmpresa}
+          censo={censoPersonas}
         />
 
         <PanelEscrutinio
           puntoActivo={puntoActivo || 0}
           dispatch={dispatch}
           state={state}
+          esEmpresa={esEmpresa}
         />
 
       </div>
@@ -170,8 +186,9 @@ export default function Dashboard() {
       <ModalConvocatoria
         mostrarModalConvocatoria={mostrarModalConvocatoria}
         setMostrarModalConvocatoria={setMostrarModalConvocatoria}
-        fincaSeleccionada={fincaSeleccionada}
+        fincaSeleccionada={entidadSeleccionada}
         datos={datosConvocatoria}
+        esEmpresa={esEmpresa}
       />
     </div>
   );
