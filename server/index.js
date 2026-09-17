@@ -7,6 +7,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { query } from './db.js';
 import { requireAuth, issueSessionCookie, clearSessionCookie, entityBelongsToTenant, propietarioBelongsToTenant } from './middleware/auth.js';
+import documentosRouter from './routes/documentos.js';
 
 dotenv.config();
 const app = express();
@@ -34,8 +35,12 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express.json());
+// Límite ampliado: documentos y PDFs en base64 superan fácilmente el
+// límite por defecto de Express (100kb) — esto ya afectaba en silencio a
+// la subida de PDF de fincas (/api/entities/upload-pdf).
+app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
+app.use('/api', documentosRouter);
 
 // =========================================================================
 // 🔐 1. ENDPOINT POST: /api/auth/register (Alta Multi-tenant Comercial)
@@ -112,6 +117,7 @@ app.post('/api/auth/login', async (req, res) => {
       [tenantBase.id]
     );
 
+    // eslint-disable-next-line no-unused-vars -- se extrae para excluirlo del objeto que se envía al cliente
     const { password_hash, ...tenantSinHash } = tenantBase;
     const tenantCompleto = {
       ...tenantSinHash,

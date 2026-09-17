@@ -32,7 +32,7 @@ export function requireAuth(req, res, next) {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     req.tenantId = payload.tenantId;
     next();
-  } catch (err) {
+  } catch {
     return res.status(401).json({ error: 'Sesión inválida o expirada.' });
   }
 }
@@ -50,6 +50,21 @@ export async function propietarioBelongsToTenant(propietarioId, tenantId) {
      JOIN entities e ON p.entity_id = e.id
      WHERE p.id = $1::uuid AND e.tenant_id = $2`,
     [String(propietarioId).trim(), tenantId]
+  );
+  return resultado.rows.length > 0;
+}
+
+// Helper genérico para cualquier tabla con columna entity_id (documentos,
+// comunicados, y los módulos de negocio que se vayan añadiendo). `tabla`
+// nunca viene de input de usuario, siempre se pasa como literal desde el
+// código de las rutas, así que interpolarla en el SQL es seguro.
+export async function filaBelongsToTenant(tabla, filaId, tenantId) {
+  if (!filaId || !tenantId) return false;
+  const resultado = await query(
+    `SELECT f.id FROM ${tabla} f
+     JOIN entities e ON f.entity_id = e.id
+     WHERE f.id = $1::uuid AND e.tenant_id = $2`,
+    [String(filaId).trim(), tenantId]
   );
   return resultado.rows.length > 0;
 }
