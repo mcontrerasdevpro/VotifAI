@@ -407,6 +407,18 @@ export default function ClientSelector() {
                 </span>
               </div>
             </div>
+          ) : !cargandoFincas && comunidadesReales.length === 0 ? (
+            <div className="flex flex-col items-center justify-center text-center h-full text-slate-500 p-6">
+              <Building2 size={32} className="text-slate-700" />
+              <h3 className="text-3xs font-black uppercase text-slate-400 mt-2 tracking-widest">Aún no tienes ninguna finca</h3>
+              <p className="text-5xs text-slate-600 mt-1 max-w-[220px]">Da de alta tu primera comunidad o empresa para empezar a gestionarla.</p>
+              <button
+                onClick={() => navigate('/alta-finca')}
+                className="mt-4 bg-blue-600 hover:bg-blue-500 transition-colors text-white text-4xs font-bold px-4 py-2.5 rounded-xl shadow-md uppercase tracking-wider"
+              >
+                Dar de Alta Nueva Finca
+              </button>
+            </div>
           ) : (
             <div className="flex flex-col items-center justify-center text-center h-full text-slate-500 p-6">
               <Building2 size={32} className="text-slate-700 animate-pulse" />

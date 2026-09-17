@@ -61,7 +61,7 @@ export default function Login() {
             plan: resultado.tenant.plan_suscripcion || resultado.tenant.plan || 'trial_15_dias',
             
             admin: {
-              nombre: resultado.tenant.admin_nombre || resultado.tenant.adminNombre || resultado.tenant.nombre || "Admin General",
+              nombre: resultado.tenant.nombre_responsable || resultado.tenant.admin_nombre || resultado.tenant.adminNombre || resultado.tenant.nombre || "Admin General",
               despacho: resultado.tenant.nombre_entidad || resultado.tenant.nombreEntidad || "Despacho Administrador"
             },
             

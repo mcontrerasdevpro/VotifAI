@@ -33,10 +33,14 @@ app.use(cookieParser());
 // 🔐 1. ENDPOINT POST: /api/auth/register (Alta Multi-tenant Comercial)
 // =========================================================================
 app.post('/api/auth/register', async (req, res) => {
-  const { tipoOrganizacion, nombreEntidad, email, password, plan, metadatosFiscales, banco } = req.body;
+  const { tipoOrganizacion, nombreEntidad, nombreResponsable, cif, telefono, direccion, email, password, plan, banco } = req.body;
 
   if (!email || !password || password.length < 8) {
     return res.status(400).json({ error: 'Se requiere un email y una contraseña de al menos 8 caracteres.' });
+  }
+
+  if (!nombreEntidad) {
+    return res.status(400).json({ error: 'El nombre del despacho profesional es obligatorio.' });
   }
 
   try {
@@ -48,35 +52,21 @@ app.post('/api/auth/register', async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 10);
 
     const nuevoTenant = await query(
-      `INSERT INTO tenants (nombre_entidad, email_maestro, password_hash, tipo_organizacion, plan_suscripcion, iban_facturacion, titular_cuenta)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, nombre_entidad, email_maestro, tipo_organizacion, plan_suscripcion`,
-      [nombreEntidad, email, passwordHash, tipoOrganizacion, plan || 'trial_15_dias', banco?.iban || 'ES0000', banco?.titularCuenta || 'Sin titular']
-    );
-
-    const tenantIdReal = String(nuevoTenant.rows[0].id).trim();
-    const nuevaFinca = await query(
-      `INSERT INTO entities (tenant_id, nombre, cif, direccion, metadatos_legales, tipo)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, nombre, cif, direccion, tipo`,
+      `INSERT INTO tenants (nombre_entidad, email_maestro, password_hash, tipo_organizacion, plan_suscripcion, iban_facturacion, titular_cuenta, cif, telefono, direccion, nombre_responsable)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       RETURNING id, nombre_entidad, email_maestro, tipo_organizacion, plan_suscripcion, cif, telefono, direccion, nombre_responsable`,
       [
-        tenantIdReal,
-        tipoOrganizacion === 'administrador' ? `C.P. ${nombreEntidad}` : nombreEntidad,
-        metadatosFiscales?.cifComunidad || metadatosFiscales?.cifEmpresa || '00000000X',
-        metadatosFiscales?.direccionComunidad || metadatosFiscales?.direccionEmpresa || 'Sede Principal',
-        JSON.stringify(metadatosFiscales),
-        tipoOrganizacion === 'empresa' ? 'empresa' : 'comunidad'
+        nombreEntidad, email, passwordHash, tipoOrganizacion, plan || 'trial_15_dias',
+        banco?.iban || 'ES0000', banco?.titularCuenta || 'Sin titular',
+        cif || null, telefono || null, direccion || null, nombreResponsable || null
       ]
     );
-
-    const inquilinoCreado = {
-      ...nuevoTenant.rows[0],
-      comunidadesYEmpresas: nuevaFinca.rows
-    };
 
     issueSessionCookie(res, nuevoTenant.rows[0]);
 
     res.status(201).json({
-      mensaje: 'Organización creada con éxito en la nube.',
-      tenant: inquilinoCreado 
+      mensaje: 'Despacho profesional registrado con éxito en la nube.',
+      tenant: { ...nuevoTenant.rows[0], comunidadesYEmpresas: [] }
     });
 
    } catch (err) {
@@ -93,7 +83,7 @@ app.post('/api/auth/login', async (req, res) => {
 
   try {
     const resultado = await query(
-      'SELECT id, nombre_entidad, email_maestro, password_hash, tipo_organizacion, plan_suscripcion FROM tenants WHERE email_maestro = $1',
+      'SELECT id, nombre_entidad, email_maestro, password_hash, tipo_organizacion, plan_suscripcion, cif, telefono, direccion, nombre_responsable FROM tenants WHERE email_maestro = $1',
       [email]
     );
 

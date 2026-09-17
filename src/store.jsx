@@ -54,7 +54,7 @@ function votifaiReducer(state, action) {
         tipoOrganizacion: datosServidor.tipo_organizacion || datosServidor.tipoOrganizacion,
         plan: datosServidor.plan_suscripcion || datosServidor.plan || 'trial_15_dias',
         admin: {
-          nombre: datosServidor.admin_nombre || datosServidor.adminNombre || datosServidor.nombre || "Admin General",
+          nombre: datosServidor.nombre_responsable || datosServidor.admin_nombre || datosServidor.adminNombre || datosServidor.nombre || "Admin General",
           despacho: datosServidor.nombre_entidad || datosServidor.nombreEntidad || "Despacho Administrador"
         },
         comunidadesYEmpresas: datosServidor.comunidadesYEmpresas || []
