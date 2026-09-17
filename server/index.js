@@ -10,6 +10,7 @@ import { requireAuth, issueSessionCookie, clearSessionCookie, entityBelongsToTen
 import documentosRouter from './routes/documentos.js';
 import cuotasRouter from './routes/cuotas.js';
 import incidenciasRouter from './routes/incidencias.js';
+import reservasRouter from './routes/reservas.js';
 
 dotenv.config();
 const app = express();
@@ -45,6 +46,7 @@ app.use(cookieParser());
 app.use('/api', documentosRouter);
 app.use('/api', cuotasRouter);
 app.use('/api', incidenciasRouter);
+app.use('/api', reservasRouter);
 
 // =========================================================================
 // 🔐 1. ENDPOINT POST: /api/auth/register (Alta Multi-tenant Comercial)
