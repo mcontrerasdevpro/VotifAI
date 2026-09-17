@@ -1,0 +1,216 @@
+import React, { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useVotifaiStore } from '../../store.jsx';
+import { ArrowLeft, ShieldCheck, KeyRound, User, Home, Building, Mail, Lock, AlertCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+export default function Login() {
+  const { perfil } = useParams();
+  const navigate = useNavigate();
+  const { dispatch } = useVotifaiStore() || { dispatch: () => { } };
+  const esComunidad = perfil === 'comunidad';
+
+  const [cargando, setCargando] = useState(false);
+  const [errorMensaje, setErrorMensaje] = useState('');
+
+  const [codigoJunta, setCodigoJunta] = useState('');
+  const [nombreVecino, setNombreVecino] = useState('');
+  const [pisoPuerta, setPisoPuerta] = useState('');
+
+  const [cifEmpresa, setCifEmpresa] = useState('');
+  const [emailSocio, setEmailSocio] = useState('');
+  const [password, setPassword] = useState('');
+
+   const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErrorMensaje('');
+
+    if (esComunidad) {      
+      console.log("Datos Vecino:", { codigoJunta, nombreVecino, pisoPuerta });
+      navigate('/voto-vecino');
+    } else {    
+      setCargando(true);
+
+      const payload = {
+        email: emailSocio,
+        password: password
+      };
+
+      try {
+        const respuesta = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const resultado = await respuesta.json();
+
+        if (!respuesta.ok) {
+          setErrorMensaje(resultado.error || 'Credenciales de acceso incorrectas.');
+          setCargando(false);
+          return;
+        }
+
+        if (resultado.tenant) {
+          const nuevoTenantCaché = {
+            tenantId: resultado.tenant.id || resultado.tenant.tenantId,
+            nombreEntidad: resultado.tenant.nombre_entidad || resultado.tenant.nombreEntidad || "Despacho Profesional",
+            email: resultado.tenant.email_maestro || resultado.tenant.email || emailSocio,
+            tipoOrganizacion: resultado.tenant.tipo_organizacion || resultado.tenant.tipoOrganizacion || 'administrador',
+            plan: resultado.tenant.plan_suscripcion || resultado.tenant.plan || 'trial_15_dias',
+            
+            admin: {
+              nombre: resultado.tenant.admin_nombre || resultado.tenant.adminNombre || resultado.tenant.nombre || "Admin General",
+              despacho: resultado.tenant.nombre_entidad || resultado.tenant.nombreEntidad || "Despacho Administrador"
+            },
+            
+            comunidadesYEmpresas: resultado.tenant.comunidadesYEmpresas || []
+          };
+
+          localStorage.setItem('votifai_tenant', JSON.stringify(nuevoTenantCaché));
+          
+          localStorage.setItem('tenantId', resultado.tenant.id);
+        }
+
+        dispatch({
+          type: 'REGISTRAR_ORGANIZACION',
+          payload: resultado.tenant
+        });
+
+        navigate('/hub');
+
+      } catch (error) {
+        console.error('Error de red en pasarela de acceso:', error);
+        setErrorMensaje('No se pudo establecer comunicación con el servidor central de VotifAI.');
+        setCargando(false);
+      }
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-900 flex flex-col justify-center items-center p-4 antialiased relative">
+
+      <button
+        onClick={() => navigate('/')}
+        className="absolute top-6 left-6 flex items-center gap-2 text-xs text-slate-400 hover:text-white font-bold transition-colors bg-slate-950 px-4 py-2 rounded-xl border border-slate-800"
+      >
+        <ArrowLeft size={14} /> Volver
+      </button>
+
+      <div className="w-full max-w-md bg-slate-950 rounded-3xl shadow-2xl overflow-hidden border border-slate-800/60">
+
+        <div className="p-6 text-center border-b border-slate-900 bg-slate-950">
+          <div className="flex justify-center items-center gap-2 mb-1">
+            <ShieldCheck size={24} className="text-blue-500" />
+            <span className="text-xl font-black text-white">Votif<span className="text-blue-500">AI</span></span>
+          </div>
+          <p className="text-xs text-slate-400 mt-2">
+            {esComunidad ? 'Acreditación para Junta de Propietarios' : 'Identificación de Accionista o Consejero'}
+          </p>
+        </div>
+
+        {/* ALERTA VISUAL DE CREDENCIALES FALLIDAS */}
+        <AnimatePresence>
+          {errorMensaje && (
+            <motion.div
+              initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }}
+              className="mx-6 mt-4 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-3xs font-bold rounded-xl flex items-center gap-2"
+            >
+              <AlertCircle size={14} className="shrink-0" /> {errorMensaje}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+
+          {esComunidad ? (
+            /* FORMULARIO VECINAL */
+            <div className="space-y-4">
+              <div>
+                <label className="block text-3xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">1. Código de Convocatoria</label>
+                <div className="relative">
+                  <KeyRound className="absolute left-3 top-3.5 text-slate-500" size={16} />
+                  <input
+                    type="text" required placeholder="Ej: VAI-7721-M" value={codigoJunta}
+                    onChange={(e) => setCodigoJunta(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-xs font-mono tracking-widest text-slate-200 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-3xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">2. Nombre y Apellidos</label>
+                <div className="relative">
+                  <User className="absolute left-3 top-3.5 text-slate-500" size={16} />
+                  <input
+                    type="text" required placeholder="Ej: Carmen Ortiz" value={nombreVecino}
+                    onChange={(e) => setNombreVecino(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-3xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">3. Propiedad o Coeficiente</label>
+                <div className="relative">
+                  <Home className="absolute left-3 top-3.5 text-slate-500" size={16} />
+                  <input
+                    type="text" required placeholder="Ej: Piso 2ºA, Garaje 12" value={pisoPuerta}
+                    onChange={(e) => setPisoPuerta(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* FORMULARIO CORPORATIVO CONECTADO A NEON */
+            <div className="space-y-4">
+              <div>
+                <label className="block text-3xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">1. CIF de la Sociedad</label>
+                <div className="relative">
+                  <Building className="absolute left-3 top-3.5 text-slate-500" size={16} />
+                  <input
+                    type="text" required placeholder="Ej: A-82345678" value={cifEmpresa}
+                    onChange={(e) => setCifEmpresa(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-xs font-mono uppercase text-slate-200 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-3xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">2. Correo Corporativo</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3.5 text-slate-500" size={16} />
+                  <input
+                    type="email" required placeholder="socio@empresa.com" value={emailSocio}
+                    onChange={(e) => setEmailSocio(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-3xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">3. Clave de Acceso</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3.5 text-slate-500" size={16} />
+                  <input
+                    type="password" required placeholder="••••••••" value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <button
+            type="submit" disabled={cargando}
+            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider transition-all mt-6 shadow-lg shadow-blue-600/10 active:scale-98 disabled:opacity-50"
+          >
+            {cargando ? 'Interrogando a Neon Cloud...' : 'Verificar Identidad y Acceder'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
