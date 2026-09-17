@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useVotifaiStore } from '../../store.jsx';
-import HeaderDashboard from '../../components/HeaderDashboard.jsx';
 import SubNavContexto from '../../components/SubNavContexto.jsx';
 import ColumnaOrdenDia from '../../components/ColumnaOrdenDia.jsx';
 import ColumnaMonitorCentral from '../../components/ColumnaMonitorCentral.jsx';
@@ -138,10 +137,8 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col h-screen overflow-hidden relative font-sans antialiased">
+    <div className="h-full bg-slate-950 text-slate-100 flex flex-col overflow-hidden relative font-sans antialiased">
 
-      <HeaderDashboard admin={tenantGlobal?.admin || datosAdmin} />      
-      
       <SubNavContexto
         setMostrarModalConvocatoria={setMostrarModalConvocatoria}
         dispatch={dispatch}

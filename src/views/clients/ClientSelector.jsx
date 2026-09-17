@@ -282,10 +282,13 @@ export default function ClientSelector() {
                   <div className="pt-2 border-t border-slate-900 flex justify-between items-center text-4xs">
                     <span className="text-amber-400 font-bold">{entidad.estado}</span>
                     <button
-                      onClick={(e) => { e.stopPropagation(); navigate(`/admin/${entidad.id}`); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(entidad.tipo === 'empresa' ? `/admin/empresa/${entidad.id}` : `/admin/${entidad.id}`);
+                      }}
                       className="bg-blue-600 hover:bg-blue-500 transition-colors px-3 py-1.5 rounded-xl text-white text-5xs font-black uppercase tracking-wider shadow-md"
                     >
-                      Entrar a Sala ➔
+                      Gestionar ➔
                     </button>
                   </div>
                 </div>
