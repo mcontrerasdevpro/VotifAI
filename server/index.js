@@ -9,6 +9,7 @@ import { query } from './db.js';
 import { requireAuth, issueSessionCookie, clearSessionCookie, entityBelongsToTenant, propietarioBelongsToTenant } from './middleware/auth.js';
 import documentosRouter from './routes/documentos.js';
 import cuotasRouter from './routes/cuotas.js';
+import incidenciasRouter from './routes/incidencias.js';
 
 dotenv.config();
 const app = express();
@@ -43,6 +44,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 app.use('/api', documentosRouter);
 app.use('/api', cuotasRouter);
+app.use('/api', incidenciasRouter);
 
 // =========================================================================
 // 🔐 1. ENDPOINT POST: /api/auth/register (Alta Multi-tenant Comercial)

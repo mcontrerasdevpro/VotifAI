@@ -68,3 +68,15 @@ export async function filaBelongsToTenant(tabla, filaId, tenantId) {
   );
   return resultado.rows.length > 0;
 }
+
+// Igual que filaBelongsToTenant, pero para tablas que cuelgan directamente
+// del tenant (columna tenant_id, sin pasar por entities) — es el caso de
+// proveedores, que se comparten entre todas las fincas del mismo despacho.
+export async function filaBelongsToTenantDirecto(tabla, filaId, tenantId) {
+  if (!filaId || !tenantId) return false;
+  const resultado = await query(
+    `SELECT id FROM ${tabla} WHERE id = $1::uuid AND tenant_id = $2`,
+    [String(filaId).trim(), tenantId]
+  );
+  return resultado.rows.length > 0;
+}
