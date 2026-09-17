@@ -7,11 +7,9 @@ import { useVotifaiStore } from '../store.jsx';
 export default function AltaEmpresa() {
   const navigate = useNavigate();
   
-  // Extraemos el dispatch y el tenantIdActual de tu store (corrigiendo la variable global que faltaba)
   const store = useVotifaiStore();
   const dispatch = store?.dispatch || (() => {});
-  const tenantIdActual = store?.tenantIdActual || 'default_tenant'; 
-  
+
   // Estados optimizados para el entorno corporativo empresarial
   const [nombre, setNombre] = useState(''); // Razón Social
   const [cif, setCif] = useState('');
@@ -23,22 +21,23 @@ export default function AltaEmpresa() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!nombre || !cif || !tenantIdActual) return;
+    if (!nombre || !cif) return;
 
     setProcesando(true);
 
     // Payload limpio adaptado a los requerimientos de la tabla de empresas
     const payload = {
-      tenant_id: tenantIdActual,
       nombre: nombre,
       cif: cif.toUpperCase(),
-      direccion: ubicacion || 'Domicilio Social Registrado'
+      direccion: ubicacion || 'Domicilio Social Registrado',
+      tipo: 'empresa'
     };
 
     try {
       const respuesta = await fetch('/api/entities/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(payload)
       });
 

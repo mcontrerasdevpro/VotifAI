@@ -53,16 +53,17 @@ app.post('/api/auth/register', async (req, res) => {
       [nombreEntidad, email, passwordHash, tipoOrganizacion, plan || 'trial_15_dias', banco?.iban || 'ES0000', banco?.titularCuenta || 'Sin titular']
     );
 
-    const tenantIdReal = String(nuevoTenant.rows[0].id).trim();   
+    const tenantIdReal = String(nuevoTenant.rows[0].id).trim();
     const nuevaFinca = await query(
-      `INSERT INTO entities (tenant_id, nombre, cif, direccion, metadatos_legales) 
-       VALUES ($1, $2, $3, $4, $5) RETURNING id, nombre, cif, direccion`,
+      `INSERT INTO entities (tenant_id, nombre, cif, direccion, metadatos_legales, tipo)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, nombre, cif, direccion, tipo`,
       [
         tenantIdReal,
         tipoOrganizacion === 'administrador' ? `C.P. ${nombreEntidad}` : nombreEntidad,
         metadatosFiscales?.cifComunidad || metadatosFiscales?.cifEmpresa || '00000000X',
         metadatosFiscales?.direccionComunidad || metadatosFiscales?.direccionEmpresa || 'Sede Principal',
-        JSON.stringify(metadatosFiscales)
+        JSON.stringify(metadatosFiscales),
+        tipoOrganizacion === 'empresa' ? 'empresa' : 'comunidad'
       ]
     );
 
@@ -109,7 +110,7 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     const fincasResultado = await query(
-      'SELECT id, nombre, cif, direccion FROM entities WHERE tenant_id = $1',
+      'SELECT id, nombre, cif, direccion, tipo FROM entities WHERE tenant_id = $1',
       [tenantBase.id]
     );
 
@@ -152,7 +153,7 @@ app.get('/api/entities/:tenantId', requireAuth, async (req, res) => {
     );
 
     const fincasResultado = await query(
-      'SELECT id, nombre, cif, direccion, creado_en FROM entities WHERE tenant_id = $1 ORDER BY creado_en DESC',
+      'SELECT id, nombre, cif, direccion, tipo, creado_en FROM entities WHERE tenant_id = $1 ORDER BY creado_en DESC',
       [tenantId]
     );
 
@@ -195,22 +196,25 @@ if (process.env.NODE_ENV === 'production') {
 // 🏢 4. ENDPOINT POST: /api/entities/create (Persistencia Real de Fincas)
 // =========================================================================
 app.post('/api/entities/create', requireAuth, async (req, res) => {
-  const { nombre, cif, direccion, metadatos_legales } = req.body;
+  const { nombre, cif, direccion, metadatos_legales, tipo } = req.body;
   if (!nombre) {
     return res.status(400).json({ error: 'El Nombre de la finca es obligatorio.' });
   }
 
+  const tipoNormalizado = tipo === 'empresa' ? 'empresa' : 'comunidad';
+
   try {
     const nuevaEntidad = await query(
-      `INSERT INTO entities (tenant_id, nombre, cif, direccion, metadatos_legales)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, nombre, cif, direccion, creado_en`,
+      `INSERT INTO entities (tenant_id, nombre, cif, direccion, metadatos_legales, tipo)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id, nombre, cif, direccion, tipo, creado_en`,
       [
         req.tenantId,
-        nombre, 
-        cif || '00000000X', 
-        direccion || 'Sede Local', 
-        JSON.stringify(metadatos_legales || {})
+        nombre,
+        cif || '00000000X',
+        direccion || 'Sede Local',
+        JSON.stringify(metadatos_legales || {}),
+        tipoNormalizado
       ]
     );
 
@@ -222,35 +226,6 @@ app.post('/api/entities/create', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('Error crítico al insertar finca en Neon:', err.message);
     res.status(500).json({ error: 'Error interno de red al guardar la finca en la nube.' });
-  }
-});
-
-app.delete('/api/entities/delete/:id', requireAuth, async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    if (!(await entityBelongsToTenant(id, req.tenantId))) {
-      return res.status(403).json({ success: false, error: 'No autorizado para eliminar esta entidad.' });
-    }
-
-    console.log(`\n🧹 [Neon Cloud] Iniciando proceso de purga total para la entidad ID: ${id}`);
-
-    await query('DELETE FROM propietarios WHERE finca_id = $1 OR id = $1', [id]);
-    await query('DELETE FROM socios WHERE empresa_id = $1 OR id = $1', [id]);
-    await query('DELETE FROM meetings WHERE entidad_id = $1', [id]);
-        
-    const sqlBorrarEntidad = 'DELETE FROM entities WHERE id = $1';
-    const result = await query(sqlBorrarEntidad, [id]);
-
-    if (result.rowCount > 0) {
-      console.log(`✅ [Neon Cloud] Entidad ${id} y todas sus dependencias purgadas con éxito.`);
-      res.status(200).json({ success: true, message: 'Entidad purgada correctamente' });
-    } else {
-      res.status(404).json({ success: false, error: 'La entidad solicitada no se encuentra registrada en Neon Cloud' });
-    }
-  } catch (err) {
-    console.error("❌ Fallo crítico durante la purga relacional de PostgreSQL:", err);
-    res.status(500).json({ success: false, error: `Error en la base de datos: ${err.message}` });
   }
 });
 
@@ -457,41 +432,17 @@ app.post('/api/propietarios/cambio-titular', requireAuth, async (req, res) => {
 });
 
 // =========================================================================
-// 🧹 ENDPOINT DELETE: /api/entities/delete/:id (REESCRITO Y CORREGIDO TOTALMENTE)
+// 🗑️ 9B. ENDPOINT DELETE: /api/entities/delete/:id (Purga en cascada transaccional)
 // =========================================================================
-app.delete('/api/entities/delete/:id', async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    console.log(`\n🧹 [Neon Cloud] Ejecutando purga integral para la entidad ID: ${id}`);
-  
-    await query('DELETE FROM propietarios WHERE entity_id = $1 OR finca_id = $1', [id]);
-    await query('DELETE FROM socios WHERE empresa_id = $1', [id]);
-    await query('DELETE FROM meetings WHERE entidad_id = $1', [id]);
-
-    const sqlBorrarEntidad = 'DELETE FROM entities WHERE id = $1';
-    const result = await query(sqlBorrarEntidad, [id]);
-
-    if (result.rowCount > 0) {
-      console.log(`✅ [Neon Cloud] Entidad ${id} y sus censos dependientes eliminados.`);
-      res.status(200).json({ success: true, message: 'Entidad purgada correctamente' });
-    } else {
-      res.status(404).json({ success: false, error: 'La entidad especificada no existe en la base de datos.' });
-    }
-  } catch (err) {
-    console.error("❌ Fallo crítico en el proceso de purga de PostgreSQL:", err.message);
-    res.status(500).json({ success: false, error: `Fallo en el servidor: ${err.message}` });
-  }
-});
-
-// =========================================================================
-// 🗑️ 10. ENDPOINT DELETE: /api/entities/delete/:id (Purga Real Híbrida en Cascada Manual)
-// =========================================================================
-app.delete('/api/entities/delete/:id', async (req, res) => {
+app.delete('/api/entities/delete/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
   const entityIdClean = String(id).trim();
 
   try {
+    if (!(await entityBelongsToTenant(entityIdClean, req.tenantId))) {
+      return res.status(403).json({ success: false, error: 'No autorizado para eliminar esta entidad.' });
+    }
+
     console.log(`\n🧹 [Neon Cloud] Ejecutando purga integral para la entidad ID: ${entityIdClean}`);
 
     // Iniciamos una transacción para asegurar la consistencia absoluta de los datos

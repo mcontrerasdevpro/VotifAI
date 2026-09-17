@@ -19,21 +19,22 @@ export default function AltaFinca() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!nombre || !cif || !tenantIdActual) return;
+    if (!nombre || !cif) return;
 
     setProcesando(true);
 
     const payload = {
-      tenant_id: tenantIdActual,
       nombre: nombre,
       cif: cif.toUpperCase(),
-      direccion: ubicacion || 'Dirección Registrada de la Finca'
+      direccion: ubicacion || 'Dirección Registrada de la Finca',
+      tipo: framework === 'LPH' ? 'comunidad' : 'empresa'
     };
 
     try {
       const respuesta = await fetch('/api/entities/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(payload)
       });
 

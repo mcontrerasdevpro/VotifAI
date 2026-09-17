@@ -67,6 +67,16 @@ function votifaiReducer(state, action) {
       localStorage.removeItem('votifai_tenant');
       return { ...state, tenant: null, salaControl: initialState.salaControl };
 
+    case 'AÑADIR_ENTIDAD': {
+      if (!state.tenant) return state;
+      const tenantActualizado = {
+        ...state.tenant,
+        comunidadesYEmpresas: [...(state.tenant.comunidadesYEmpresas || []), action.payload]
+      };
+      localStorage.setItem('votifai_tenant', JSON.stringify(tenantActualizado));
+      return { ...state, tenant: tenantActualizado };
+    }
+
     case 'SET_SALA_STATE':
       return {
         ...state,
