@@ -12,10 +12,10 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     allowedHosts: true,
-    // 🔗 ENLACE AL BACKEND: Redirecciona todas las peticiones /api al puerto 3000
+    // 🔗 ENLACE AL BACKEND: Redirecciona todas las peticiones /api al servidor Express
     proxy: {
       '/api': {
-        target: 'https://redesigned-garbanzo-q75qxq4xjp7jh9xq-3000.app.github.dev',
+        target: process.env.VITE_API_URL || 'http://localhost:3000',
         changeOrigin: true,
         secure: false,
       }

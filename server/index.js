@@ -1,9 +1,12 @@
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { query } from './db.js';
+import { requireAuth, issueSessionCookie, clearSessionCookie, entityBelongsToTenant, propietarioBelongsToTenant } from './middleware/auth.js';
 
 dotenv.config();
 const app = express();
@@ -12,18 +15,29 @@ const PORT = process.env.PORT || 3000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173').split(',').map(o => o.trim());
+
 app.use(cors({
-  origin: '*',
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error('Origen no permitido por la política CORS.'));
+  },
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
+app.use(cookieParser());
 
 // =========================================================================
 // 🔐 1. ENDPOINT POST: /api/auth/register (Alta Multi-tenant Comercial)
 // =========================================================================
 app.post('/api/auth/register', async (req, res) => {
-  const { tipoOrganizacion, nombreEntidad, email, plan, metadatosFiscales, banco } = req.body;
+  const { tipoOrganizacion, nombreEntidad, email, password, plan, metadatosFiscales, banco } = req.body;
+
+  if (!email || !password || password.length < 8) {
+    return res.status(400).json({ error: 'Se requiere un email y una contraseña de al menos 8 caracteres.' });
+  }
 
   try {
     const existeUser = await query('SELECT * FROM tenants WHERE email_maestro = $1', [email]);
@@ -31,10 +45,12 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ error: 'El correo electrónico ya está registrado.' });
     }
 
+    const passwordHash = await bcrypt.hash(password, 10);
+
     const nuevoTenant = await query(
-      `INSERT INTO tenants (nombre_entidad, email_maestro, password_hash, tipo_organizacion, plan_suscripcion, iban_facturacion, titular_cuenta) 
+      `INSERT INTO tenants (nombre_entidad, email_maestro, password_hash, tipo_organizacion, plan_suscripcion, iban_facturacion, titular_cuenta)
        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, nombre_entidad, email_maestro, tipo_organizacion, plan_suscripcion`,
-      [nombreEntidad, email, 'password_hash_seguro', tipoOrganizacion, plan || 'trial_15_dias', banco?.iban || 'ES0000', banco?.titularCuenta || 'Sin titular']
+      [nombreEntidad, email, passwordHash, tipoOrganizacion, plan || 'trial_15_dias', banco?.iban || 'ES0000', banco?.titularCuenta || 'Sin titular']
     );
 
     const tenantIdReal = String(nuevoTenant.rows[0].id).trim();   
@@ -52,8 +68,10 @@ app.post('/api/auth/register', async (req, res) => {
 
     const inquilinoCreado = {
       ...nuevoTenant.rows[0],
-      comunidadesYEmpresas: nuevaFinca.rows 
+      comunidadesYEmpresas: nuevaFinca.rows
     };
+
+    issueSessionCookie(res, nuevoTenant.rows[0]);
 
     res.status(201).json({
       mensaje: 'Organización creada con éxito en la nube.',
@@ -84,9 +102,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     const tenantBase = resultado.rows[0];
 
-    const esPasswordValido = password === tenantBase.password_hash ||
-      password === '26035618' ||
-      tenantBase.password_hash === 'password_hash_seguro';
+    const esPasswordValido = await bcrypt.compare(password || '', tenantBase.password_hash);
 
     if (!esPasswordValido) {
       return res.status(401).json({ error: 'La contraseña introducida es incorrecta.' });
@@ -97,10 +113,13 @@ app.post('/api/auth/login', async (req, res) => {
       [tenantBase.id]
     );
 
+    const { password_hash, ...tenantSinHash } = tenantBase;
     const tenantCompleto = {
-      ...tenantBase,
+      ...tenantSinHash,
       comunidadesYEmpresas: fincasResultado.rows
     };
+
+    issueSessionCookie(res, tenantBase);
 
     res.status(200).json({
       mensaje: 'Acceso autorizado con éxito.',
@@ -114,10 +133,18 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // =========================================================================
+// 🚪 ENDPOINT POST: /api/auth/logout
+// =========================================================================
+app.post('/api/auth/logout', (req, res) => {
+  clearSessionCookie(res);
+  res.status(200).json({ success: true, mensaje: 'Sesión cerrada correctamente.' });
+});
+
+// =========================================================================
 // 📁 3. ENDPOINT GET: /api/entities/:tenantId (Catálogo Real + Datos Admin)
 // =========================================================================
-app.get('/api/entities/:tenantId', async (req, res) => {
-  const { tenantId } = req.params;
+app.get('/api/entities/:tenantId', requireAuth, async (req, res) => {
+  const tenantId = req.tenantId;
   try {
     const datosAdmin = await query(
       'SELECT id, nombre_entidad, email_maestro, tipo_organizacion, plan_suscripcion FROM tenants WHERE id = $1',
@@ -167,19 +194,19 @@ if (process.env.NODE_ENV === 'production') {
 // =========================================================================
 // 🏢 4. ENDPOINT POST: /api/entities/create (Persistencia Real de Fincas)
 // =========================================================================
-app.post('/api/entities/create', async (req, res) => {
-  const { tenant_id, nombre, cif, direccion, metadatos_legales } = req.body;
-  if (!tenant_id || !nombre) {
-    return res.status(400).json({ error: 'El ID del Administrador y el Nombre de la finca son obligatorios.' });
+app.post('/api/entities/create', requireAuth, async (req, res) => {
+  const { nombre, cif, direccion, metadatos_legales } = req.body;
+  if (!nombre) {
+    return res.status(400).json({ error: 'El Nombre de la finca es obligatorio.' });
   }
 
   try {
     const nuevaEntidad = await query(
-      `INSERT INTO entities (tenant_id, nombre, cif, direccion, metadatos_legales) 
-       VALUES ($1, $2, $3, $4, $5) 
+      `INSERT INTO entities (tenant_id, nombre, cif, direccion, metadatos_legales)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING id, nombre, cif, direccion, creado_en`,
       [
-        String(tenant_id).trim(), 
+        req.tenantId,
         nombre, 
         cif || '00000000X', 
         direccion || 'Sede Local', 
@@ -198,10 +225,14 @@ app.post('/api/entities/create', async (req, res) => {
   }
 });
 
-app.delete('/api/entities/delete/:id', async (req, res) => {
+app.delete('/api/entities/delete/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
 
   try {
+    if (!(await entityBelongsToTenant(id, req.tenantId))) {
+      return res.status(403).json({ success: false, error: 'No autorizado para eliminar esta entidad.' });
+    }
+
     console.log(`\n🧹 [Neon Cloud] Iniciando proceso de purga total para la entidad ID: ${id}`);
 
     await query('DELETE FROM propietarios WHERE finca_id = $1 OR id = $1', [id]);
@@ -226,7 +257,7 @@ app.delete('/api/entities/delete/:id', async (req, res) => {
 // =========================================================================
 // 📲 5. ENDPOINT POST: /api/notifications/convocar (WhatsApp Dispatcher)
 // =========================================================================
-app.post('/api/notifications/convocar', async (req, res) => {
+app.post('/api/notifications/convocar', requireAuth, async (req, res) => {
   const { fincaId, nombreFinca, propietarios } = req.body;
 
   if (!fincaId || !propietarios || propietarios.length === 0) {
@@ -234,6 +265,10 @@ app.post('/api/notifications/convocar', async (req, res) => {
   }
 
   try {
+    if (!(await entityBelongsToTenant(fincaId, req.tenantId))) {
+      return res.status(403).json({ error: 'No autorizado para notificar a esta entidad.' });
+    }
+
     console.log(`\n📲 [WhatsApp API] Iniciando campaña de notificación oficial para: ${nombreFinca}`);
     console.log(`🔒 ID del Expediente: ${fincaId}`);        
     propietarios.forEach((vecino) => {
@@ -255,7 +290,7 @@ app.post('/api/notifications/convocar', async (req, res) => {
 // =========================================================================
 // 📁 6. ENDPOINT PUT: /api/entities/upload-pdf (Almacenamiento de Acta Original)
 // =========================================================================
-app.put('/api/entities/upload-pdf', async (req, res) => {
+app.put('/api/entities/upload-pdf', requireAuth, async (req, res) => {
   const { entityId, pdfBase64 } = req.body;
 
   if (!entityId || !pdfBase64) {
@@ -263,6 +298,10 @@ app.put('/api/entities/upload-pdf', async (req, res) => {
   }
 
   try {
+    if (!(await entityBelongsToTenant(entityId, req.tenantId))) {
+      return res.status(403).json({ error: 'No autorizado para modificar esta entidad.' });
+    }
+
     await query(
       `UPDATE entities 
        SET documento_adjunto = $1 
@@ -284,7 +323,7 @@ app.put('/api/entities/upload-pdf', async (req, res) => {
 // =========================================================================
 // 🏢 7. ENDPOINT PUT: /api/entities/update (Actualización en Caliente de Fincas/Empresas)
 // =========================================================================
-app.put('/api/entities/update', async (req, res) => {
+app.put('/api/entities/update', requireAuth, async (req, res) => {
   const { id, nombre, cif, direccion, presidente, tesorero } = req.body;
 
   if (!id || !nombre) {
@@ -292,6 +331,10 @@ app.put('/api/entities/update', async (req, res) => {
   }
 
   try {
+    if (!(await entityBelongsToTenant(id, req.tenantId))) {
+      return res.status(403).json({ error: 'No autorizado para modificar esta entidad.' });
+    }
+
     const metadatosLegales = { presidente, tesorero };
 
     const resultado = await query(
@@ -317,7 +360,7 @@ app.put('/api/entities/update', async (req, res) => {
 // =========================================================================
 // 👤 8. ENDPOINT POST: /api/propietarios/create (CORREGIDO SIN COLUMNA DNI)
 // =========================================================================
-app.post('/api/propietarios/create', async (req, res) => {
+app.post('/api/propietarios/create', requireAuth, async (req, res) => {
   const { entity_id, nombre_completo, direccion_postal, telefono, email, coeficiente } = req.body;
 
   if (!entity_id || !nombre_completo || !coeficiente) {
@@ -329,6 +372,10 @@ app.post('/api/propietarios/create', async (req, res) => {
   }
 
   try {
+    if (!(await entityBelongsToTenant(entity_id, req.tenantId))) {
+      return res.status(403).json({ error: 'No autorizado para añadir propietarios a esta entidad.' });
+    }
+
     const resultado = await query(
       `INSERT INTO propietarios (entity_id, nombre_completo, propiedad_detalle, telefono, email, coeficiente)
        VALUES ($1, $2, $3, $4, $5, $6)
@@ -357,7 +404,7 @@ app.post('/api/propietarios/create', async (req, res) => {
 // =========================================================================
 // 🔄 9. ENDPOINT POST: /api/propietarios/cambio-titular (TRASPASO CORREGIDO SIN DNI)
 // =========================================================================
-app.post('/api/propietarios/cambio-titular', async (req, res) => {
+app.post('/api/propietarios/cambio-titular', requireAuth, async (req, res) => {
   const { propietario_id, nuevo_nombre, nuevo_telefono, nuevo_email, motivo_cambio, detalles } = req.body;
 
   if (!propietario_id || !nuevo_nombre || !motivo_cambio) {
@@ -366,6 +413,10 @@ app.post('/api/propietarios/cambio-titular', async (req, res) => {
 
   if (!nuevo_telefono && !nuevo_email) {
     return res.status(400).json({ error: 'El nuevo titular debe disponer obligatoriamente de teléfono o email.' });
+  }
+
+  if (!(await propietarioBelongsToTenant(propietario_id, req.tenantId))) {
+    return res.status(403).json({ error: 'No autorizado para modificar este propietario.' });
   }
 
   try {
@@ -487,11 +538,15 @@ app.delete('/api/entities/delete/:id', async (req, res) => {
 // =========================================================================
 // 📊 11. ENDPOINT GET: /api/propietarios/lista/:entityId (CENSO HÍBRIDO BLINDADO)
 // =========================================================================
-app.get('/api/propietarios/lista/:entityId', async (req, res) => {
+app.get('/api/propietarios/lista/:entityId', requireAuth, async (req, res) => {
   const { entityId } = req.params;
   const cleanId = String(entityId).trim();
 
   try {
+    if (!(await entityBelongsToTenant(cleanId, req.tenantId))) {
+      return res.status(403).json({ error: 'No autorizado para consultar el censo de esta entidad.' });
+    }
+
     const censoResultado = await query(
       `SELECT id, nombre_completo, propiedad_detalle, telefono, email, coeficiente, es_moroso 
        FROM propietarios 
@@ -530,11 +585,15 @@ app.get('/api/propietarios/lista/:entityId', async (req, res) => {
 // =========================================================================
 // 🏢 11B. ENDPOINT GET: /api/socios/lista/:entityId (NUEVO: Soporte Censo Corporativo)
 // =========================================================================
-app.get('/api/socios/lista/:entityId', async (req, res) => {
+app.get('/api/socios/lista/:entityId', requireAuth, async (req, res) => {
   const { entityId } = req.params;
   const cleanId = String(entityId).trim();
 
   try {
+    if (!(await entityBelongsToTenant(cleanId, req.tenantId))) {
+      return res.status(403).json({ error: 'No autorizado para consultar el libro de socios de esta entidad.' });
+    }
+
     // Si tus socios se guardan en la tabla "propietarios" de forma unificada, los extraemos mapeando semánticamente
     const sociosResultado = await query(
       `SELECT id, nombre_completo AS nombre, propiedad_detalle AS acciones, telefono, email, coeficiente AS porcentaje 
@@ -557,7 +616,7 @@ app.get('/api/socios/lista/:entityId', async (req, res) => {
 // =========================================================================
 // 🔒 12. ENDPOINT POST: /api/meetings/clausurar (Persistencia de Cierre de Junta/Asamblea)
 // =========================================================================
-app.post('/api/meetings/clausurar', async (req, res) => {
+app.post('/api/meetings/clausurar', requireAuth, async (req, res) => {
   const { fincaId, acta_texto } = req.body;
 
   if (!fincaId || !acta_texto) {
@@ -565,6 +624,10 @@ app.post('/api/meetings/clausurar', async (req, res) => {
   }
 
   try {
+    if (!(await entityBelongsToTenant(fincaId, req.tenantId))) {
+      return res.status(403).json({ error: 'No autorizado para clausurar la asamblea de esta entidad.' });
+    }
+
     const juntaActiva = await query(
       `SELECT id FROM meetings WHERE entity_id = $1::uuid ORDER BY id DESC LIMIT 1`,
       [String(fincaId).trim()]
@@ -607,10 +670,14 @@ app.post('/api/meetings/clausurar', async (req, res) => {
 // =========================================================================
 // 🔍 13. ENDPOINT GET: /api/meetings/estado/:fincaId (Verificación de Cierre Híbrido)
 // =========================================================================
-app.get('/api/meetings/estado/:fincaId', async (req, res) => {
+app.get('/api/meetings/estado/:fincaId', requireAuth, async (req, res) => {
   const { fincaId } = req.params;
 
   try {
+    if (!(await entityBelongsToTenant(fincaId, req.tenantId))) {
+      return res.status(403).json({ error: 'No autorizado para consultar el estado de esta entidad.' });
+    }
+
     const resultado = await query(
       `SELECT id, estado, acta_texto_final 
        FROM meetings 
@@ -648,11 +715,15 @@ app.get('/api/meetings/estado/:fincaId', async (req, res) => {
 // =========================================================================
 // 📲 14. ENDPOINT POST: /api/notifications/reenviar-individual (WhatsApp Híbrido)
 // =========================================================================
-app.post('/api/notifications/reenviar-individual', async (req, res) => {
+app.post('/api/notifications/reenviar-individual', requireAuth, async (req, res) => {
   const { propietarioId, nombreFinca, actaTexto } = req.body;
 
   if (!propietarioId || !actaTexto) {
     return res.status(400).json({ error: 'Faltan parámetros indispensables para realizar el reenvío individual.' });
+  }
+
+  if (!(await propietarioBelongsToTenant(propietarioId, req.tenantId))) {
+    return res.status(403).json({ error: 'No autorizado para notificar a este propietario.' });
   }
 
   try {

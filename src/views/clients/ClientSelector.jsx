@@ -246,7 +246,18 @@ export default function ClientSelector() {
           >
             Dar de Alta Nueva Finca
           </button>
-          <button onClick={() => { dispatch({ type: 'CERRAR_SESION' }); navigate('/'); }} className="p-2.5 bg-slate-900 border border-slate-800 text-slate-400 rounded-xl hover:text-white transition-colors"><LogOut size={14} /></button>
+          <button
+            onClick={async () => {
+              try {
+                await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+              } catch (err) {
+                console.error('Fallo al cerrar sesión en el servidor:', err);
+              }
+              dispatch({ type: 'CERRAR_SESION' });
+              navigate('/');
+            }}
+            className="p-2.5 bg-slate-900 border border-slate-800 text-slate-400 rounded-xl hover:text-white transition-colors"
+          ><LogOut size={14} /></button>
         </div>
       </header>
 

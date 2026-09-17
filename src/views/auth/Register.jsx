@@ -45,6 +45,7 @@ export default function Register() {
         tipoOrganizacion,
         nombreEntidad: tipoOrganizacion === 'empresa' ? razonSocial : nombreComunidad,
         email,
+        password,
         plan: 'trial_15_dias',
         metadatosFiscales: tipoOrganizacion === 'empresa'
           ? { cifEmpresa, direccionEmpresa, administradores, sector, capitalSocial, numAcciones, regimenMayoria }
@@ -67,6 +68,7 @@ export default function Register() {
         const respuesta = await fetch('/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify(payload)
         });
 
