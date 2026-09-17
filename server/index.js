@@ -17,9 +17,17 @@ const __dirname = path.dirname(__filename);
 
 const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173').split(',').map(o => o.trim());
 
+// En desarrollo, vite.config.js expone el frontend en 0.0.0.0:5173 para poder
+// probarlo desde el móvil u otro equipo de la misma red — la IP de origen
+// varía con el DHCP del router, así que en vez de mantener una whitelist
+// fija se acepta cualquier IP de rango privado en el puerto 5173.
+const RANGO_LAN_DEV = /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}):5173$/;
+
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    if (process.env.NODE_ENV !== 'production' && RANGO_LAN_DEV.test(origin)) return callback(null, true);
+    console.error(`🚫 CORS rechazado: origen "${origin}" no está en la whitelist [${allowedOrigins.join(', ')}]. Añádelo a CORS_ORIGIN en server/.env si es de confianza.`);
     callback(new Error('Origen no permitido por la política CORS.'));
   },
   credentials: true,
