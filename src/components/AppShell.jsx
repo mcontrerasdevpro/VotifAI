@@ -1,9 +1,10 @@
 import { NavLink, Outlet, useNavigate, useParams } from 'react-router-dom';
 import { useVotifaiStore } from '../store.jsx';
-import { ShieldCheck, Vote, Wrench, Wallet, FileStack, CalendarClock, ArrowLeft, LogOut } from 'lucide-react';
+import { ShieldCheck, LayoutDashboard, Vote, Wrench, Wallet, FileStack, CalendarClock, ArrowLeft, LogOut } from 'lucide-react';
 
 const MODULOS_COMUNIDAD = [
-  { to: '.', end: true, icon: Vote, label: 'Junta en Vivo' },
+  { to: '.', end: true, icon: LayoutDashboard, label: 'Resumen' },
+  { to: 'junta', icon: Vote, label: 'Junta en Vivo' },
   { to: 'incidencias', icon: Wrench, label: 'Incidencias' },
   { to: 'cuotas', icon: Wallet, label: 'Cuotas' },
   { to: 'documentos', icon: FileStack, label: 'Documentos' },
@@ -11,7 +12,8 @@ const MODULOS_COMUNIDAD = [
 ];
 
 const MODULOS_EMPRESA = [
-  { to: '.', end: true, icon: Vote, label: 'Junta en Vivo' }
+  { to: '.', end: true, icon: LayoutDashboard, label: 'Resumen' },
+  { to: 'junta', icon: Vote, label: 'Junta en Vivo' }
 ];
 
 /**

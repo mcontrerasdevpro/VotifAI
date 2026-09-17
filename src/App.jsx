@@ -11,6 +11,7 @@ import AltaFinca from './components/AltaFinca.jsx';
 import AltaEmpresa from './components/AltaEmpresa.jsx';
 import ProtectedRoute from './components/ProtectedRoute';
 import AppShell from './components/AppShell.jsx';
+import ResumenFinca from './views/resumen/ResumenFinca.jsx';
 import Incidencias from './views/incidencias/Incidencias.jsx';
 import Cuotas from './views/cuotas/Cuotas.jsx';
 import Documentos from './views/documentos/Documentos.jsx';
@@ -34,7 +35,8 @@ function App() {
             <Route path="/alta-empresa" element={<AltaEmpresa />} />
 
             <Route path="/admin/:fincaId" element={<AppShell />}>
-              <Route index element={<Dashboard />} />
+              <Route index element={<ResumenFinca />} />
+              <Route path="junta" element={<Dashboard />} />
               <Route path="incidencias" element={<Incidencias />} />
               <Route path="cuotas" element={<Cuotas />} />
               <Route path="documentos" element={<Documentos />} />
@@ -42,7 +44,8 @@ function App() {
             </Route>
 
             <Route path="/admin/empresa/:empresaId" element={<AppShell />}>
-              <Route index element={<Dashboard />} />
+              <Route index element={<ResumenFinca />} />
+              <Route path="junta" element={<Dashboard />} />
             </Route>
           </Route>
 
