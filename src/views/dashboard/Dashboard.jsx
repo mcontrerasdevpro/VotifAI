@@ -160,6 +160,7 @@ export default function Dashboard() {
         />
 
         <PanelEscrutinio
+          entidadId={entidadIdActiva}
           puntoActivo={puntoActivo || 0}
           dispatch={dispatch}
           state={state}

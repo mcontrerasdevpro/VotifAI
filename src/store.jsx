@@ -15,12 +15,10 @@ const initialState = {
     }
   })(),
   salaControl: {
-    mercado: 'comunidad', 
+    mercado: 'comunidad',
     puntoActivo: 0,
-    escuchandoIA: false,
     tiempoRestante: 60,
     votosRegistrados: 0,
-    transcripcionesIA: [],
     puntosExpandidos: { 0: true },
     juntasData: {
       // 🏘️ ORDEN DEL DÍA POR DEFECTO PARA COMUNIDADES DE VECINOS

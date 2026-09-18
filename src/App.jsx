@@ -18,6 +18,7 @@ import Reservas from './views/reservas/Reservas.jsx';
 import Crm from './views/crm/Crm.jsx';
 import Agenda from './views/agenda/Agenda.jsx';
 import Contabilidad from './views/contabilidad/Contabilidad.jsx';
+import Asistencia from './views/asistencia/Asistencia.jsx';
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
           <Route path="/login/:perfil" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/voto-vecino" element={<VoterScreen tipoUsuario="vecino" />} />
+          <Route path="/asistencia/:entityId" element={<Asistencia />} />
 
           <Route element={<ProtectedRoute />}>
             <Route path="/hub" element={<ClientSelector />} />

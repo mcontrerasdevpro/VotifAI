@@ -14,6 +14,7 @@ import reservasRouter from './routes/reservas.js';
 import crmRouter from './routes/crm.js';
 import agendaRouter from './routes/agenda.js';
 import contabilidadRouter from './routes/contabilidad.js';
+import vozRouter from './routes/voz.js';
 
 dotenv.config();
 const app = express();
@@ -53,6 +54,7 @@ app.use('/api', reservasRouter);
 app.use('/api', crmRouter);
 app.use('/api', agendaRouter);
 app.use('/api', contabilidadRouter);
+app.use('/api', vozRouter);
 
 // =========================================================================
 // 🔐 1. ENDPOINT POST: /api/auth/register (Alta Multi-tenant Comercial)
