@@ -16,6 +16,7 @@ import Incidencias from './views/incidencias/Incidencias.jsx';
 import Cuotas from './views/cuotas/Cuotas.jsx';
 import Documentos from './views/documentos/Documentos.jsx';
 import Reservas from './views/reservas/Reservas.jsx';
+import Crm from './views/crm/Crm.jsx';
 
 function App() {
   return (
@@ -41,11 +42,13 @@ function App() {
               <Route path="cuotas" element={<Cuotas />} />
               <Route path="documentos" element={<Documentos />} />
               <Route path="reservas" element={<Reservas />} />
+              <Route path="crm" element={<Crm />} />
             </Route>
 
             <Route path="/admin/empresa/:empresaId" element={<AppShell />}>
               <Route index element={<ResumenFinca />} />
               <Route path="junta" element={<Dashboard />} />
+              <Route path="crm" element={<Crm />} />
             </Route>
           </Route>
 
