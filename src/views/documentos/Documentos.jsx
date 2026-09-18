@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { FileStack, Megaphone, Plus, Download, Trash2, Pin, Upload } from 'lucide-react';
+import { FileStack, Megaphone, PenSquare, LayoutTemplate, Plus, Download, Trash2, Pin, Upload } from 'lucide-react';
 import Card from '../../components/ui/Card.jsx';
 import Modal from '../../components/ui/Modal.jsx';
 import Field from '../../components/ui/Field.jsx';
@@ -38,16 +38,38 @@ export default function Documentos() {
   const [comCuerpo, setComCuerpo] = useState('');
   const [comFijado, setComFijado] = useState(false);
 
+  const [documentosTexto, setDocumentosTexto] = useState([]);
+  const [plantillas, setPlantillas] = useState([]);
+  const [modalRedactarAbierto, setModalRedactarAbierto] = useState(false);
+  const [guardandoRedactar, setGuardandoRedactar] = useState(false);
+  const [rdId, setRdId] = useState(null);
+  const [rdTitulo, setRdTitulo] = useState('');
+  const [rdPlantillaId, setRdPlantillaId] = useState('');
+  const [rdContenido, setRdContenido] = useState('');
+
+  const [modalPlantillaAbierto, setModalPlantillaAbierto] = useState(false);
+  const [guardandoPlantilla, setGuardandoPlantilla] = useState(false);
+  const [plId, setPlId] = useState(null);
+  const [plNombre, setPlNombre] = useState('');
+  const [plDescripcion, setPlDescripcion] = useState('');
+  const [plContenido, setPlContenido] = useState('');
+
   const refrescar = useCallback(async () => {
     try {
-      const [resDocs, resComs] = await Promise.all([
+      const [resDocs, resComs, resTexto, resPlant] = await Promise.all([
         fetch(`/api/documentos/lista/${entidadId}`, { credentials: 'include' }),
-        fetch(`/api/comunicados/lista/${entidadId}`, { credentials: 'include' })
+        fetch(`/api/comunicados/lista/${entidadId}`, { credentials: 'include' }),
+        fetch(`/api/documentos-editor/lista/${entidadId}`, { credentials: 'include' }),
+        fetch('/api/plantillas/lista', { credentials: 'include' })
       ]);
       const dataDocs = await resDocs.json();
       const dataComs = await resComs.json();
+      const dataTexto = await resTexto.json();
+      const dataPlant = await resPlant.json();
       if (resDocs.ok) setDocumentos(dataDocs.documentos || []);
       if (resComs.ok) setComunicados(dataComs.comunicados || []);
+      if (resTexto.ok) setDocumentosTexto(dataTexto.documentos || []);
+      if (resPlant.ok) setPlantillas(dataPlant.plantillas || []);
     } catch (err) {
       console.error('Fallo al cargar documentos/comunicados:', err);
     }
@@ -176,6 +198,106 @@ export default function Documentos() {
     }
   };
 
+  const abrirNuevoDocumentoTexto = () => {
+    setRdId(null); setRdTitulo(''); setRdPlantillaId(''); setRdContenido('');
+    setModalRedactarAbierto(true);
+  };
+
+  const abrirEditarDocumentoTexto = (doc) => {
+    setRdId(doc.id); setRdTitulo(doc.titulo); setRdPlantillaId(doc.plantilla_id || ''); setRdContenido(doc.contenido || '');
+    setModalRedactarAbierto(true);
+  };
+
+  const handleSeleccionarPlantilla = (plantillaId) => {
+    setRdPlantillaId(plantillaId);
+    const plantilla = plantillas.find(p => p.id === plantillaId);
+    if (plantilla) setRdContenido(plantilla.contenido || '');
+  };
+
+  const handleGuardarDocumentoTexto = async (e) => {
+    e.preventDefault();
+    if (!rdTitulo) return;
+
+    setGuardandoRedactar(true);
+    try {
+      const respuesta = await fetch(rdId ? `/api/documentos-editor/${rdId}` : '/api/documentos-editor/create', {
+        method: rdId ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ entity_id: entidadId, plantilla_id: rdPlantillaId || null, titulo: rdTitulo, contenido: rdContenido })
+      });
+      const resultado = await respuesta.json();
+      if (respuesta.ok && resultado.success) {
+        setModalRedactarAbierto(false);
+        await refrescar();
+      } else {
+        alert(`❌ Error: ${resultado.error || 'No se pudo guardar el documento.'}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('❌ Fallo de red al guardar el documento.');
+    } finally {
+      setGuardandoRedactar(false);
+    }
+  };
+
+  const handleEliminarDocumentoTexto = async (id) => {
+    if (!window.confirm('¿Eliminar este documento redactado?')) return;
+    try {
+      const respuesta = await fetch(`/api/documentos-editor/delete/${id}`, { method: 'DELETE', credentials: 'include' });
+      if (respuesta.ok) await refrescar();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const abrirNuevaPlantilla = () => {
+    setPlId(null); setPlNombre(''); setPlDescripcion(''); setPlContenido('');
+    setModalPlantillaAbierto(true);
+  };
+
+  const abrirEditarPlantilla = (plantilla) => {
+    setPlId(plantilla.id); setPlNombre(plantilla.nombre); setPlDescripcion(plantilla.descripcion || ''); setPlContenido(plantilla.contenido || '');
+    setModalPlantillaAbierto(true);
+  };
+
+  const handleGuardarPlantilla = async (e) => {
+    e.preventDefault();
+    if (!plNombre) return;
+
+    setGuardandoPlantilla(true);
+    try {
+      const respuesta = await fetch(plId ? `/api/plantillas/update/${plId}` : '/api/plantillas/create', {
+        method: plId ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ nombre: plNombre, descripcion: plDescripcion, contenido: plContenido })
+      });
+      const resultado = await respuesta.json();
+      if (respuesta.ok && resultado.success) {
+        setModalPlantillaAbierto(false);
+        await refrescar();
+      } else {
+        alert(`❌ Error: ${resultado.error || 'No se pudo guardar la plantilla.'}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('❌ Fallo de red al guardar la plantilla.');
+    } finally {
+      setGuardandoPlantilla(false);
+    }
+  };
+
+  const handleEliminarPlantilla = async (id) => {
+    if (!window.confirm('¿Eliminar esta plantilla del despacho?')) return;
+    try {
+      const respuesta = await fetch(`/api/plantillas/delete/${id}`, { method: 'DELETE', credentials: 'include' });
+      if (respuesta.ok) await refrescar();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const columnasDocumentos = [
     { key: 'titulo', header: 'Documento', render: (d) => (
       <div>
@@ -198,21 +320,73 @@ export default function Documentos() {
     ) }
   ];
 
+  const columnasDocumentosTexto = [
+    { key: 'titulo', header: 'Documento', render: (d) => (
+      <button onClick={() => abrirEditarDocumentoTexto(d)} className="text-left hover:text-blue-400 transition-colors">
+        <p className="font-bold text-white">{d.titulo}</p>
+        {d.plantilla_id && <p className="text-slate-500 mt-0.5">Generado desde plantilla</p>}
+      </button>
+    ) },
+    { key: 'actualizado_en', header: 'Última edición', render: (d) => new Date(d.actualizado_en).toLocaleDateString('es-ES') },
+    { key: 'acciones', header: 'Acciones', align: 'center', render: (d) => (
+      <div className="flex items-center justify-center gap-2">
+        <button onClick={() => abrirEditarDocumentoTexto(d)} className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-blue-400 hover:text-blue-300" title="Editar">
+          <PenSquare size={12} />
+        </button>
+        <button onClick={() => handleEliminarDocumentoTexto(d.id)} className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-rose-400 hover:text-rose-300" title="Eliminar">
+          <Trash2 size={12} />
+        </button>
+      </div>
+    ) }
+  ];
+
+  const columnasPlantillas = [
+    { key: 'nombre', header: 'Plantilla', render: (p) => (
+      <div>
+        <p className="font-bold text-white">{p.nombre}</p>
+        {p.descripcion && <p className="text-slate-500 mt-0.5">{p.descripcion}</p>}
+      </div>
+    ) },
+    { key: 'creado_en', header: 'Creada', render: (p) => new Date(p.creado_en).toLocaleDateString('es-ES') },
+    { key: 'acciones', header: 'Acciones', align: 'center', render: (p) => (
+      <div className="flex items-center justify-center gap-2">
+        <button onClick={() => abrirEditarPlantilla(p)} className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-blue-400 hover:text-blue-300" title="Editar">
+          <PenSquare size={12} />
+        </button>
+        <button onClick={() => handleEliminarPlantilla(p.id)} className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-rose-400 hover:text-rose-300" title="Eliminar">
+          <Trash2 size={12} />
+        </button>
+      </div>
+    ) }
+  ];
+
   return (
     <div className="h-full overflow-y-auto p-6 flex flex-col gap-4">
       <div className="flex flex-col sm:flex-row gap-3 justify-between sm:items-center shrink-0">
-        <div className="flex gap-2 bg-slate-950 p-1 rounded-xl border border-slate-900 max-w-md">
+        <div className="flex gap-2 bg-slate-950 p-1 rounded-xl border border-slate-900 flex-wrap">
           <button
             onClick={() => setTab('documentos')}
-            className={`flex-1 py-2 px-4 rounded-lg text-4xs font-black uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all ${tab === 'documentos' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-300'}`}
+            className={`flex-1 py-2 px-4 rounded-lg text-4xs font-black uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all whitespace-nowrap ${tab === 'documentos' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-300'}`}
           >
             <FileStack size={12} /> Documentos
           </button>
           <button
             onClick={() => setTab('comunicados')}
-            className={`flex-1 py-2 px-4 rounded-lg text-4xs font-black uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all ${tab === 'comunicados' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-300'}`}
+            className={`flex-1 py-2 px-4 rounded-lg text-4xs font-black uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all whitespace-nowrap ${tab === 'comunicados' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-300'}`}
           >
             <Megaphone size={12} /> Comunicados
+          </button>
+          <button
+            onClick={() => setTab('redactar')}
+            className={`flex-1 py-2 px-4 rounded-lg text-4xs font-black uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all whitespace-nowrap ${tab === 'redactar' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-300'}`}
+          >
+            <PenSquare size={12} /> Redactar
+          </button>
+          <button
+            onClick={() => setTab('plantillas')}
+            className={`flex-1 py-2 px-4 rounded-lg text-4xs font-black uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all whitespace-nowrap ${tab === 'plantillas' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-300'}`}
+          >
+            <LayoutTemplate size={12} /> Plantillas
           </button>
         </div>
 
@@ -220,9 +394,17 @@ export default function Documentos() {
           <button onClick={() => setModalDocAbierto(true)} className="bg-blue-600 hover:bg-blue-500 text-white text-5xs font-black uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-md shadow-blue-600/10">
             <Plus size={12} /> Subir Documento
           </button>
-        ) : (
+        ) : tab === 'comunicados' ? (
           <button onClick={() => setModalComAbierto(true)} className="bg-blue-600 hover:bg-blue-500 text-white text-5xs font-black uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-md shadow-blue-600/10">
             <Plus size={12} /> Publicar Comunicado
+          </button>
+        ) : tab === 'redactar' ? (
+          <button onClick={abrirNuevoDocumentoTexto} className="bg-blue-600 hover:bg-blue-500 text-white text-5xs font-black uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-md shadow-blue-600/10">
+            <Plus size={12} /> Nuevo Documento
+          </button>
+        ) : (
+          <button onClick={abrirNuevaPlantilla} className="bg-blue-600 hover:bg-blue-500 text-white text-5xs font-black uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-md shadow-blue-600/10">
+            <Plus size={12} /> Nueva Plantilla
           </button>
         )}
       </div>
@@ -239,7 +421,7 @@ export default function Documentos() {
             />
           </div>
         </Card>
-      ) : (
+      ) : tab === 'comunicados' ? (
         <div className="flex-grow overflow-y-auto custom-scrollbar space-y-3">
           {cargando ? (
             <div className="text-center py-12 text-4xs text-slate-500 font-bold uppercase tracking-widest">Cargando comunicados...</div>
@@ -265,6 +447,30 @@ export default function Documentos() {
             ))
           )}
         </div>
+      ) : tab === 'redactar' ? (
+        <Card className="flex-grow overflow-hidden" padding="p-0">
+          <div className="h-full overflow-y-auto custom-scrollbar">
+            <DataTable
+              columns={columnasDocumentosTexto}
+              data={documentosTexto}
+              loading={cargando}
+              loadingLabel="Cargando documentos..."
+              emptyLabel="No hay documentos redactados todavía."
+            />
+          </div>
+        </Card>
+      ) : (
+        <Card className="flex-grow overflow-hidden" padding="p-0">
+          <div className="h-full overflow-y-auto custom-scrollbar">
+            <DataTable
+              columns={columnasPlantillas}
+              data={plantillas}
+              loading={cargando}
+              loadingLabel="Cargando plantillas..."
+              emptyLabel="No hay plantillas creadas todavía."
+            />
+          </div>
+        </Card>
       )}
 
       {/* MODAL: SUBIR DOCUMENTO */}
@@ -331,6 +537,70 @@ export default function Documentos() {
             <input type="checkbox" checked={comFijado} onChange={(e) => setComFijado(e.target.checked)} className="rounded" />
             Fijar arriba del tablón
           </label>
+        </form>
+      </Modal>
+
+      {/* MODAL: REDACTAR / EDITAR DOCUMENTO DE TEXTO */}
+      <Modal
+        open={modalRedactarAbierto}
+        onClose={() => setModalRedactarAbierto(false)}
+        icon={PenSquare}
+        size="lg"
+        title={rdId ? 'Editar Documento' : 'Nuevo Documento'}
+        subtitle="Redactado en el editor de texto"
+        footer={
+          <>
+            <button type="button" onClick={() => setModalRedactarAbierto(false)} className="flex-1 bg-slate-950 text-slate-400 py-2.5 rounded-xl text-xs font-bold border border-slate-900">Cancelar</button>
+            <button type="submit" form="form-redactar-documento" disabled={guardandoRedactar} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50">
+              {guardandoRedactar ? 'Guardando...' : 'Guardar Documento'}
+            </button>
+          </>
+        }
+      >
+        <form id="form-redactar-documento" onSubmit={handleGuardarDocumentoTexto} className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Título" required value={rdTitulo} onChange={(e) => setRdTitulo(e.target.value)} placeholder="Ej: Convocatoria Junta Ordinaria" />
+            {!rdId && (
+              <Field label="Partir de plantilla (opcional)" as="select" value={rdPlantillaId} onChange={(e) => handleSeleccionarPlantilla(e.target.value)}>
+                <option value="">-- En blanco --</option>
+                {plantillas.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+              </Field>
+            )}
+          </div>
+          <Field label="Contenido" as="textarea" rows={12} value={rdContenido} onChange={(e) => setRdContenido(e.target.value)} placeholder="Redacta aquí el documento..." inputClassName="font-mono" />
+        </form>
+      </Modal>
+
+      {/* MODAL: NUEVA / EDITAR PLANTILLA */}
+      <Modal
+        open={modalPlantillaAbierto}
+        onClose={() => setModalPlantillaAbierto(false)}
+        icon={LayoutTemplate}
+        size="lg"
+        title={plId ? 'Editar Plantilla' : 'Nueva Plantilla'}
+        subtitle="Catálogo compartido del despacho"
+        footer={
+          <>
+            <button type="button" onClick={() => setModalPlantillaAbierto(false)} className="flex-1 bg-slate-950 text-slate-400 py-2.5 rounded-xl text-xs font-bold border border-slate-900">Cancelar</button>
+            <button type="submit" form="form-nueva-plantilla" disabled={guardandoPlantilla} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50">
+              {guardandoPlantilla ? 'Guardando...' : 'Guardar Plantilla'}
+            </button>
+          </>
+        }
+      >
+        <form id="form-nueva-plantilla" onSubmit={handleGuardarPlantilla} className="space-y-3">
+          <Field label="Nombre" required value={plNombre} onChange={(e) => setPlNombre(e.target.value)} placeholder="Ej: Convocatoria de Junta Ordinaria" />
+          <Field label="Descripción (opcional)" value={plDescripcion} onChange={(e) => setPlDescripcion(e.target.value)} placeholder="Para qué se usa esta plantilla" />
+          <Field
+            label="Contenido"
+            as="textarea"
+            rows={12}
+            value={plContenido}
+            onChange={(e) => setPlContenido(e.target.value)}
+            placeholder={'Ej: Estimado/a {{nombre_propietario}},\n\nPor la presente se le convoca a la Junta de {{nombre_finca}}...'}
+            hint="Usa variables tipo {{nombre_finca}} o {{nombre_propietario}} como recordatorio al rellenar el documento — se sustituyen a mano por ahora."
+            inputClassName="font-mono"
+          />
         </form>
       </Modal>
     </div>

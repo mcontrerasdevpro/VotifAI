@@ -17,6 +17,7 @@ import Cuotas from './views/cuotas/Cuotas.jsx';
 import Documentos from './views/documentos/Documentos.jsx';
 import Reservas from './views/reservas/Reservas.jsx';
 import Crm from './views/crm/Crm.jsx';
+import Agenda from './views/agenda/Agenda.jsx';
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
 
           <Route element={<ProtectedRoute />}>
             <Route path="/hub" element={<ClientSelector />} />
+            <Route path="/agenda" element={<Agenda />} />
             <Route path="/acta-ia" element={<MinutesAI />} />
             <Route path="/alta-finca" element={<AltaFinca />} />
             <Route path="/alta-empresa" element={<AltaEmpresa />} />

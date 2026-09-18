@@ -1,6 +1,11 @@
 import { Router } from 'express';
 import { query } from '../db.js';
-import { requireAuth, entityBelongsToTenant, filaBelongsToTenant } from '../middleware/auth.js';
+import {
+  requireAuth,
+  entityBelongsToTenant,
+  filaBelongsToTenant,
+  filaBelongsToTenantDirecto
+} from '../middleware/auth.js';
 
 const router = Router();
 
@@ -195,6 +200,182 @@ router.delete('/comunicados/delete/:id', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('Error al eliminar comunicado:', err.message);
     res.status(500).json({ error: `Fallo al eliminar el comunicado: ${err.message}` });
+  }
+});
+
+// =========================================================================
+// 📝 PLANTILLAS DE DOCUMENTO (catálogo a nivel de tenant, no de entidad)
+// =========================================================================
+
+router.get('/plantillas/lista', requireAuth, async (req, res) => {
+  try {
+    const resultado = await query(
+      `SELECT id, nombre, descripcion, contenido, creado_en
+       FROM plantillas_documento WHERE tenant_id = $1 ORDER BY nombre ASC`,
+      [req.tenantId]
+    );
+    res.status(200).json({ success: true, plantillas: resultado.rows });
+  } catch (err) {
+    console.error('Error al listar plantillas:', err.message);
+    res.status(500).json({ error: `Fallo al consultar plantillas: ${err.message}` });
+  }
+});
+
+router.post('/plantillas/create', requireAuth, async (req, res) => {
+  const { nombre, descripcion, contenido } = req.body;
+
+  if (!nombre) {
+    return res.status(400).json({ error: 'El nombre de la plantilla es obligatorio.' });
+  }
+
+  try {
+    const resultado = await query(
+      `INSERT INTO plantillas_documento (tenant_id, nombre, descripcion, contenido)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, nombre, descripcion, contenido, creado_en`,
+      [req.tenantId, nombre, descripcion || null, contenido || '']
+    );
+    res.status(201).json({ success: true, mensaje: 'Plantilla creada correctamente.', plantilla: resultado.rows[0] });
+  } catch (err) {
+    console.error('Error al crear plantilla:', err.message);
+    res.status(500).json({ error: `Fallo al guardar la plantilla: ${err.message}` });
+  }
+});
+
+router.put('/plantillas/update/:id', requireAuth, async (req, res) => {
+  const id = String(req.params.id).trim();
+  const { nombre, descripcion, contenido } = req.body;
+
+  if (!(await filaBelongsToTenantDirecto('plantillas_documento', id, req.tenantId))) {
+    return res.status(403).json({ error: 'No autorizado para modificar esta plantilla.' });
+  }
+
+  try {
+    const resultado = await query(
+      `UPDATE plantillas_documento SET nombre = $1, descripcion = $2, contenido = $3
+       WHERE id = $4
+       RETURNING id, nombre, descripcion, contenido, creado_en`,
+      [nombre, descripcion || null, contenido || '', id]
+    );
+    res.status(200).json({ success: true, mensaje: 'Plantilla actualizada correctamente.', plantilla: resultado.rows[0] });
+  } catch (err) {
+    console.error('Error al actualizar plantilla:', err.message);
+    res.status(500).json({ error: `Fallo al actualizar la plantilla: ${err.message}` });
+  }
+});
+
+router.delete('/plantillas/delete/:id', requireAuth, async (req, res) => {
+  const id = String(req.params.id).trim();
+
+  if (!(await filaBelongsToTenantDirecto('plantillas_documento', id, req.tenantId))) {
+    return res.status(403).json({ error: 'No autorizado para eliminar esta plantilla.' });
+  }
+
+  try {
+    const resultado = await query('DELETE FROM plantillas_documento WHERE id = $1', [id]);
+    if (resultado.rowCount > 0) {
+      res.status(200).json({ success: true, mensaje: 'Plantilla eliminada correctamente.' });
+    } else {
+      res.status(404).json({ error: 'Plantilla no encontrada.' });
+    }
+  } catch (err) {
+    console.error('Error al eliminar plantilla:', err.message);
+    res.status(500).json({ error: `Fallo al eliminar la plantilla: ${err.message}` });
+  }
+});
+
+// =========================================================================
+// ✍️ DOCUMENTOS DE TEXTO (redactados en el editor, por entidad)
+// =========================================================================
+
+router.get('/documentos-editor/lista/:entityId', requireAuth, async (req, res) => {
+  const entityId = String(req.params.entityId).trim();
+
+  if (!(await entityBelongsToTenant(entityId, req.tenantId))) {
+    return res.status(403).json({ error: 'No autorizado para consultar los documentos de esta entidad.' });
+  }
+
+  try {
+    const resultado = await query(
+      `SELECT id, titulo, contenido, plantilla_id, creado_en, actualizado_en
+       FROM documentos_editor WHERE entity_id = $1::uuid ORDER BY actualizado_en DESC`,
+      [entityId]
+    );
+    res.status(200).json({ success: true, documentos: resultado.rows });
+  } catch (err) {
+    console.error('Error al listar documentos redactados:', err.message);
+    res.status(500).json({ error: `Fallo al consultar documentos: ${err.message}` });
+  }
+});
+
+router.post('/documentos-editor/create', requireAuth, async (req, res) => {
+  const { entity_id, plantilla_id, titulo, contenido } = req.body;
+
+  if (!entity_id || !titulo) {
+    return res.status(400).json({ error: 'Faltan campos obligatorios: entidad y título.' });
+  }
+
+  if (!(await entityBelongsToTenant(entity_id, req.tenantId))) {
+    return res.status(403).json({ error: 'No autorizado para crear documentos en esta entidad.' });
+  }
+
+  if (plantilla_id && !(await filaBelongsToTenantDirecto('plantillas_documento', plantilla_id, req.tenantId))) {
+    return res.status(403).json({ error: 'La plantilla indicada no pertenece a tu despacho.' });
+  }
+
+  try {
+    const resultado = await query(
+      `INSERT INTO documentos_editor (entity_id, plantilla_id, titulo, contenido)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, titulo, contenido, plantilla_id, creado_en, actualizado_en`,
+      [entity_id, plantilla_id || null, titulo, contenido || '']
+    );
+    res.status(201).json({ success: true, mensaje: 'Documento creado correctamente.', documento: resultado.rows[0] });
+  } catch (err) {
+    console.error('Error al crear documento redactado:', err.message);
+    res.status(500).json({ error: `Fallo al crear el documento: ${err.message}` });
+  }
+});
+
+router.put('/documentos-editor/:id', requireAuth, async (req, res) => {
+  const id = String(req.params.id).trim();
+  const { titulo, contenido } = req.body;
+
+  if (!(await filaBelongsToTenant('documentos_editor', id, req.tenantId))) {
+    return res.status(403).json({ error: 'No autorizado para modificar este documento.' });
+  }
+
+  try {
+    const resultado = await query(
+      `UPDATE documentos_editor SET titulo = $1, contenido = $2, actualizado_en = now()
+       WHERE id = $3
+       RETURNING id, titulo, contenido, plantilla_id, creado_en, actualizado_en`,
+      [titulo, contenido || '', id]
+    );
+    res.status(200).json({ success: true, mensaje: 'Documento actualizado correctamente.', documento: resultado.rows[0] });
+  } catch (err) {
+    console.error('Error al actualizar documento redactado:', err.message);
+    res.status(500).json({ error: `Fallo al actualizar el documento: ${err.message}` });
+  }
+});
+
+router.delete('/documentos-editor/delete/:id', requireAuth, async (req, res) => {
+  const id = String(req.params.id).trim();
+
+  if (!(await filaBelongsToTenant('documentos_editor', id, req.tenantId))) {
+    return res.status(403).json({ error: 'No autorizado para eliminar este documento.' });
+  }
+
+  try {
+    const resultado = await query('DELETE FROM documentos_editor WHERE id = $1', [id]);
+    if (resultado.rowCount > 0) {
+      res.status(200).json({ success: true, mensaje: 'Documento eliminado correctamente.' });
+    } else {
+      res.status(404).json({ error: 'Documento no encontrado.' });
+    }
+  } catch (err) {
+    console.error('Error al eliminar documento redactado:', err.message);
+    res.status(500).json({ error: `Fallo al eliminar el documento: ${err.message}` });
   }
 });
 

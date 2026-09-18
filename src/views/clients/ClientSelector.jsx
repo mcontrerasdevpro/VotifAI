@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVotifaiStore } from '../../store.jsx';
-import { Building2, Search, FolderOpen, LogOut } from 'lucide-react';
+import { Building2, Search, FolderOpen, LogOut, CalendarDays } from 'lucide-react';
 import Card from '../../components/ui/Card.jsx';
 import Field from '../../components/ui/Field.jsx';
 
@@ -70,6 +70,12 @@ export default function ClientSelector() {
               👤 {adminGlobal.nombre}
             </span>
           )}
+          <button
+            onClick={() => navigate('/agenda')}
+            className="bg-slate-900 hover:bg-slate-800 border border-slate-800 transition-colors text-slate-300 hover:text-white text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-1.5"
+          >
+            <CalendarDays size={14} /> Agenda
+          </button>
           <button
             onClick={() => navigate('/alta-finca')}
             className="bg-blue-600 hover:bg-blue-500 transition-colors text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md"
