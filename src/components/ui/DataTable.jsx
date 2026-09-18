@@ -17,11 +17,19 @@ export default function DataTable({
   keyField = 'id',
   loading = false,
   loadingLabel = 'Cargando...',
-  emptyLabel = 'Sin resultados.'
+  emptyLabel = 'Sin resultados.',
+  light = false
 }) {
+  const cabecera = light
+    ? 'bg-slate-50 text-slate-500 border-b border-slate-200'
+    : 'bg-slate-900 text-slate-400 border-b border-slate-800';
+  const cuerpo = light ? 'divide-slate-100 text-slate-700' : 'divide-slate-900 text-slate-300';
+  const hover = light ? 'hover:bg-slate-50' : 'hover:bg-slate-900/30';
+  const vacio = light ? 'text-slate-400' : 'text-slate-600';
+
   return (
     <table className="w-full text-left font-sans text-4xs">
-      <thead className="bg-slate-900 text-slate-400 sticky top-0 border-b border-slate-800 font-bold z-10">
+      <thead className={`sticky top-0 font-bold z-10 ${cabecera}`}>
         <tr>
           {columns.map((col) => (
             <th key={col.key} className={`py-2.5 px-3 ${ALINEACION[col.align] || ALINEACION.left}`}>
@@ -30,18 +38,18 @@ export default function DataTable({
           ))}
         </tr>
       </thead>
-      <tbody className="divide-y divide-slate-900 text-slate-300">
+      <tbody className={`divide-y ${cuerpo}`}>
         {loading ? (
           <tr>
             <td colSpan={columns.length} className="py-10">
-              <div className="flex flex-col items-center justify-center gap-2 text-4xs text-slate-500 font-bold uppercase tracking-widest animate-pulse">
+              <div className={`flex flex-col items-center justify-center gap-2 text-4xs font-bold uppercase tracking-widest animate-pulse ${light ? 'text-slate-400' : 'text-slate-500'}`}>
                 <RefreshCw size={16} className="animate-spin text-blue-500" /> {loadingLabel}
               </div>
             </td>
           </tr>
         ) : data && data.length > 0 ? (
           data.map((fila, index) => (
-            <tr key={fila[keyField] ?? index} className="hover:bg-slate-900/30 transition-colors">
+            <tr key={fila[keyField] ?? index} className={`transition-colors ${hover}`}>
               {columns.map((col) => (
                 <td key={col.key} className={`py-2.5 px-3 ${ALINEACION[col.align] || ALINEACION.left}`}>
                   {col.render ? col.render(fila, index) : fila[col.key]}
@@ -51,7 +59,7 @@ export default function DataTable({
           ))
         ) : (
           <tr>
-            <td colSpan={columns.length} className="text-center py-12 text-slate-600 font-medium uppercase tracking-widest text-[9px]">
+            <td colSpan={columns.length} className={`text-center py-12 font-medium uppercase tracking-widest text-[9px] ${vacio}`}>
               {emptyLabel}
             </td>
           </tr>

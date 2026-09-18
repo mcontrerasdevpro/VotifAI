@@ -30,6 +30,7 @@
    */
   --color-brand-50: var(--color-teal-50);
   --color-brand-100: var(--color-teal-100);
+  --color-brand-200: var(--color-teal-200);
   --color-brand-400: var(--color-teal-400);
   --color-brand-500: var(--color-teal-500);
   --color-brand-600: var(--color-teal-600);
@@ -41,6 +42,23 @@
   --color-success: var(--color-emerald-500);
   --color-warning: var(--color-amber-500);
   --color-danger: var(--color-rose-500);
+
+  /* La app usa "slate" (gris con matiz azulado) en cientos de sitios para
+     fondos y bordes. Lo redefinimos a "zinc" (gris neutro) para que el
+     fondo de la interfaz no se lea azul incluso donde no hay ningún
+     acento de color — sin tocar ninguna clase de componente, solo estos
+     valores. */
+  --color-slate-50: var(--color-zinc-50);
+  --color-slate-100: var(--color-zinc-100);
+  --color-slate-200: var(--color-zinc-200);
+  --color-slate-300: var(--color-zinc-300);
+  --color-slate-400: var(--color-zinc-400);
+  --color-slate-500: var(--color-zinc-500);
+  --color-slate-600: var(--color-zinc-600);
+  --color-slate-700: var(--color-zinc-700);
+  --color-slate-800: var(--color-zinc-800);
+  --color-slate-900: var(--color-zinc-900);
+  --color-slate-950: var(--color-zinc-950);
 }
 
 /* rounded-xl es el radio por defecto de tarjetas, botones e inputs en toda

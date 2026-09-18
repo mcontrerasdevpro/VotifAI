@@ -152,26 +152,26 @@ export default function Cuotas() {
   const columnas = [
     { key: 'propietario', header: 'Propietario', render: (c) => (
       <div>
-        <p className="font-bold text-white">{c.nombre_completo}</p>
+        <p className="font-bold text-slate-900">{c.nombre_completo}</p>
         <p className="text-slate-500 mt-0.5">{c.propiedad_detalle}</p>
       </div>
     ) },
     { key: 'concepto', header: 'Concepto', render: (c) => (
       <div>
-        <p className="text-slate-200">{c.concepto}</p>
+        <p className="text-slate-700">{c.concepto}</p>
         {c.periodo && <p className="text-slate-500 mt-0.5">{c.periodo}</p>}
       </div>
     ) },
     { key: 'importe', header: 'Importe', align: 'right', render: (c) => (
       <div className="text-right">
-        <p className="font-bold text-slate-200">{parseFloat(c.importe).toFixed(2)}€</p>
+        <p className="font-bold text-slate-900">{parseFloat(c.importe).toFixed(2)}€</p>
         {parseFloat(c.total_pagado) > 0 && parseFloat(c.total_pagado) < parseFloat(c.importe) && (
-          <p className="text-emerald-400 mt-0.5">Pagado: {parseFloat(c.total_pagado).toFixed(2)}€</p>
+          <p className="text-emerald-600 mt-0.5">Pagado: {parseFloat(c.total_pagado).toFixed(2)}€</p>
         )}
       </div>
     ) },
     { key: 'fecha_vencimiento', header: 'Vencimiento', render: (c) => new Date(c.fecha_vencimiento).toLocaleDateString('es-ES') },
-    { key: 'estado', header: 'Estado', render: (c) => <StatusBadge tone={TONOS_ESTADO[c.estado] || 'neutral'}>{ETIQUETAS_ESTADO[c.estado] || c.estado}</StatusBadge> },
+    { key: 'estado', header: 'Estado', render: (c) => <StatusBadge light tone={TONOS_ESTADO[c.estado] || 'neutral'}>{ETIQUETAS_ESTADO[c.estado] || c.estado}</StatusBadge> },
     { key: 'acciones', header: 'Acciones', align: 'center', render: (c) => (
       <div className="flex items-center justify-center gap-2">
         {(c.estado === 'pendiente' || c.estado === 'parcial' || c.estado === 'impagada') && (
@@ -197,9 +197,10 @@ export default function Cuotas() {
         </button>
       </div>
 
-      <Card className="flex-grow overflow-hidden" padding="p-0">
+      <Card className="flex-grow overflow-hidden" padding="p-0" light>
         <div className="h-full overflow-y-auto custom-scrollbar">
           <DataTable
+            light
             columns={columnas}
             data={cuotas}
             loading={cargando}

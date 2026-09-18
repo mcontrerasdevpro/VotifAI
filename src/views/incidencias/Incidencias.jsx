@@ -218,15 +218,15 @@ export default function Incidencias() {
 
   const columnasIncidencias = [
     { key: 'titulo', header: 'Incidencia', render: (i) => (
-      <button onClick={() => abrirDetalle(i)} className="text-left hover:text-blue-400 transition-colors">
-        <p className="font-bold text-white">{i.titulo}</p>
+      <button onClick={() => abrirDetalle(i)} className="text-left hover:text-blue-600 transition-colors">
+        <p className="font-bold text-slate-900">{i.titulo}</p>
         {i.ubicacion && <p className="text-slate-500 mt-0.5">{i.ubicacion}</p>}
       </button>
     ) },
-    { key: 'prioridad', header: 'Prioridad', render: (i) => <StatusBadge tone={TONOS_PRIORIDAD[i.prioridad] || 'neutral'}>{i.prioridad}</StatusBadge> },
+    { key: 'prioridad', header: 'Prioridad', render: (i) => <StatusBadge light tone={TONOS_PRIORIDAD[i.prioridad] || 'neutral'}>{i.prioridad}</StatusBadge> },
     { key: 'proveedor_nombre', header: 'Proveedor', render: (i) => i.proveedor_nombre || <span className="text-slate-600">Sin asignar</span> },
     { key: 'fecha_apertura', header: 'Apertura', render: (i) => new Date(i.fecha_apertura).toLocaleDateString('es-ES') },
-    { key: 'estado', header: 'Estado', render: (i) => <StatusBadge tone={TONOS_ESTADO[i.estado] || 'neutral'}>{ETIQUETAS_ESTADO[i.estado] || i.estado}</StatusBadge> },
+    { key: 'estado', header: 'Estado', render: (i) => <StatusBadge light tone={TONOS_ESTADO[i.estado] || 'neutral'}>{ETIQUETAS_ESTADO[i.estado] || i.estado}</StatusBadge> },
     { key: 'acciones', header: 'Acciones', align: 'center', render: (i) => (
       <div className="flex items-center justify-center gap-2">
         <button onClick={() => handleEliminarIncidencia(i.id)} className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-rose-400 hover:text-rose-300" title="Eliminar">
@@ -239,7 +239,7 @@ export default function Incidencias() {
   const columnasProveedores = [
     { key: 'nombre', header: 'Proveedor', render: (p) => (
       <div>
-        <p className="font-bold text-white">{p.nombre}</p>
+        <p className="font-bold text-slate-900">{p.nombre}</p>
         {p.categoria && <p className="text-slate-500 mt-0.5">{p.categoria}</p>}
       </div>
     ) },
@@ -277,12 +277,12 @@ export default function Incidencias() {
         )}
       </div>
 
-      <Card className="flex-grow overflow-hidden" padding="p-0">
+      <Card className="flex-grow overflow-hidden" padding="p-0" light>
         <div className="h-full overflow-y-auto custom-scrollbar">
           {tab === 'incidencias' ? (
-            <DataTable columns={columnasIncidencias} data={incidencias} loading={cargando} loadingLabel="Cargando incidencias..." emptyLabel="No hay incidencias registradas." />
+            <DataTable light columns={columnasIncidencias} data={incidencias} loading={cargando} loadingLabel="Cargando incidencias..." emptyLabel="No hay incidencias registradas." />
           ) : (
-            <DataTable columns={columnasProveedores} data={proveedores} loading={cargando} loadingLabel="Cargando proveedores..." emptyLabel="No hay proveedores en el catálogo." />
+            <DataTable light columns={columnasProveedores} data={proveedores} loading={cargando} loadingLabel="Cargando proveedores..." emptyLabel="No hay proveedores en el catálogo." />
           )}
         </div>
       </Card>

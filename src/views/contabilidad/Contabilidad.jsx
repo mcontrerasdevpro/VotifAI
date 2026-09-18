@@ -205,14 +205,14 @@ export default function Contabilidad() {
   const columnasMovimientos = [
     { key: 'concepto', header: 'Concepto', render: (m) => (
       <div>
-        <p className="font-bold text-white">{m.concepto}</p>
+        <p className="font-bold text-slate-900">{m.concepto}</p>
         {m.categoria && <p className="text-slate-500 mt-0.5">{m.categoria}</p>}
       </div>
     ) },
-    { key: 'tipo', header: 'Tipo', render: (m) => <StatusBadge tone={m.tipo === 'ingreso' ? 'success' : 'danger'}>{m.tipo === 'ingreso' ? 'Ingreso' : 'Gasto'}</StatusBadge> },
+    { key: 'tipo', header: 'Tipo', render: (m) => <StatusBadge light tone={m.tipo === 'ingreso' ? 'success' : 'danger'}>{m.tipo === 'ingreso' ? 'Ingreso' : 'Gasto'}</StatusBadge> },
     { key: 'fecha', header: 'Fecha', render: (m) => new Date(m.fecha).toLocaleDateString('es-ES') },
     { key: 'importe', header: 'Importe', align: 'right', render: (m) => (
-      <span className={`font-mono font-black ${m.tipo === 'ingreso' ? 'text-emerald-400' : 'text-rose-400'}`}>
+      <span className={`font-mono font-black ${m.tipo === 'ingreso' ? 'text-emerald-600' : 'text-rose-600'}`}>
         {m.tipo === 'ingreso' ? '+' : '-'}{fmt(m.importe)} €
       </span>
     ) },
@@ -224,13 +224,13 @@ export default function Contabilidad() {
   ];
 
   const columnasPresupuestos = [
-    { key: 'nombre', header: 'Presupuesto', render: (p) => <p className="font-bold text-white">{p.nombre}</p> },
+    { key: 'nombre', header: 'Presupuesto', render: (p) => <p className="font-bold text-slate-900">{p.nombre}</p> },
     { key: 'anio', header: 'Año' },
     { key: 'importe_previsto', header: 'Previsto', align: 'right', render: (p) => <span className="font-mono">{fmt(p.importe_previsto)} €</span> },
     { key: 'ejecutado', header: 'Gasto Ejecutado', align: 'right', render: (p) => <span className="font-mono">{fmt(gastoPorAnio[p.anio] || 0)} €</span> },
     { key: 'desviacion', header: 'Desviación', align: 'right', render: (p) => {
       const desviacion = Number(p.importe_previsto) - (gastoPorAnio[p.anio] || 0);
-      return <StatusBadge tone={desviacion >= 0 ? 'success' : 'danger'}>{desviacion >= 0 ? '+' : ''}{fmt(desviacion)} €</StatusBadge>;
+      return <StatusBadge light tone={desviacion >= 0 ? 'success' : 'danger'}>{desviacion >= 0 ? '+' : ''}{fmt(desviacion)} €</StatusBadge>;
     } },
     { key: 'acciones', header: 'Acciones', align: 'center', render: (p) => (
       <button onClick={() => handleEliminarPresupuesto(p.id)} className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-rose-400 hover:text-rose-300" title="Eliminar">
@@ -241,12 +241,12 @@ export default function Contabilidad() {
 
   const columnasLiquidaciones = [
     { key: 'periodo', header: 'Periodo', render: (l) => (
-      <p className="font-bold text-white">{new Date(l.periodo_inicio).toLocaleDateString('es-ES')} — {new Date(l.periodo_fin).toLocaleDateString('es-ES')}</p>
+      <p className="font-bold text-slate-900">{new Date(l.periodo_inicio).toLocaleDateString('es-ES')} — {new Date(l.periodo_fin).toLocaleDateString('es-ES')}</p>
     ) },
-    { key: 'total_ingresos', header: 'Ingresos', align: 'right', render: (l) => <span className="font-mono text-emerald-400">{fmt(l.total_ingresos)} €</span> },
-    { key: 'total_gastos', header: 'Gastos', align: 'right', render: (l) => <span className="font-mono text-rose-400">{fmt(l.total_gastos)} €</span> },
+    { key: 'total_ingresos', header: 'Ingresos', align: 'right', render: (l) => <span className="font-mono text-emerald-600">{fmt(l.total_ingresos)} €</span> },
+    { key: 'total_gastos', header: 'Gastos', align: 'right', render: (l) => <span className="font-mono text-rose-600">{fmt(l.total_gastos)} €</span> },
     { key: 'saldo', header: 'Saldo', align: 'right', render: (l) => (
-      <StatusBadge tone={Number(l.saldo) >= 0 ? 'success' : 'danger'}>{fmt(l.saldo)} €</StatusBadge>
+      <StatusBadge light tone={Number(l.saldo) >= 0 ? 'success' : 'danger'}>{fmt(l.saldo)} €</StatusBadge>
     ) },
     { key: 'acciones', header: 'Acciones', align: 'center', render: (l) => (
       <button onClick={() => handleEliminarLiquidacion(l.id)} className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-rose-400 hover:text-rose-300" title="Eliminar">
@@ -307,14 +307,14 @@ export default function Contabilidad() {
         )}
       </div>
 
-      <Card className="flex-grow overflow-hidden" padding="p-0">
+      <Card className="flex-grow overflow-hidden" padding="p-0" light>
         <div className="h-full overflow-y-auto custom-scrollbar">
           {tab === 'movimientos' ? (
-            <DataTable columns={columnasMovimientos} data={movimientos} loading={cargando} loadingLabel="Cargando movimientos..." emptyLabel="No hay movimientos registrados." />
+            <DataTable light columns={columnasMovimientos} data={movimientos} loading={cargando} loadingLabel="Cargando movimientos..." emptyLabel="No hay movimientos registrados." />
           ) : tab === 'presupuestos' ? (
-            <DataTable columns={columnasPresupuestos} data={presupuestos} loading={cargando} loadingLabel="Cargando presupuestos..." emptyLabel="No hay presupuestos creados." />
+            <DataTable light columns={columnasPresupuestos} data={presupuestos} loading={cargando} loadingLabel="Cargando presupuestos..." emptyLabel="No hay presupuestos creados." />
           ) : (
-            <DataTable columns={columnasLiquidaciones} data={liquidaciones} loading={cargando} loadingLabel="Cargando liquidaciones..." emptyLabel="No hay liquidaciones calculadas." />
+            <DataTable light columns={columnasLiquidaciones} data={liquidaciones} loading={cargando} loadingLabel="Cargando liquidaciones..." emptyLabel="No hay liquidaciones calculadas." />
           )}
         </div>
       </Card>

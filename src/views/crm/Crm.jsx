@@ -166,15 +166,15 @@ export default function Crm() {
 
   const columnasSolicitudes = [
     { key: 'titulo', header: 'Solicitud', render: (s) => (
-      <button onClick={() => abrirDetalle(s)} className="text-left hover:text-blue-400 transition-colors">
-        <p className="font-bold text-white">{s.titulo}</p>
+      <button onClick={() => abrirDetalle(s)} className="text-left hover:text-blue-600 transition-colors">
+        <p className="font-bold text-slate-900">{s.titulo}</p>
         {s.propietario_nombre && <p className="text-slate-500 mt-0.5">{s.propiedad_detalle} — {s.propietario_nombre}</p>}
       </button>
     ) },
     { key: 'categoria', header: 'Categoría', render: (s) => ETIQUETAS_CATEGORIA[s.categoria] || s.categoria },
     { key: 'canal', header: 'Canal', render: (s) => ETIQUETAS_CANAL[s.canal] || s.canal },
-    { key: 'prioridad', header: 'Prioridad', render: (s) => <StatusBadge tone={TONOS_PRIORIDAD[s.prioridad] || 'neutral'}>{s.prioridad}</StatusBadge> },
-    { key: 'estado', header: 'Estado', render: (s) => <StatusBadge tone={TONOS_ESTADO[s.estado] || 'neutral'}>{ETIQUETAS_ESTADO[s.estado] || s.estado}</StatusBadge> },
+    { key: 'prioridad', header: 'Prioridad', render: (s) => <StatusBadge light tone={TONOS_PRIORIDAD[s.prioridad] || 'neutral'}>{s.prioridad}</StatusBadge> },
+    { key: 'estado', header: 'Estado', render: (s) => <StatusBadge light tone={TONOS_ESTADO[s.estado] || 'neutral'}>{ETIQUETAS_ESTADO[s.estado] || s.estado}</StatusBadge> },
     { key: 'acciones', header: 'Acciones', align: 'center', render: (s) => (
       <div className="flex items-center justify-center gap-2">
         <button onClick={() => handleEliminarSolicitud(s.id)} className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-rose-400 hover:text-rose-300" title="Eliminar">
@@ -195,9 +195,9 @@ export default function Crm() {
         </button>
       </div>
 
-      <Card className="flex-grow overflow-hidden" padding="p-0">
+      <Card className="flex-grow overflow-hidden" padding="p-0" light>
         <div className="h-full overflow-y-auto custom-scrollbar">
-          <DataTable columns={columnasSolicitudes} data={solicitudes} loading={cargando} loadingLabel="Cargando solicitudes..." emptyLabel="No hay solicitudes registradas." />
+          <DataTable light columns={columnasSolicitudes} data={solicitudes} loading={cargando} loadingLabel="Cargando solicitudes..." emptyLabel="No hay solicitudes registradas." />
         </div>
       </Card>
 

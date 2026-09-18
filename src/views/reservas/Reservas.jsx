@@ -174,13 +174,13 @@ export default function Reservas() {
     { key: 'zona_nombre', header: 'Zona', render: (r) => r.zona_nombre },
     { key: 'propietario_nombre', header: 'Propietario', render: (r) => (
       <div>
-        <p className="font-bold text-white">{r.propietario_nombre}</p>
+        <p className="font-bold text-slate-900">{r.propietario_nombre}</p>
         <p className="text-slate-500 mt-0.5">{r.propiedad_detalle}</p>
       </div>
     ) },
     { key: 'fecha', header: 'Fecha', render: (r) => new Date(r.fecha).toLocaleDateString('es-ES') },
     { key: 'horario', header: 'Horario', render: (r) => `${r.hora_inicio.slice(0, 5)} - ${r.hora_fin.slice(0, 5)}` },
-    { key: 'estado', header: 'Estado', render: (r) => <StatusBadge tone={TONOS_ESTADO[r.estado] || 'neutral'}>{ETIQUETAS_ESTADO[r.estado] || r.estado}</StatusBadge> },
+    { key: 'estado', header: 'Estado', render: (r) => <StatusBadge light tone={TONOS_ESTADO[r.estado] || 'neutral'}>{ETIQUETAS_ESTADO[r.estado] || r.estado}</StatusBadge> },
     { key: 'acciones', header: 'Acciones', align: 'center', render: (r) => (
       <div className="flex items-center justify-center gap-2">
         {r.estado === 'pendiente' && (
@@ -203,13 +203,13 @@ export default function Reservas() {
   const columnasZonas = [
     { key: 'nombre', header: 'Zona', render: (z) => (
       <div>
-        <p className="font-bold text-white">{z.nombre}</p>
+        <p className="font-bold text-slate-900">{z.nombre}</p>
         {z.tipo && <p className="text-slate-500 mt-0.5">{z.tipo}</p>}
       </div>
     ) },
     { key: 'horario', header: 'Horario', render: (z) => `${z.horario_apertura.slice(0, 5)} - ${z.horario_cierre.slice(0, 5)}` },
     { key: 'capacidad_maxima', header: 'Capacidad', align: 'center', render: (z) => z.capacidad_maxima || '—' },
-    { key: 'requiere_aprobacion', header: 'Aprobación', render: (z) => <StatusBadge tone={z.requiere_aprobacion ? 'warning' : 'success'}>{z.requiere_aprobacion ? 'Manual' : 'Automática'}</StatusBadge> },
+    { key: 'requiere_aprobacion', header: 'Aprobación', render: (z) => <StatusBadge light tone={z.requiere_aprobacion ? 'warning' : 'success'}>{z.requiere_aprobacion ? 'Manual' : 'Automática'}</StatusBadge> },
     { key: 'acciones', header: 'Acciones', align: 'center', render: (z) => (
       <div className="flex items-center justify-center gap-2">
         <button onClick={() => handleEliminarZona(z.id)} className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-rose-400 hover:text-rose-300" title="Eliminar">
@@ -248,12 +248,12 @@ export default function Reservas() {
         </p>
       )}
 
-      <Card className="flex-grow overflow-hidden" padding="p-0">
+      <Card className="flex-grow overflow-hidden" padding="p-0" light>
         <div className="h-full overflow-y-auto custom-scrollbar">
           {tab === 'reservas' ? (
-            <DataTable columns={columnasReservas} data={reservas} loading={cargando} loadingLabel="Cargando reservas..." emptyLabel="No hay reservas registradas." />
+            <DataTable light columns={columnasReservas} data={reservas} loading={cargando} loadingLabel="Cargando reservas..." emptyLabel="No hay reservas registradas." />
           ) : (
-            <DataTable columns={columnasZonas} data={zonas} loading={cargando} loadingLabel="Cargando zonas..." emptyLabel="No hay zonas comunes configuradas." />
+            <DataTable light columns={columnasZonas} data={zonas} loading={cargando} loadingLabel="Cargando zonas..." emptyLabel="No hay zonas comunes configuradas." />
           )}
         </div>
       </Card>

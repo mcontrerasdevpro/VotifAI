@@ -161,14 +161,14 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
         },
         {
             key: 'titular', header: 'Titular Activo',
-            render: (v) => <span className="text-white font-bold">{v.nombre_completo}</span>
+            render: (v) => <span className="text-slate-900 font-bold">{v.nombre_completo}</span>
         },
         {
             key: 'contacto', header: 'Medios de Contacto',
             render: (v) => (
                 <div className="space-y-0.5">
-                    {v.telefono && <p className="text-slate-300 font-medium">📞 {v.telefono}</p>}
-                    {v.email && <p className="text-slate-400 truncate max-w-[120px]">✉️ {v.email}</p>}
+                    {v.telefono && <p className="text-slate-600 font-medium">📞 {v.telefono}</p>}
+                    {v.email && <p className="text-slate-500 truncate max-w-[120px]">✉️ {v.email}</p>}
                 </div>
             )
         },
@@ -230,10 +230,11 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
                 </div>
 
                 {/* CONTENEDOR CENTRAL INTERACTIVO CON CONMUTACIÓN DE VISTAS */}
-                <div className="flex-grow overflow-y-auto custom-scrollbar mb-3 border border-slate-900 rounded-xl bg-slate-950">
+                <div className={`flex-grow overflow-y-auto custom-scrollbar mb-3 border rounded-xl ${vistaActiva === 'censo' ? 'bg-white border-slate-200' : 'bg-slate-950 border-slate-900'}`}>
                     {vistaActiva === 'censo' ? (
                         /* VISTA A: TABLA DEL CENSO LEGAL ACTUALIZADO */
                         <DataTable
+                            light
                             columns={columnasCenso}
                             data={propietarios}
                             loading={cargando}

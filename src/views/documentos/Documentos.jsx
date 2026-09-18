@@ -301,12 +301,12 @@ export default function Documentos() {
   const columnasDocumentos = [
     { key: 'titulo', header: 'Documento', render: (d) => (
       <div>
-        <p className="font-bold text-white">{d.titulo}</p>
+        <p className="font-bold text-slate-900">{d.titulo}</p>
         {d.descripcion && <p className="text-slate-500 mt-0.5">{d.descripcion}</p>}
       </div>
     ) },
-    { key: 'categoria', header: 'Categoría', render: (d) => <StatusBadge tone="brand">{CATEGORIAS.find(c => c.value === d.categoria)?.label || d.categoria}</StatusBadge> },
-    { key: 'visibilidad', header: 'Visibilidad', render: (d) => <StatusBadge tone={d.visibilidad === 'solo_admin' ? 'warning' : 'success'}>{d.visibilidad === 'solo_admin' ? 'Solo Admin' : 'Público'}</StatusBadge> },
+    { key: 'categoria', header: 'Categoría', render: (d) => <StatusBadge light tone="brand">{CATEGORIAS.find(c => c.value === d.categoria)?.label || d.categoria}</StatusBadge> },
+    { key: 'visibilidad', header: 'Visibilidad', render: (d) => <StatusBadge light tone={d.visibilidad === 'solo_admin' ? 'warning' : 'success'}>{d.visibilidad === 'solo_admin' ? 'Solo Admin' : 'Público'}</StatusBadge> },
     { key: 'creado_en', header: 'Fecha', render: (d) => new Date(d.creado_en).toLocaleDateString('es-ES') },
     { key: 'acciones', header: 'Acciones', align: 'center', render: (d) => (
       <div className="flex items-center justify-center gap-2">
@@ -322,8 +322,8 @@ export default function Documentos() {
 
   const columnasDocumentosTexto = [
     { key: 'titulo', header: 'Documento', render: (d) => (
-      <button onClick={() => abrirEditarDocumentoTexto(d)} className="text-left hover:text-blue-400 transition-colors">
-        <p className="font-bold text-white">{d.titulo}</p>
+      <button onClick={() => abrirEditarDocumentoTexto(d)} className="text-left hover:text-blue-600 transition-colors">
+        <p className="font-bold text-slate-900">{d.titulo}</p>
         {d.plantilla_id && <p className="text-slate-500 mt-0.5">Generado desde plantilla</p>}
       </button>
     ) },
@@ -343,7 +343,7 @@ export default function Documentos() {
   const columnasPlantillas = [
     { key: 'nombre', header: 'Plantilla', render: (p) => (
       <div>
-        <p className="font-bold text-white">{p.nombre}</p>
+        <p className="font-bold text-slate-900">{p.nombre}</p>
         {p.descripcion && <p className="text-slate-500 mt-0.5">{p.descripcion}</p>}
       </div>
     ) },
@@ -410,9 +410,10 @@ export default function Documentos() {
       </div>
 
       {tab === 'documentos' ? (
-        <Card className="flex-grow overflow-hidden" padding="p-0">
+        <Card className="flex-grow overflow-hidden" padding="p-0" light>
           <div className="h-full overflow-y-auto custom-scrollbar">
             <DataTable
+              light
               columns={columnasDocumentos}
               data={documentos}
               loading={cargando}
@@ -448,9 +449,10 @@ export default function Documentos() {
           )}
         </div>
       ) : tab === 'redactar' ? (
-        <Card className="flex-grow overflow-hidden" padding="p-0">
+        <Card className="flex-grow overflow-hidden" padding="p-0" light>
           <div className="h-full overflow-y-auto custom-scrollbar">
             <DataTable
+              light
               columns={columnasDocumentosTexto}
               data={documentosTexto}
               loading={cargando}
@@ -460,9 +462,10 @@ export default function Documentos() {
           </div>
         </Card>
       ) : (
-        <Card className="flex-grow overflow-hidden" padding="p-0">
+        <Card className="flex-grow overflow-hidden" padding="p-0" light>
           <div className="h-full overflow-y-auto custom-scrollbar">
             <DataTable
+              light
               columns={columnasPlantillas}
               data={plantillas}
               loading={cargando}
