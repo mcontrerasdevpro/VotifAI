@@ -6,7 +6,6 @@ import Register from './views/auth/Register';
 import ClientSelector from './views/clients/ClientSelector';
 import Dashboard from './views/dashboard/Dashboard';
 import MinutesAI from './views/minutes/MinutesAI';
-import VoterScreen from './views/voter/VoterScreen';
 import AltaFinca from './components/AltaFinca.jsx';
 import ProtectedRoute from './components/ProtectedRoute';
 import AppShell from './components/AppShell.jsx';
@@ -19,6 +18,11 @@ import Crm from './views/crm/Crm.jsx';
 import Agenda from './views/agenda/Agenda.jsx';
 import Contabilidad from './views/contabilidad/Contabilidad.jsx';
 import Asistencia from './views/asistencia/Asistencia.jsx';
+import OlvidePassword from './views/auth/OlvidePassword.jsx';
+import RestablecerPassword from './views/auth/RestablecerPassword.jsx';
+import AvisoLegal from './views/legal/AvisoLegal.jsx';
+import Privacidad from './views/legal/Privacidad.jsx';
+import Terminos from './views/legal/Terminos.jsx';
 
 function App() {
   return (
@@ -28,8 +32,12 @@ function App() {
           <Route path="/" element={<Welcome />} />
           <Route path="/login/:perfil" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/voto-vecino" element={<VoterScreen tipoUsuario="vecino" />} />
           <Route path="/asistencia/:entityId" element={<Asistencia />} />
+          <Route path="/olvide-password/:perfil" element={<OlvidePassword />} />
+          <Route path="/restablecer-password/:perfil" element={<RestablecerPassword />} />
+          <Route path="/legal/aviso-legal" element={<AvisoLegal />} />
+          <Route path="/legal/privacidad" element={<Privacidad />} />
+          <Route path="/legal/terminos" element={<Terminos />} />
 
           <Route element={<ProtectedRoute />}>
             <Route path="/hub" element={<ClientSelector />} />

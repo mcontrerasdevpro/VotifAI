@@ -177,6 +177,15 @@ export default function Login() {
                 type="password" required placeholder="••••••••" value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={() => navigate('/olvide-password/despacho')}
+                  className="text-4xs text-slate-500 hover:text-blue-400 font-bold uppercase tracking-wider"
+                >
+                  ¿Olvidaste tu contraseña?
+                </button>
+              </div>
             </div>
           )}
 

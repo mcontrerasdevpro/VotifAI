@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, Search, Mic, Square, CheckCircle2, RefreshCw, AlertTriangle, UserCheck, Mail, Lock, KeyRound, LogOut, ArrowLeft } from 'lucide-react';
 
@@ -295,6 +295,11 @@ export default function Asistencia() {
                       className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white py-3 rounded-xl text-4xs font-black uppercase tracking-widest shadow-lg shadow-blue-600/10 transition-all">
                       {enviandoAuth ? 'Entrando...' : 'Entrar'}
                     </button>
+                    <div className="text-center">
+                      <Link to="/olvide-password/comunidad" className="text-4xs text-slate-500 hover:text-blue-400 font-bold uppercase tracking-wider">
+                        ¿Olvidaste tu contraseña?
+                      </Link>
+                    </div>
                   </form>
                 ) : !elegido ? (
                   <div className="space-y-3">

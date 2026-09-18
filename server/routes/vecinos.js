@@ -1,9 +1,12 @@
 import { Router } from 'express';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import { query } from '../db.js';
 import { issueVoterSessionCookie, clearVoterSessionCookie, requireVoterAuth } from '../middleware/auth.js';
+import { notificar } from '../lib/notificaciones.js';
 
 const router = Router();
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173').split(',').map((o) => o.trim());
 
 // =========================================================================
 // 🏘️ AUTENTICACIÓN DE VECINOS (registro real con email + contraseña,
@@ -131,6 +134,72 @@ router.post('/vecinos/login', async (req, res) => {
   } catch (err) {
     console.error('Error al iniciar sesión de vecino:', err.message);
     res.status(500).json({ error: `Fallo al iniciar sesión: ${err.message}` });
+  }
+});
+
+router.post('/vecinos/olvide-password', async (req, res) => {
+  const email = String(req.body.email || '').trim();
+
+  const respuestaGenerica = { success: true, mensaje: 'Si ese correo está registrado, recibirás un enlace para restablecer tu contraseña.' };
+  if (!email) return res.status(200).json(respuestaGenerica);
+
+  try {
+    const resultado = await query(
+      `SELECT id, nombre_completo, propiedad_detalle FROM propietarios WHERE email = $1 AND password_hash IS NOT NULL`,
+      [email]
+    );
+    if (resultado.rows.length === 0) return res.status(200).json(respuestaGenerica);
+
+    const vecino = resultado.rows[0];
+    const token = crypto.randomBytes(32).toString('hex');
+    await query(
+      `UPDATE propietarios SET reset_token = $1, reset_token_expira = NOW() + INTERVAL '1 hour' WHERE id = $2`,
+      [token, vecino.id]
+    );
+
+    const enlace = `${allowedOrigins[0]}/restablecer-password/comunidad?token=${token}`;
+    await notificar({
+      tipo: 'reset_password_vecino',
+      finca: { nombre: vecino.propiedad_detalle },
+      mensaje: { titulo: 'Restablecer tu contraseña de VotifAI', cuerpo: `Solicitaste restablecer tu contraseña. Este enlace caduca en 1 hora: ${enlace}` },
+      destinatarios: [{ nombre: vecino.nombre_completo, propiedad: vecino.propiedad_detalle, email }]
+    });
+
+    res.status(200).json(respuestaGenerica);
+  } catch (err) {
+    console.error('Error al solicitar recuperación de contraseña de vecino:', err.message);
+    res.status(200).json(respuestaGenerica);
+  }
+});
+
+router.post('/vecinos/restablecer-password', async (req, res) => {
+  const { token, password } = req.body;
+  if (!token || !password) {
+    return res.status(400).json({ error: 'Faltan datos para restablecer la contraseña.' });
+  }
+  if (password.length < 8) {
+    return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres.' });
+  }
+
+  try {
+    const resultado = await query(
+      `SELECT id FROM propietarios WHERE reset_token = $1 AND reset_token_expira > NOW()`,
+      [token]
+    );
+    if (resultado.rows.length === 0) {
+      return res.status(400).json({ error: 'El enlace no es válido o ha caducado. Solicita uno nuevo.' });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    await query(
+      `UPDATE propietarios SET password_hash = $1, reset_token = NULL, reset_token_expira = NULL WHERE id = $2`,
+      [passwordHash, resultado.rows[0].id]
+    );
+
+    res.status(200).json({ success: true, mensaje: 'Contraseña actualizada correctamente. Ya puedes iniciar sesión.' });
+  } catch (err) {
+    console.error('Error al restablecer contraseña de vecino:', err.message);
+    res.status(500).json({ error: `Fallo al restablecer la contraseña: ${err.message}` });
   }
 });
 

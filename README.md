@@ -52,6 +52,14 @@ Una vez dentro de una finca, además de "Junta en Vivo":
 | Cookie de sesión | `votifai_session` (7 días) | `votifai_voter_session` (180 días) |
 | Alcance | Todas las fincas de su despacho | Solo su propia finca |
 
+Ambas sesiones tienen recuperación de contraseña por email (`/olvide-password/despacho` y `/olvide-password/comunidad`), enviada a través del mismo webhook de n8n que las notificaciones (ver más abajo).
+
+---
+
+## 📲 Notificaciones (WhatsApp / Email vía n8n)
+
+Las convocatorias, los reenvíos de acta y la recuperación de contraseña se envían a través de un único webhook de n8n (`server/lib/notificaciones.js`), configurable con `N8N_WEBHOOK_URL`. Es el flujo de n8n quien decide el canal por destinatario según tenga teléfono, email o ambos. Sin esa variable, el envío se simula con un `console.log` (útil en desarrollo).
+
 ---
 
 ## 🛠️ Instalación en Entorno Local

@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -160,6 +161,73 @@ app.post('/api/auth/login', async (req, res) => {
 app.post('/api/auth/logout', (req, res) => {
   clearSessionCookie(res);
   res.status(200).json({ success: true, mensaje: 'Sesión cerrada correctamente.' });
+});
+
+// =========================================================================
+// 🔁 ENDPOINTS DE RECUPERACIÓN DE CONTRASEÑA (despacho administrador)
+// =========================================================================
+app.post('/api/auth/olvide-password', async (req, res) => {
+  const email = String(req.body.email || '').trim();
+
+  // Respuesta siempre genérica: no revelamos si ese email existe o no.
+  const respuestaGenerica = { success: true, mensaje: 'Si ese correo está registrado, recibirás un enlace para restablecer tu contraseña.' };
+  if (!email) return res.status(200).json(respuestaGenerica);
+
+  try {
+    const resultado = await query('SELECT id, nombre_entidad FROM tenants WHERE email_maestro = $1', [email]);
+    if (resultado.rows.length === 0) return res.status(200).json(respuestaGenerica);
+
+    const tenant = resultado.rows[0];
+    const token = crypto.randomBytes(32).toString('hex');
+    await query(
+      `UPDATE tenants SET reset_token = $1, reset_token_expira = NOW() + INTERVAL '1 hour' WHERE id = $2`,
+      [token, tenant.id]
+    );
+
+    const enlace = `${allowedOrigins[0]}/restablecer-password/despacho?token=${token}`;
+    await notificar({
+      tipo: 'reset_password_despacho',
+      despacho: { id: tenant.id, nombre: tenant.nombre_entidad },
+      mensaje: { titulo: 'Restablecer tu contraseña de VotifAI', cuerpo: `Solicitaste restablecer tu contraseña. Este enlace caduca en 1 hora: ${enlace}` },
+      destinatarios: [{ nombre: tenant.nombre_entidad, email }]
+    });
+
+    res.status(200).json(respuestaGenerica);
+  } catch (err) {
+    console.error('Error al solicitar recuperación de contraseña de despacho:', err.message);
+    res.status(200).json(respuestaGenerica);
+  }
+});
+
+app.post('/api/auth/restablecer-password', async (req, res) => {
+  const { token, password } = req.body;
+  if (!token || !password) {
+    return res.status(400).json({ error: 'Faltan datos para restablecer la contraseña.' });
+  }
+  if (password.length < 8) {
+    return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres.' });
+  }
+
+  try {
+    const resultado = await query(
+      `SELECT id FROM tenants WHERE reset_token = $1 AND reset_token_expira > NOW()`,
+      [token]
+    );
+    if (resultado.rows.length === 0) {
+      return res.status(400).json({ error: 'El enlace no es válido o ha caducado. Solicita uno nuevo.' });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    await query(
+      `UPDATE tenants SET password_hash = $1, reset_token = NULL, reset_token_expira = NULL WHERE id = $2`,
+      [passwordHash, resultado.rows[0].id]
+    );
+
+    res.status(200).json({ success: true, mensaje: 'Contraseña actualizada correctamente. Ya puedes iniciar sesión.' });
+  } catch (err) {
+    console.error('Error al restablecer contraseña de despacho:', err.message);
+    res.status(500).json({ error: `Fallo al restablecer la contraseña: ${err.message}` });
+  }
 });
 
 // =========================================================================

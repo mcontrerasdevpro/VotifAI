@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Users, ShieldCheck, ArrowRight, Sparkles, AudioLines, FileJson, Scale, Send } from 'lucide-react';
 
 const DIAPOSITIVAS = [
@@ -186,9 +186,14 @@ export default function Welcome() {
       </main>
 
       {/* 3. PIE DE PÁGINA */}
-      <footer className="w-full max-w-7xl mx-auto border-t border-slate-900 pt-4 flex flex-col sm:flex-row justify-between items-center text-4xs text-slate-500 font-bold tracking-widest uppercase gap-2 shrink-0">
+      <footer className="w-full max-w-7xl mx-auto border-t border-slate-900 pt-4 flex flex-col sm:flex-row justify-between items-center text-4xs text-slate-500 font-bold tracking-widest uppercase gap-3 shrink-0">
         <div>© {new Date().getFullYear()} VotifAI Inc. Todos los derechos reservados.</div>
-        <div className="flex items-center gap-1"><ShieldCheck size={12} className="text-slate-600" /> Protocolo Criptográfico de Seguridad Activo</div>
+        <div className="flex items-center gap-4">
+          <Link to="/legal/aviso-legal" className="hover:text-slate-300 transition-colors">Aviso Legal</Link>
+          <Link to="/legal/privacidad" className="hover:text-slate-300 transition-colors">Privacidad</Link>
+          <Link to="/legal/terminos" className="hover:text-slate-300 transition-colors">Términos</Link>
+          <span className="flex items-center gap-1"><ShieldCheck size={12} className="text-slate-600" /> Protocolo Criptográfico de Seguridad Activo</span>
+        </div>
       </footer>
 
     </div>
