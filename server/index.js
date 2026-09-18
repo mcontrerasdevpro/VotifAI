@@ -16,6 +16,7 @@ import agendaRouter from './routes/agenda.js';
 import contabilidadRouter from './routes/contabilidad.js';
 import vozRouter from './routes/voz.js';
 import vecinosRouter from './routes/vecinos.js';
+import { notificar } from './lib/notificaciones.js';
 
 dotenv.config();
 const app = express();
@@ -287,21 +288,25 @@ app.post('/api/notifications/convocar', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'No autorizado para notificar a esta entidad.' });
     }
 
-    console.log(`\n📲 [WhatsApp API] Iniciando campaña de notificación oficial para: ${nombreFinca}`);
-    console.log(`🔒 ID del Expediente: ${fincaId}`);        
-    propietarios.forEach((vecino) => {
-      console.log(`   ➔ [ENVIADO] Mensaje Certificado ➔ Propiedad: ${vecino.propiedad} | Propietario: ${vecino.nombre} | Móvil: ${vecino.telefono}`);
+    const despachoResultado = await query('SELECT nombre_entidad FROM tenants WHERE id = $1', [req.tenantId]);
+
+    await notificar({
+      tipo: 'convocatoria',
+      despacho: { id: req.tenantId, nombre: despachoResultado.rows[0]?.nombre_entidad || null },
+      finca: { id: fincaId, nombre: nombreFinca },
+      mensaje: { titulo: `Convocatoria oficial — ${nombreFinca}`, cuerpo: 'Se ha publicado una nueva convocatoria de junta. Consulta el orden del día en VotifAI.' },
+      destinatarios: propietarios.map((v) => ({ nombre: v.nombre, propiedad: v.propiedad, telefono: v.telefono, email: v.email }))
     });
 
     res.status(200).json({
       success: true,
-      mensaje: `Convocatoria oficial despachada con éxito a los ${propietarios.length} propietarios de la finca vía WhatsApp API.`,
-      hashCertificado: "sha256_b4e789a1cdcefd2100874e99fbcad781a941efc5" 
+      mensaje: `Convocatoria oficial despachada a los ${propietarios.length} propietarios de la finca.`,
+      hashCertificado: "sha256_b4e789a1cdcefd2100874e99fbcad781a941efc5"
     });
 
   } catch (err) {
     console.error('Error en el despachador de notificaciones:', err.message);
-    res.status(500).json({ error: 'Fallo en la pasarela externa de telefonía.' });
+    res.status(500).json({ error: 'Fallo en la pasarela externa de notificación.' });
   }
 });
 
@@ -696,23 +701,33 @@ app.post('/api/notifications/reenviar-individual', requireAuth, async (req, res)
 
     const datosVecino = vecino.rows[0];
 
-    if (!datosVecino.telefono) {
-      return res.status(400).json({ error: 'Este usuario no dispone de teléfono móvil registrado para envío por WhatsApp.' });
+    if (!datosVecino.telefono && !datosVecino.email) {
+      return res.status(400).json({ error: 'Este usuario no dispone de teléfono ni email registrado para el reenvío.' });
     }
 
-    console.log(`\n📲 [WhatsApp API - REENVÍO INDIVIDUAL]`);
-    console.log(`   ➔ Despachando Copia Certificada del Acta | Entidad: ${nombreFinca}`);
-    console.log(`   ➔ Destinatario: ${datosVecino.nombre_completo} | Ref: ${datosVecino.propiedad_detalle}`);
-    console.log(`   ➔ Pasarela Móvil: ${datosVecino.telefono}`);
+    const despachoResultado = await query('SELECT nombre_entidad FROM tenants WHERE id = $1', [req.tenantId]);
+
+    await notificar({
+      tipo: 'reenvio_individual',
+      despacho: { id: req.tenantId, nombre: despachoResultado.rows[0]?.nombre_entidad || null },
+      finca: { nombre: nombreFinca },
+      mensaje: { titulo: `Copia del acta — ${nombreFinca}`, cuerpo: actaTexto },
+      destinatarios: [{
+        nombre: datosVecino.nombre_completo,
+        propiedad: datosVecino.propiedad_detalle,
+        telefono: datosVecino.telefono,
+        email: datosVecino.email
+      }]
+    });
 
     res.status(200).json({
       success: true,
-      mensaje: `Copia certificada del acta reenviada correctamente a ${datosVecino.nombre_completo} (${datosVecino.propiedad_detalle}) vía WhatsApp API.`
+      mensaje: `Copia certificada del acta reenviada correctamente a ${datosVecino.nombre_completo} (${datosVecino.propiedad_detalle}).`
     });
 
   } catch (err) {
     console.error('Error crítico en el despachador de reenvíos:', err.message);
-    res.status(500).json({ error: `Fallo en la pasarela externa de telefonía: ${err.message}` });
+    res.status(500).json({ error: `Fallo en la pasarela externa de notificación: ${err.message}` });
   }
 });
 
