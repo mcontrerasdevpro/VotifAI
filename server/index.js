@@ -165,7 +165,7 @@ app.get('/api/entities/:tenantId', requireAuth, async (req, res) => {
     );
 
     const fincasResultado = await query(
-      'SELECT id, nombre, cif, direccion, tipo, creado_en FROM entities WHERE tenant_id = $1 ORDER BY creado_en DESC',
+      'SELECT id, nombre, cif, direccion, tipo, metadatos_legales, creado_en FROM entities WHERE tenant_id = $1 ORDER BY creado_en DESC',
       [tenantId]
     );
 
