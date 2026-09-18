@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Users, FileText, ArrowLeftRight, UserPlus, Scale, AlertCircle, RefreshCw, ClipboardList } from 'lucide-react';
+import { Users, ArrowLeftRight, UserPlus, Scale, ClipboardList } from 'lucide-react';
+import DataTable from './ui/DataTable.jsx';
+import StatusBadge from './ui/StatusBadge.jsx';
+import Modal from './ui/Modal.jsx';
+import Field from './ui/Field.jsx';
+
+const TONO_MOTIVO = {
+    venta: 'success',
+    alquiler: 'warning'
+};
 
 export default function CensoPropietarios({ fincaId, nombreFinca }) {
     const [propietarios, setPropietarios] = useState([]);
@@ -114,7 +122,7 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
         const payload = {
             entity_id: fincaId,
             nombre_completo: altaNombre,
-            direccion_postal: altaDireccion, 
+            direccion_postal: altaDireccion,
             telefono: altaTelefono || null,
             email: altaEmail || null,
             coeficiente: parseFloat(altaCoeficiente)
@@ -133,8 +141,8 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
                 alert("✓ Propietario inscrito correctamente en el censo legal.");
                 setMostrarModalAlta(false);
                 setAltaNombre(''); setAltaDireccion(''); setAltaTelefono(''); setAltaEmail(''); setAltaCoeficiente('5.00');
-                if (typeof setAltaDni === 'function') setAltaDni('');                
-                await consultarCensoNeon(); 
+                if (typeof setAltaDni === 'function') setAltaDni('');
+                await consultarCensoNeon();
             } else {
                 alert(`❌ Error: ${data.error || 'No se pudo registrar.'}`);
             }
@@ -145,6 +153,47 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
             setGuardandoAlta(false);
         }
     };
+
+    const columnasCenso = [
+        {
+            key: 'inmueble', header: 'Inmueble',
+            render: (v) => <span className="font-bold text-blue-400">{v.propiedad_detalle || 'Vivienda'}</span>
+        },
+        {
+            key: 'titular', header: 'Titular Activo',
+            render: (v) => <span className="text-slate-900 font-bold">{v.nombre_completo}</span>
+        },
+        {
+            key: 'contacto', header: 'Medios de Contacto',
+            render: (v) => (
+                <div className="space-y-0.5">
+                    {v.telefono && <p className="text-slate-600 font-medium">📞 {v.telefono}</p>}
+                    {v.email && <p className="text-slate-500 truncate max-w-[120px]">✉️ {v.email}</p>}
+                </div>
+            )
+        },
+        {
+            key: 'coeficiente', header: 'Coef.', align: 'right',
+            render: (v) => <span className="font-black text-emerald-400">{parseFloat(v.coeficiente || 5.00).toFixed(2)}%</span>
+        },
+        {
+            key: 'acciones', header: 'Acciones', align: 'center',
+            render: (v) => (
+                <button
+                    type="button"
+                    onClick={() => {
+                        setPropietarioSustituir(v);
+                        setNuevoNombre('');
+                        setNuevoTelefono('');
+                        setNuevoEmail('');
+                    }}
+                    className="bg-slate-900 border border-slate-800 hover:bg-slate-800 text-blue-400 hover:text-blue-300 px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-wider transition-colors flex items-center gap-1 mx-auto shadow-sm"
+                >
+                    <ArrowLeftRight size={10} /> Traspasar
+                </button>
+            )
+        }
+    ];
 
     return (
         <div className="flex flex-col h-full overflow-hidden justify-between">
@@ -181,67 +230,19 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
                 </div>
 
                 {/* CONTENEDOR CENTRAL INTERACTIVO CON CONMUTACIÓN DE VISTAS */}
-                <div className="flex-grow overflow-y-auto custom-scrollbar mb-3 border border-slate-900 rounded-xl bg-slate-950">
-                    {cargando ? (
-                        <div className="h-full flex flex-col justify-center items-center text-4xs text-slate-500 font-bold uppercase tracking-widest animate-pulse gap-2">
-                            <RefreshCw size={16} className="animate-spin text-blue-500" /> Sincronizando Censo Registral...
-                        </div>
-                    ) : vistaActiva === 'censo' ? (
-                         /* ========================================================================= */
-            /* VISTA A: TABLA DEL CENSO LEGAL ACTUALIZADO              */
-            /* ========================================================================= */
-            <table className="w-full text-left font-sans text-4xs">
-              <thead className="bg-slate-900 text-slate-400 sticky top-0 border-b border-slate-800 font-bold z-10">
-                <tr>
-                  <th className="py-2.5 px-3">Inmueble</th>
-                  <th className="py-2.5 px-3">Titular Activo</th>
-                  <th className="py-2.5 px-3">Medios de Contacto</th>
-                  <th className="py-2.5 px-3 text-right">Coef.</th>
-                  <th className="py-2.5 px-3 text-center">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-900 text-slate-300">
-                {propietarios && propietarios.length > 0 ? (
-                  propietarios.map((v, index) => (
-                    <tr key={v.id || `prop_${index}`} className="hover:bg-slate-900/30 transition-colors">
-                      <td className="py-2.5 px-3 font-bold text-blue-400">{v.propiedad_detalle || 'Vivienda'}</td>
-                      <td className="py-2.5 px-3 text-white font-bold">{v.nombre_completo}</td>
-                      <td className="py-2.5 px-3 space-y-0.5">
-                        {v.telefono && <p className="text-slate-300 font-medium">📞 {v.telefono}</p>}
-                        {v.email && <p className="text-slate-400 truncate max-w-[120px]">✉️ {v.email}</p>}
-                      </td>
-                      <td className="py-2.5 px-3 text-right font-black text-emerald-400">
-                        {parseFloat(v.coeficiente || 5.00).toFixed(2)}%
-                      </td>
-                      <td className="py-2.5 px-3 text-center">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setPropietarioSustituir(v);
-                            setNuevoNombre('');
-                            setNuevoTelefono('');
-                            setNuevoEmail('');
-                          }}
-                          className="bg-slate-900 border border-slate-800 hover:bg-slate-800 text-blue-400 hover:text-blue-300 px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-wider transition-colors flex items-center gap-1 mx-auto shadow-sm"
-                        >
-                          <ArrowLeftRight size={10} /> Traspasar
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={5} className="text-center py-12 text-slate-600 font-medium uppercase tracking-widest text-[9px]">
-                      No hay propietarios dados de alta en esta comunidad.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                <div className={`flex-grow overflow-y-auto custom-scrollbar mb-3 border rounded-xl ${vistaActiva === 'censo' ? 'bg-white border-slate-200' : 'bg-slate-950 border-slate-900'}`}>
+                    {vistaActiva === 'censo' ? (
+                        /* VISTA A: TABLA DEL CENSO LEGAL ACTUALIZADO */
+                        <DataTable
+                            light
+                            columns={columnasCenso}
+                            data={propietarios}
+                            loading={cargando}
+                            loadingLabel="Sincronizando Censo Registral..."
+                            emptyLabel="No hay propietarios dados de alta en esta comunidad."
+                        />
                     ) : (
-                        /* ========================================================================= */
-                        /* VISTA B: HISTORIAL INMUTABLE DE AUDITORÍA (CAMBIOS DE TITULAR)            */
-                        /* ========================================================================= */
+                        /* VISTA B: HISTORIAL INMUTABLE DE AUDITORÍA (CAMBIOS DE TITULAR) */
                         <div className="p-3 space-y-2.5">
                             {historial.length > 0 ? (
                                 historial.map((h) => (
@@ -259,12 +260,9 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
                                             <p className="text-slate-400 font-medium leading-relaxed">
                                                 <span className="text-slate-500 font-bold uppercase tracking-wider">Detalles:</span> "{h.detalles}"
                                             </p>
-                                            <span className={`px-2 py-0.5 rounded font-black uppercase tracking-wider text-[8px] shrink-0 ${h.motivo_cambio === 'venta' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                                                h.motivo_cambio === 'alquiler' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
-                                                    'bg-purple-500/10 text-purple-400 border border-purple-500/20'
-                                                }`}>
+                                            <StatusBadge tone={TONO_MOTIVO[h.motivo_cambio] || 'info'} className="shrink-0">
                                                 {h.motivo_cambio}
-                                            </span>
+                                            </StatusBadge>
                                         </div>
                                     </div>
                                 ))
@@ -285,122 +283,66 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
                 </span>
             </div>
 
-            {/* FORMULARIO FLOTANTE ANIMADO: TRAMITACIÓN DE CAMBIO DE TITULARIDAD */}
-      <AnimatePresence>
-        {propietarioSustituir && (
-          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <motion.form
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              onSubmit={handleTramitarCambioTitular}
-              className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md space-y-4 shadow-2xl overflow-hidden"
+            {/* FORMULARIO FLOTANTE: TRAMITACIÓN DE CAMBIO DE TITULARIDAD */}
+            <Modal
+                open={!!propietarioSustituir}
+                onClose={() => setPropietarioSustituir(null)}
+                icon={Scale}
+                eyebrow={propietarioSustituir ? `Traspaso de Propiedad: ${propietarioSustituir.propiedad_detalle}` : ''}
+                title="Modificar Datos de Vivienda"
+                footer={
+                    <>
+                        <button type="button" onClick={() => setPropietarioSustituir(null)} className="flex-1 bg-slate-950 text-slate-400 py-2.5 rounded-xl text-xs font-bold border border-slate-900 transition-colors hover:text-white">Cancelar</button>
+                        <button type="submit" form="form-cambio-titular" disabled={procesandoTransaccion} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50">
+                            {procesandoTransaccion ? 'Inscribiendo...' : 'Inscribir Traspaso'}
+                        </button>
+                    </>
+                }
             >
-              <div>
-                <h2 className="text-sm font-black text-white flex items-center gap-2">
-                  <Scale size={16} className="text-blue-500" /> Modificar Datos de Vivienda
-                </h2>
-                <p className="text-5xs text-slate-400 mt-1 uppercase tracking-wider">
-                  Traspaso de Propiedad: <span className="text-white font-bold">{propietarioSustituir.propiedad_detalle}</span>
-                </p>
-              </div>
+                <form id="form-cambio-titular" onSubmit={handleTramitarCambioTitular} className="space-y-3">
+                    <Field label="Nombre del Nuevo Propietario" type="text" required value={nuevoNombre} onChange={(e) => setNuevoNombre(e.target.value)} placeholder="Ej: Francisco Gómez Ruiz" />
+                    <div className="grid grid-cols-2 gap-3">
+                        <Field label="Teléfono Móvil" type="text" value={nuevoTelefono} onChange={(e) => setNuevoTelefono(e.target.value)} placeholder="Ej: +34600123456" />
+                        <Field label="Correo Electrónico" type="email" value={nuevoEmail} onChange={(e) => setNuevoEmail(e.target.value)} placeholder="Ej: nuevo@correo.com" />
+                    </div>
+                    <Field as="select" label="Motivo Legal del Traspaso" value={motivoCambio} onChange={(e) => setMotivoCambio(e.target.value)}>
+                        <option value="venta">🔑 Venta / Compraventa</option>
+                        <option value="alquiler">📋 Alquiler / Arrendamiento</option>
+                        <option value="cesion">🤝 Cesión de Propiedad</option>
+                        <option value="herencia">📜 Herencia / Sucesión</option>
+                        <option value="otro">⚙️ Otro Motivo</option>
+                    </Field>
+                    <Field as="textarea" label="Detalles Adicionales y Notas de Auditoría" value={detalles} onChange={(e) => setDetalles(e.target.value)} inputClassName="h-16" placeholder="Ej: Escritura firmada ante Notario..." />
+                </form>
+            </Modal>
 
-              <div className="space-y-3">
-                <div className="space-y-1">
-                  <label className="block text-5xs font-bold text-slate-400 uppercase tracking-widest">Nombre del Nuevo Propietario</label>
-                  <input type="text" required value={nuevoNombre} onChange={(e) => setNuevoNombre(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-3 text-xs text-slate-200 focus:outline-none focus:border-blue-500" placeholder="Ej: Francisco Gómez Ruiz" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="block text-5xs font-bold text-slate-400 uppercase tracking-widest">Teléfono Móvil</label>
-                    <input type="text" value={nuevoTelefono} onChange={(e) => setNuevoTelefono(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-3 text-xs text-slate-200 focus:outline-none focus:border-blue-500" placeholder="Ej: +34600123456" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="block text-5xs font-bold text-slate-400 uppercase tracking-widest">Correo Electrónico</label>
-                    <input type="email" value={nuevoEmail} onChange={(e) => setNuevoEmail(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-3 text-xs text-slate-200 focus:outline-none focus:border-blue-500" placeholder="Ej: nuevo@correo.com" />
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-5xs font-bold text-slate-400 uppercase tracking-widest">Motivo Legal del Traspaso</label>
-                  <select value={motivoCambio} onChange={(e) => setMotivoCambio(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-3 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
-                    <option value="venta">🔑 Venta / Compraventa</option>
-                    <option value="alquiler">📋 Alquiler / Arrendamiento</option>
-                    <option value="cesion">🤝 Cesión de Propiedad</option>
-                    <option value="herencia">📜 Herencia / Sucesión</option>
-                    <option value="otro">⚙️ Otro Motivo</option>
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-5xs font-bold text-slate-400 uppercase tracking-widest">Detalles Adicionales y Notas de Auditoría</label>
-                  <textarea value={detalles} onChange={(e) => setDetalles(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500 h-16 resize-none" placeholder="Ej: Escritura firmada ante Notario..." />
-                </div>
-              </div>
-
-              <div className="flex gap-2 pt-2 border-t border-slate-800/60">
-                <button type="button" onClick={() => setPropietarioSustituir(null)} className="flex-1 bg-slate-950 text-slate-400 py-2.5 rounded-xl text-xs font-bold border border-slate-900 transition-colors hover:text-white">Cancelar</button>
-                <button type="submit" disabled={procesandoTransaccion} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50">
-                  {procesandoTransaccion ? 'Inscribiendo...' : 'Inscribir Traspaso'}
-                </button>
-              </div>
-            </motion.form>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* 👤 MODAL FLOTANTE ANIMADO: ALTA INICIAL DE VECINOS EN EL CENSO */}
-      <AnimatePresence>
-        {mostrarModalAlta && (
-          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <motion.form
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              onSubmit={handleRegistrarPropietarioInicial}
-              className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md space-y-4 shadow-2xl"
+            {/* MODAL: ALTA INICIAL DE VECINOS EN EL CENSO */}
+            <Modal
+                open={mostrarModalAlta}
+                onClose={() => setMostrarModalAlta(false)}
+                icon={UserPlus}
+                eyebrow="Alta directa en libro de censo"
+                title="Inscribir Propietario Inicial"
+                footer={
+                    <>
+                        <button type="button" onClick={() => setMostrarModalAlta(false)} className="flex-1 bg-slate-950 text-slate-400 py-2.5 rounded-xl text-xs font-bold border border-slate-900 transition-colors hover:text-white">Cancelar</button>
+                        <button type="submit" form="form-alta-propietario" disabled={guardandoAlta} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50">
+                            {guardandoAlta ? 'Inscribiendo...' : 'Registrar Vecino'}
+                        </button>
+                    </>
+                }
             >
-              <div>
-                <h2 className="text-sm font-black text-white flex items-center gap-2">
-                  <UserPlus size={16} className="text-blue-500" /> Inscribir Propietario Inicial
-                </h2>
-                <p className="text-5xs text-slate-400 mt-1 uppercase tracking-wider">Alta directa en libro de censo</p>
-              </div>
+                <form id="form-alta-propietario" onSubmit={handleRegistrarPropietarioInicial} className="space-y-3">
+                    <Field label="Nombre y Apellidos" type="text" required value={altaNombre} onChange={(e) => setAltaNombre(e.target.value)} placeholder="Ej: Juan Pérez Gómez" />
+                    <Field label="Vivienda / Propiedad" type="text" required value={altaDireccion} onChange={(e) => setAltaDireccion(e.target.value)} placeholder="Ej: Piso 1ºB o Local Izquierdo" />
+                    <div className="grid grid-cols-2 gap-3">
+                        <Field label="Teléfono Móvil" type="text" value={altaTelefono} onChange={(e) => setAltaTelefono(e.target.value)} placeholder="+34600000000" />
+                        <Field label="Email de Notificación" type="email" value={altaEmail} onChange={(e) => setAltaEmail(e.target.value)} placeholder="vecino@correo.com" />
+                    </div>
+                    <Field label="Coeficiente de Participación (%)" type="number" step="0.01" min="0.01" max="100" required value={altaCoeficiente} onChange={(e) => setAltaCoeficiente(e.target.value)} placeholder="5.00" />
+                </form>
+            </Modal>
 
-              <div className="space-y-3">
-                <div className="space-y-1">
-                  <label className="block text-5xs font-bold text-slate-400 uppercase tracking-widest">Nombre y Apellidos</label>
-                  <input type="text" required value={altaNombre} onChange={(e) => setAltaNombre(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-3 text-xs text-slate-200 focus:outline-none focus:border-blue-500" placeholder="Ej: Juan Pérez Gómez" />
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-5xs font-bold text-slate-400 uppercase tracking-widest">Vivienda / Propiedad</label>
-                  <input type="text" required value={altaDireccion} onChange={(e) => setAltaDireccion(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-3 text-xs text-slate-200 focus:outline-none focus:border-blue-500" placeholder="Ej: Piso 1ºB o Local Izquierdo" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="block text-5xs font-bold text-slate-400 uppercase tracking-widest">Teléfono Móvil</label>
-                    <input type="text" value={altaTelefono} onChange={(e) => setAltaTelefono(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-3 text-xs text-slate-200 focus:outline-none focus:border-blue-500" placeholder="+34600000000" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="block text-5xs font-bold text-slate-400 uppercase tracking-widest">Email de Notificación</label>
-                    <input type="email" value={altaEmail} onChange={(e) => setAltaEmail(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-3 text-xs text-slate-200 focus:outline-none focus:border-blue-500" placeholder="vecino@correo.com" />
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-5xs font-bold text-slate-400 uppercase tracking-widest">Coeficiente de Participación (%)</label>
-                  <input type="number" step="0.01" min="0.01" max="100" required value={altaCoeficiente} onChange={(e) => setAltaCoeficiente(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-3 text-xs text-slate-200 focus:outline-none focus:border-blue-500" placeholder="5.00" />
-                </div>
-              </div>
-
-              <div className="flex gap-2 pt-2 border-t border-slate-800/60">
-                <button type="button" onClick={() => setMostrarModalAlta(false)} className="flex-1 bg-slate-950 text-slate-400 py-2.5 rounded-xl text-xs font-bold border border-slate-900 transition-colors hover:text-white">Cancelar</button>
-                <button type="submit" disabled={guardandoAlta} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50">
-                  {guardandoAlta ? 'Inscribiendo...' : 'Registrar Vecino'}
-                </button>
-              </div>
-            </motion.form>
-          </div>
-        )}
-      </AnimatePresence>
-
-    </div>
-  );
+        </div>
+    );
 }

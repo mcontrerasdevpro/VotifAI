@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Chart from 'react-apexcharts';
 import { FileText, AudioLines, Download, CheckCircle, Edit3, ArrowLeft, RefreshCw, Sparkles, Mic, MicOff, BarChart3, Users, Percent, ShieldCheck, Lock, Mail, MessageSquare, Send } from 'lucide-react';
 import { useVotifaiStore } from '../../store.jsx';
+import Card from '../../components/ui/Card.jsx';
 
 export default function MinutesAI() {
   const navigate = useNavigate();
@@ -34,7 +35,7 @@ export default function MinutesAI() {
 
  useEffect(() => {
     const fincaActivaId = 'd1f5964c-0c2b-40f8-88d6-d0ed253f8413';    
-    const listaFincas = state?.tenant?.comunidadesYEmpresas || [];
+    const listaFincas = state?.tenant?.comunidades || [];
     const fincaData = listaFincas.find(f => f.id === fincaActivaId);
 
     const nombre = fincaData?.nombre || 'Sala de Gobernanza Conectada';
@@ -161,12 +162,12 @@ export default function MinutesAI() {
 
       {/* RECUADRO PANORÁMICO */}
       <div className="flex-grow flex flex-col lg:flex-row overflow-hidden p-4 gap-4">
-        <div className="w-full lg:w-5/12 bg-slate-900/40 border border-slate-900 rounded-2xl p-5 flex flex-col h-full overflow-hidden">
+        <Card className="w-full lg:w-5/12 flex flex-col h-full overflow-hidden" padding="p-5">
           <div className="flex justify-between items-center mb-4 border-b border-slate-900 pb-3"><h3 className="text-3xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5"><AudioLines size={14} className="text-blue-500" /> Conversaciones Indexadas</h3></div>
           <div className="space-y-4 overflow-y-auto pr-1 flex-grow custom-scrollbar text-2xs italic text-slate-400">
             <div className="p-3 bg-slate-950 rounded-xl border border-slate-900">[Presidente]: "El acta queda revisada. Procedamos al cierre."</div>
           </div>
-        </div>
+        </Card>
 
         <div className="w-full lg:w-7/12 bg-white text-slate-900 rounded-2xl p-5 flex flex-col h-full overflow-hidden relative border border-slate-200">
           <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-3 text-slate-500">

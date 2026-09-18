@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useVotifaiStore } from '../../store.jsx';
-import { ArrowLeft, ShieldCheck, KeyRound, User, Home, Building, Mail, Lock, AlertCircle } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, KeyRound, Building, Mail, Lock, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Field from '../../components/ui/Field.jsx';
 
 export default function Login() {
   const { perfil } = useParams();
@@ -14,25 +15,42 @@ export default function Login() {
   const [errorMensaje, setErrorMensaje] = useState('');
 
   const [codigoJunta, setCodigoJunta] = useState('');
-  const [nombreVecino, setNombreVecino] = useState('');
-  const [pisoPuerta, setPisoPuerta] = useState('');
 
-  const [cifEmpresa, setCifEmpresa] = useState('');
-  const [emailSocio, setEmailSocio] = useState('');
+  const [cifDespacho, setCifDespacho] = useState('');
+  const [emailAdmin, setEmailAdmin] = useState('');
   const [password, setPassword] = useState('');
 
    const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMensaje('');
 
-    if (esComunidad) {      
-      console.log("Datos Vecino:", { codigoJunta, nombreVecino, pisoPuerta });
-      navigate('/voto-vecino');
-    } else {    
+    if (esComunidad) {
+      setCargando(true);
+      try {
+        const respuesta = await fetch('/api/vecinos/resolver-codigo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ codigo: codigoJunta })
+        });
+        const resultado = await respuesta.json();
+
+        if (!respuesta.ok) {
+          setErrorMensaje(resultado.error || 'Código de acceso no válido.');
+          setCargando(false);
+          return;
+        }
+
+        navigate(`/asistencia/${resultado.entity_id}`);
+      } catch (error) {
+        console.error('Error al resolver el código de acceso:', error);
+        setErrorMensaje('No se pudo establecer comunicación con el servidor central de VotifAI.');
+        setCargando(false);
+      }
+    } else {
       setCargando(true);
 
       const payload = {
-        email: emailSocio,
+        email: emailAdmin,
         password: password
       };
 
@@ -40,6 +58,7 @@ export default function Login() {
         const respuesta = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify(payload)
         });
 
@@ -55,20 +74,20 @@ export default function Login() {
           const nuevoTenantCaché = {
             tenantId: resultado.tenant.id || resultado.tenant.tenantId,
             nombreEntidad: resultado.tenant.nombre_entidad || resultado.tenant.nombreEntidad || "Despacho Profesional",
-            email: resultado.tenant.email_maestro || resultado.tenant.email || emailSocio,
+            email: resultado.tenant.email_maestro || resultado.tenant.email || emailAdmin,
             tipoOrganizacion: resultado.tenant.tipo_organizacion || resultado.tenant.tipoOrganizacion || 'administrador',
             plan: resultado.tenant.plan_suscripcion || resultado.tenant.plan || 'trial_15_dias',
-            
+
             admin: {
-              nombre: resultado.tenant.admin_nombre || resultado.tenant.adminNombre || resultado.tenant.nombre || "Admin General",
+              nombre: resultado.tenant.nombre_responsable || resultado.tenant.admin_nombre || resultado.tenant.adminNombre || resultado.tenant.nombre || "Admin General",
               despacho: resultado.tenant.nombre_entidad || resultado.tenant.nombreEntidad || "Despacho Administrador"
             },
-            
-            comunidadesYEmpresas: resultado.tenant.comunidadesYEmpresas || []
+
+            comunidades: resultado.tenant.comunidades || []
           };
 
           localStorage.setItem('votifai_tenant', JSON.stringify(nuevoTenantCaché));
-          
+
           localStorage.setItem('tenantId', resultado.tenant.id);
         }
 
@@ -105,7 +124,7 @@ export default function Login() {
             <span className="text-xl font-black text-white">Votif<span className="text-blue-500">AI</span></span>
           </div>
           <p className="text-xs text-slate-400 mt-2">
-            {esComunidad ? 'Acreditación para Junta de Propietarios' : 'Identificación de Accionista o Consejero'}
+            {esComunidad ? 'Acreditación para Junta de Propietarios' : 'Acceso de Administrador de Fincas'}
           </p>
         </div>
 
@@ -124,81 +143,48 @@ export default function Login() {
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
 
           {esComunidad ? (
-            /* FORMULARIO VECINAL */
+            /* FORMULARIO VECINAL: solo el código que reparte el administrador — la
+               identificación real (elegirte del censo + contraseña) vive en /asistencia */
             <div className="space-y-4">
-              <div>
-                <label className="block text-3xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">1. Código de Convocatoria</label>
-                <div className="relative">
-                  <KeyRound className="absolute left-3 top-3.5 text-slate-500" size={16} />
-                  <input
-                    type="text" required placeholder="Ej: VAI-7721-M" value={codigoJunta}
-                    onChange={(e) => setCodigoJunta(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-xs font-mono tracking-widest text-slate-200 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-3xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">2. Nombre y Apellidos</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-3.5 text-slate-500" size={16} />
-                  <input
-                    type="text" required placeholder="Ej: Carmen Ortiz" value={nombreVecino}
-                    onChange={(e) => setNombreVecino(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-3xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">3. Propiedad o Coeficiente</label>
-                <div className="relative">
-                  <Home className="absolute left-3 top-3.5 text-slate-500" size={16} />
-                  <input
-                    type="text" required placeholder="Ej: Piso 2ºA, Garaje 12" value={pisoPuerta}
-                    onChange={(e) => setPisoPuerta(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              </div>
+              <Field
+                label="Código de Acceso de tu Comunidad" icon={KeyRound}
+                type="text" required placeholder="Ej: VAI-7721-M" value={codigoJunta}
+                onChange={(e) => setCodigoJunta(e.target.value)}
+                inputClassName="font-mono tracking-widest uppercase"
+              />
+              <p className="text-4xs text-slate-500 leading-relaxed">
+                Este código te lo facilita el administrador de tu comunidad. Con él identificarás tu vivienda y crearás (o iniciarás) tu cuenta de vecino.
+              </p>
             </div>
           ) : (
-            /* FORMULARIO CORPORATIVO CONECTADO A NEON */
+            /* FORMULARIO DE ADMINISTRADOR DE FINCAS CONECTADO A NEON */
             <div className="space-y-4">
-              <div>
-                <label className="block text-3xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">1. CIF de la Sociedad</label>
-                <div className="relative">
-                  <Building className="absolute left-3 top-3.5 text-slate-500" size={16} />
-                  <input
-                    type="text" required placeholder="Ej: A-82345678" value={cifEmpresa}
-                    onChange={(e) => setCifEmpresa(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-xs font-mono uppercase text-slate-200 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              </div>
+              <Field
+                label="1. CIF del Despacho" icon={Building}
+                type="text" required placeholder="Ej: A-82345678" value={cifDespacho}
+                onChange={(e) => setCifDespacho(e.target.value)}
+                inputClassName="font-mono uppercase"
+              />
 
-              <div>
-                <label className="block text-3xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">2. Correo Corporativo</label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3.5 text-slate-500" size={16} />
-                  <input
-                    type="email" required placeholder="socio@empresa.com" value={emailSocio}
-                    onChange={(e) => setEmailSocio(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              </div>
+              <Field
+                label="2. Correo Corporativo" icon={Mail}
+                type="email" required placeholder="admin@despacho.com" value={emailAdmin}
+                onChange={(e) => setEmailAdmin(e.target.value)}
+              />
 
-              <div>
-                <label className="block text-3xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">3. Clave de Acceso</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3.5 text-slate-500" size={16} />
-                  <input
-                    type="password" required placeholder="••••••••" value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
+              <Field
+                label="3. Clave de Acceso" icon={Lock}
+                type="password" required placeholder="••••••••" value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={() => navigate('/olvide-password/despacho')}
+                  className="text-4xs text-slate-500 hover:text-blue-400 font-bold uppercase tracking-wider"
+                >
+                  ¿Olvidaste tu contraseña?
+                </button>
               </div>
             </div>
           )}

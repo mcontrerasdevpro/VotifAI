@@ -1,101 +1,101 @@
-import React, { useEffect } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Radio } from 'lucide-react';
+import { Radio, Link2, Check } from 'lucide-react';
+import Card from './ui/Card.jsx';
+import StatusBadge from './ui/StatusBadge.jsx';
 
-export default function PanelEscrutinio({ puntoActivo, dispatch, state }) {
-  const { escuchandoIA, transcripcionesIA, juntasData, mercado } = state?.salaControl || {
-    escuchandoIA: false, transcripcionesIA: [], juntasData: {}, mercado: 'comunidad'
-  };
+/**
+ * Transcripción real de intervenciones: cada vecino graba desde su propio
+ * móvil en /asistencia/:entityId (ver Asistencia.jsx), ya identificado
+ * porque eligió su nombre del censo — no hay micrófono de sala ni
+ * diarización por IA, la atribución es exacta por diseño. Este panel solo
+ * hace polling de lo que ya se ha transcrito y guardado en el servidor.
+ */
+export default function PanelEscrutinio({ entidadId }) {
+  const [transcripciones, setTranscripciones] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [enlaceCopiado, setEnlaceCopiado] = useState(false);
+  const contenedorRef = useRef(null);
 
   useEffect(() => {
-    let intervaloIA = null;
+    if (!entidadId) { setCargando(false); return; }
 
-    const bibliotecaFrases = {
-      0: [
-        { ponente: "Presidente (Manuel C.)", texto: "La fachada norte tiene filtraciones graves y si no impermeabilizamos ya, la LPH nos puede hacer responsables subsidiarios por daños estructurales." },
-        { ponente: "Vecino 1ºB (Carmen O.)", texto: "Yo estoy de acuerdo con el Presidente, en mi salón ya hay humedades por culpa de las bajantes de la letra C. Hay que arreglarlo con urgencia." },
-        { ponente: "Vecino 2ºA (Carlos R.)", texto: "¿Pero se han pedido al menos tres presupuestos diferentes? No podemos aprobar la primera derrama que nos pongan sobre la mesa." }
-      ],
-      1: [
-        { ponente: "Presidente (Manuel C.)", texto: "Pasamos al tema de las cámaras de seguridad para el garaje. Últimamente ha habido robos y con sensores perimetrales 4K estaríamos blindados." },
-        { ponente: "Vecino 3ºA (Antonio L.)", texto: "A mí me preocupa la ley de protección de datos. ¿Quién va a custodiar esas grabaciones continuas? Necesitamos garantías jurídicas." },
-        { ponente: "Vecino 1ºC (Juan P.)", texto: "Con que se guarden de forma encriptada 30 días y solo tenga acceso el administrador bajo denuncia es totalmente legal, yo voto que sí." }
-      ],
-      99: [
-        { ponente: "Vecino 4ºB (Laura S.)", texto: "Me gustaría solicitar formalmente que en la próxima junta ordinaria se trate el tema de pintar los descansillos de las plantas impares, que están muy deteriorados." },
-        { ponente: "Vecino 1ºA (Manuel P.)", texto: "Yo quiero dejar constancia de quejas por ruidos en el patio interior los fines de semana a deshoras. Ruego se envíe un comunicado circular de recordatorio normativo." },
-        { ponente: "Presidente (Manuel C.)", texto: "Tomamos nota de ambos ruegos en el borrador del acta. Si no hay más intervenciones de los vecinos censados, levantamos la sesión." }
-      ]
+    let activo = true;
+
+    const refrescar = async () => {
+      try {
+        const respuesta = await fetch(`/api/transcripciones/lista/${entidadId}`, { credentials: 'include' });
+        const resultado = await respuesta.json();
+        if (activo && respuesta.ok) setTranscripciones(resultado.transcripciones || []);
+      } catch (err) {
+        console.error('Fallo al cargar transcripciones:', err);
+      } finally {
+        if (activo) setCargando(false);
+      }
     };
 
-    if (escuchandoIA) {
-      let indiceFrase = 0;
-      const puntos = juntasData?.[mercado || 'comunidad']?.puntos || [];
-      const todosLosPuntosCerrados = puntos.length > 0 && puntos.every(p => p.estado === 'Cerrado');
+    refrescar();
+    const intervalo = setInterval(refrescar, 4000);
+    return () => { activo = false; clearInterval(intervalo); };
+  }, [entidadId]);
 
-      const frasesDisponibles = todosLosPuntosCerrados
-        ? bibliotecaFrases[99]
-        : (bibliotecaFrases[puntoActivo] || [{ ponente: "Presidente", texto: "Se abre el turno de intervenciones libres para debatir el punto." }]);
-
-      dispatch({ type: 'SET_SALA_STATE', payload: { transcripcionesIA: [] } });
-
-      intervaloIA = setInterval(() => {
-        if (indiceFrase < frasesDisponibles.length) {
-          const fraseValida = frasesDisponibles[indiceFrase];
-          dispatch({
-            type: 'SET_SALA_STATE',
-            payload: { 
-              transcripcionesIA: [...(state?.salaControl?.transcripcionesIA || []), fraseValida] 
-            }
-          });
-          indiceFrase++;
-        } else {
-          clearInterval(intervaloIA);
-        }
-      }, 3500);
-    } else {
-      dispatch({ type: 'SET_SALA_STATE', payload: { transcripcionesIA: [] } });
+  useEffect(() => {
+    if (contenedorRef.current) {
+      contenedorRef.current.scrollTop = contenedorRef.current.scrollHeight;
     }
+  }, [transcripciones]);
 
-    return () => { if (intervaloIA) clearInterval(intervaloIA); };
-  }, [escuchandoIA, puntoActivo]);
+  const enlaceAsistencia = entidadId ? `${window.location.origin}/asistencia/${entidadId}` : '';
+
+  const copiarEnlace = async () => {
+    if (!enlaceAsistencia) return;
+    try {
+      await navigator.clipboard.writeText(enlaceAsistencia);
+      setEnlaceCopiado(true);
+      setTimeout(() => setEnlaceCopiado(false), 2000);
+    } catch (err) {
+      console.error('No se pudo copiar el enlace:', err);
+    }
+  };
 
   return (
-    <section className="w-full lg:w-80 bg-slate-900/40 border border-slate-900 rounded-2xl p-4 flex flex-col h-full overflow-hidden justify-between shrink-0">
+    <Card as="section" className="w-full lg:w-80 flex flex-col h-full overflow-hidden justify-between shrink-0" padding="p-4">
       <div className="flex items-center justify-between border-b border-slate-900 pb-3 mb-3 shrink-0">
         <div className="flex items-center gap-2">
-          <Radio size={15} className={escuchandoIA ? 'text-rose-500 animate-pulse' : 'text-slate-500'} />
-          <h3 className="text-3xs font-black uppercase tracking-widest text-slate-400">Transcripción e IA</h3>
+          <Radio size={15} className="text-emerald-500" />
+          <h3 className="text-3xs font-black uppercase tracking-widest text-slate-400">Transcripción en Vivo</h3>
         </div>
-        {escuchandoIA && (
-          <span className="text-[8px] font-mono bg-rose-500/10 border border-rose-500/20 text-rose-400 font-bold px-2 py-0.5 rounded animate-pulse uppercase tracking-wider">
-            ● LIVE REC
-          </span>
-        )}
+        <StatusBadge tone="success" className="font-mono">
+          ● ESCUCHANDO
+        </StatusBadge>
       </div>
 
-      <div className="flex-grow overflow-y-auto pr-1 custom-scrollbar space-y-3 mb-4 min-h-[250px]">
-        {transcripcionesIA.length === 0 ? (
+      <div ref={contenedorRef} className="flex-grow overflow-y-auto pr-1 custom-scrollbar space-y-3 mb-4 min-h-[250px]">
+        {cargando ? (
+          <div className="h-full flex flex-col justify-center items-center text-center p-4 text-4xs text-slate-500 font-bold uppercase tracking-widest">
+            Cargando intervenciones...
+          </div>
+        ) : transcripciones.length === 0 ? (
           <div className="h-full flex flex-col justify-center items-center text-center p-4 border border-dashed border-slate-800/60 rounded-xl bg-slate-950/20">
-            <Radio size={28} className={`mb-2 ${escuchandoIA ? 'text-rose-500 animate-bounce' : 'text-slate-700'}`} />
-            <p className="text-4xs text-slate-400 font-medium">Asistente Conversacional Listo</p>
-            <p className="text-[9px] text-slate-600 mt-1 max-w-[150px]">Pulsa el capturador inferior para aislar las intervenciones de la sala.</p>
+            <Radio size={28} className="mb-2 text-slate-700" />
+            <p className="text-4xs text-slate-400 font-medium">Sin intervenciones todavía</p>
+            <p className="text-[9px] text-slate-600 mt-1 max-w-[150px]">Comparte el enlace de asistencia para que los vecinos puedan hablar desde su móvil.</p>
           </div>
         ) : (
           <div className="space-y-2.5">
-            {transcripcionesIA.map((dialogo, idx) => (
+            {transcripciones.map((t) => (
               <motion.div
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
-                key={idx}
+                key={t.id}
                 className="p-2.5 bg-slate-950 border border-slate-900 rounded-xl space-y-1 shadow-sm"
               >
-                <div className="flex justify-between items-center text-[9px] font-black text-indigo-400 font-mono tracking-wide uppercase">
-                  <span>🎙️ {dialogo.ponente}</span>
-                  <span className="text-slate-600 font-normal">Sincronizado</span>
+                <div className="flex justify-between items-center text-[9px] font-black text-indigo-400 font-mono tracking-wide uppercase gap-2">
+                  <span className="truncate">🎙️ {t.propietario_nombre || 'Propietario'} {t.propiedad_detalle ? `— ${t.propiedad_detalle}` : ''}</span>
+                  <span className="text-slate-600 font-normal shrink-0">{new Date(t.creado_en).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
                 <p className="text-4xs text-slate-300 leading-relaxed font-medium">
-                  "{dialogo.texto}"
+                  "{t.texto}"
                 </p>
               </motion.div>
             ))}
@@ -105,16 +105,12 @@ export default function PanelEscrutinio({ puntoActivo, dispatch, state }) {
 
       <div className="shrink-0 border-t border-slate-900 pt-3">
         <button
-          onClick={() => dispatch({ type: 'SET_SALA_STATE', payload: { escuchandoIA: !escuchandoIA } })}
-          className={`w-full py-3 rounded-xl text-5xs font-black uppercase tracking-widest transition-all border ${
-            escuchandoIA
-              ? 'bg-rose-600 border-rose-500 text-white shadow-lg shadow-rose-600/10'
-              : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white'
-          }`}
+          onClick={copiarEnlace}
+          className="w-full py-3 rounded-xl text-5xs font-black uppercase tracking-widest transition-all border bg-slate-900 border-slate-800 text-slate-300 hover:text-white flex items-center justify-center gap-1.5"
         >
-          {escuchandoIA ? 'Detener Captura de Sala' : 'Iniciar Captura de Sala'}
+          {enlaceCopiado ? <><Check size={12} className="text-emerald-400" /> Enlace copiado</> : <><Link2 size={12} /> Copiar enlace de asistencia</>}
         </button>
       </div>
-    </section>
+    </Card>
   );
 }

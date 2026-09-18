@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Vote, Plus, ChevronUp, ChevronDown } from 'lucide-react';
+import { Vote, Plus, ChevronUp, ChevronDown } from 'lucide-react';
+import FincasSelector from './FincasSelector.jsx';
+import StatusBadge from './ui/StatusBadge.jsx';
+import Card from './ui/Card.jsx';
 
 export default function ColumnaOrdenDia({ 
   cargandoFincas, datosAdmin, tenantGlobal, fincasReales, fincaSeleccionada, setFincaSeleccionada, datos, puntoActivo, dispatch, state 
@@ -26,41 +29,16 @@ export default function ColumnaOrdenDia({
   };
 
   return (
-    <aside className="w-full lg:w-96 bg-slate-900/40 border border-slate-900 rounded-2xl p-4 flex flex-col h-full overflow-hidden shrink-0">
-      <div className="p-3 mb-4 border border-slate-800 bg-slate-950 rounded-xl shadow-inner shrink-0">
-        <div className="flex items-center gap-1.5 text-[9px] font-black text-blue-400 uppercase tracking-widest">
-          <Shield size={11} className="text-blue-500" /> Entorno de Gestión Activo
-        </div>
-        <h3 className="text-xs font-black text-white mt-1 truncate">
-          {cargandoFincas ? "Verificando Despacho..." : datosAdmin ? datosAdmin.nombre_entidad : tenantGlobal?.nombreEntidad || "Administrador General"}
-        </h3>
-        <p className="text-[10px] text-slate-500 font-medium truncate mt-0.5">
-          {datosAdmin ? datosAdmin.email_maestro : tenantGlobal?.email || "Conectando con Neon Cloud..."}
-        </p>
-      </div>
-
+    <Card as="aside" className="w-full lg:w-96 flex flex-col h-full overflow-hidden shrink-0" padding="p-4">
       <div className="mb-4 shrink-0">
-        <h4 className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1.5">Fincas en Cartera</h4>
-        <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
-          {cargandoFincas ? (
-            <span className="text-5xs text-slate-600">Cargando catálogo...</span>
-          ) : fincasReales.length === 0 ? (
-            <span className="text-5xs text-rose-400">Sin fincas en Neon.</span>
-          ) : (
-            fincasReales.map((finca) => (
-              <button
-                key={finca.id}
-                onClick={() => setFincaSeleccionada(finca)}
-                className={`px-2.5 py-1 rounded-lg text-4xs font-bold transition-all border ${fincaSeleccionada?.id === finca.id
-                  ? 'bg-blue-600/20 border-blue-500 text-blue-400 font-black'
-                  : 'bg-slate-950 border-slate-900 text-slate-400 hover:border-slate-800'
-                }`}
-              >
-                {finca.nombre}
-              </button>
-            ))
-          )}
-        </div>
+        <FincasSelector
+          cargando={cargandoFincas}
+          admin={datosAdmin}
+          tenantGlobal={tenantGlobal}
+          fincas={fincasReales}
+          seleccionada={fincaSeleccionada}
+          alSeleccionar={setFincaSeleccionada}
+        />
       </div>
 
       <div className="flex justify-between items-center mb-3 shrink-0 border-t border-slate-900 pt-3">
@@ -132,14 +110,17 @@ export default function ColumnaOrdenDia({
 
               <div className="px-3 pb-2.5 pt-1.5 flex justify-between items-center text-5xs font-black uppercase tracking-wider bg-slate-950/20 border-t border-slate-900/20 shrink-0">
                 <span className={esElActivo ? 'text-blue-400' : 'text-slate-600'}>EXP-00{punto.id}</span>
-                <span className={`px-2 py-0.5 rounded font-black ${punto.estado === 'Votando' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20 animate-pulse' : punto.estado === 'Debatiendo' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' : punto.estado === 'Cerrado' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-slate-900 text-slate-500'}`}>
+                <StatusBadge
+                  tone={punto.estado === 'Votando' ? 'warning' : punto.estado === 'Debatiendo' ? 'info' : punto.estado === 'Cerrado' ? 'success' : 'neutral'}
+                  className={punto.estado === 'Votando' ? 'animate-pulse' : ''}
+                >
                   {punto.estado}
-                </span>
+                </StatusBadge>
               </div>
             </div>
           );
         })}
       </div>
-    </aside>
+    </Card>
   );
 }

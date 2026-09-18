@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useVotifaiStore } from '../../store.jsx';
-import HeaderDashboard from '../../components/HeaderDashboard.jsx';
 import SubNavContexto from '../../components/SubNavContexto.jsx';
 import ColumnaOrdenDia from '../../components/ColumnaOrdenDia.jsx';
 import ColumnaMonitorCentral from '../../components/ColumnaMonitorCentral.jsx';
@@ -9,25 +8,22 @@ import PanelEscrutinio from '../../components/PanelEscrutinio.jsx';
 import ModalConvocatoria from '../../components/ModalConvocatoria.jsx';
 
 export default function Dashboard() {
-  const { fincaId, empresaId } = useParams(); 
-  const navigate = useNavigate();
-
-  const esEmpresa = !!empresaId;
-  const entidadIdActiva = esEmpresa ? empresaId : fincaId;
+  const { fincaId } = useParams();
+  const entidadIdActiva = fincaId;
 
   const { state, dispatch } = useVotifaiStore() || { state: { tenant: null, salaControl: {} } };
   const tenantGlobal = state?.tenant;
-  const { jactiva, mercado, puntoActivo } = state?.salaControl || {};
+  const { mercado, puntoActivo } = state?.salaControl || {};
 
   const [mostrarModalConvocatoria, setMostrarModalConvocatoria] = useState(false);
   const [datosAdmin, setDatosAdmin] = useState(null);
   const [entidadSeleccionada, setEntidadSeleccionada] = useState(null);
-  const [entidadesReales, setEntidadesReales] = useState([]); 
+  const [entidadesReales, setEntidadesReales] = useState([]);
   const [cargandoEntidades, setCargandoEntidades] = useState(true);
   const [censoPersonas, setCensoPersonas] = useState([]);
   const [modoAuditoria, setModoAuditoria] = useState(false);
   const [actaHistoricaTexto, setActaHistoricaTexto] = useState('');
-  const [personaDestinataria, setPersonaDestinataria] = useState(''); 
+  const [personaDestinataria, setPersonaDestinataria] = useState('');
   const [reenviandoPush, setReenviandoPush] = useState(false);
 
   useEffect(() => {
@@ -45,8 +41,8 @@ export default function Dashboard() {
         const resCat = await fetch(`/api/entities/${idRealDeNeon}`);
         const dataCat = await resCat.json();
 
-        const listaFiltrada = esEmpresa ? (dataCat.empresas || []) : (dataCat.fincas || []);
-        
+        const listaFiltrada = dataCat.fincas || [];
+
         if (resCat.ok && listaFiltrada.length > 0) {
           setEntidadesReales(listaFiltrada);
           const actual = listaFiltrada.find(e => e.id === entidadIdActiva) || listaFiltrada[0];
@@ -65,14 +61,10 @@ export default function Dashboard() {
           }
         }
 
-        const endpointCenso = esEmpresa 
-          ? `/api/socios/lista/${entidadIdActiva}` 
-          : `/api/propietarios/lista/${entidadIdActiva}`;
-
-        const resCenso = await fetch(endpointCenso);
+        const resCenso = await fetch(`/api/propietarios/lista/${entidadIdActiva}`);
         const dataCenso = await resCenso.json();
         if (resCenso.ok) {
-          setCensoPersonas(esEmpresa ? (dataCenso.socios || []) : (dataCenso.propietarios || []));
+          setCensoPersonas(dataCenso.propietarios || []);
         }
 
       } catch (err) {
@@ -83,12 +75,12 @@ export default function Dashboard() {
     };
 
     inicializarSalaJuntas();
-  }, [tenantGlobal, entidadIdActiva, esEmpresa]);
+  }, [tenantGlobal, entidadIdActiva]);
 
   const handleReenviarCopiaActa = async (e) => {
     e.preventDefault();
     if (!personaDestinataria || !actaHistoricaTexto) {
-      alert(esEmpresa ? "⚠️ Selecciona un socio del censo para procesar el despacho." : "⚠️ Selecciona un propietario del censo para procesar el despacho.");
+      alert("⚠️ Selecciona un propietario del censo para procesar el despacho.");
       return;
     }
 
@@ -99,7 +91,7 @@ export default function Dashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           propietarioId: personaDestinataria,
-          nombreFinca: entidadSeleccionada?.nombre || (esEmpresa ? 'Sociedad Activa' : 'Comunidad Activa'),
+          nombreFinca: entidadSeleccionada?.nombre || 'Comunidad Activa',
           actaTexto: actaHistoricaTexto
         })
       });
@@ -119,34 +111,29 @@ export default function Dashboard() {
     }
   };
 
-  const puntosActuales = state?.salaControl?.juntasData?.[mercado || (esEmpresa ? 'empresa' : 'comunidad')]?.puntos || [];
+  const puntosActuales = state?.salaControl?.juntasData?.[mercado || 'comunidad']?.puntos || [];
 
   const datosConvocatoria = entidadSeleccionada ? {
     entidad: entidadSeleccionada.nombre,
-    convocatoria: esEmpresa ? "Asamblea General de Socios (Neon Cloud)" : "Junta General Extraordinaria (Neon Cloud)",
+    convocatoria: "Junta General Extraordinaria (Neon Cloud)",
     cuorum: "100%",
-    subCuorum: esEmpresa ? `Sociedad con CIF: ${entidadSeleccionada.cif}` : `Finca con CIF: ${entidadSeleccionada.cif}`,
-    coeficiente: esEmpresa ? `Domicilio Social: ${entidadSeleccionada.direccion}` : `Dirección: ${entidadSeleccionada.direccion}`,
+    subCuorum: `Finca con CIF: ${entidadSeleccionada.cif}`,
+    coeficiente: `Dirección: ${entidadSeleccionada.direccion}`,
     puntos: puntosActuales
   } : {
     entidad: "Cargando entorno...",
-    convocatoria: esEmpresa ? "Buscando asambleas..." : "Buscando juntas...",
+    convocatoria: "Buscando juntas...",
     cuorum: "0.00%",
-    subCuorum: esEmpresa ? "Buscando empresas en la nube..." : "Buscando fincas en la nube...",
+    subCuorum: "Buscando fincas en la nube...",
     coeficiente: "—",
     puntos: puntosActuales
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col h-screen overflow-hidden relative font-sans antialiased">
+    <div className="h-full bg-slate-950 text-slate-100 flex flex-col overflow-hidden relative font-sans antialiased">
 
-      <HeaderDashboard admin={tenantGlobal?.admin || datosAdmin} />      
-      
       <SubNavContexto
         setMostrarModalConvocatoria={setMostrarModalConvocatoria}
-        dispatch={dispatch}
-        mercado={mercado}
-        esEmpresa={esEmpresa} 
       />
 
       <div className="flex-grow flex flex-col lg:flex-row overflow-hidden p-4 gap-4">
@@ -162,23 +149,21 @@ export default function Dashboard() {
           puntoActivo={puntoActivo || 0}
           dispatch={dispatch}
           state={state}
-          esEmpresa={esEmpresa}
         />
-        
+
         <ColumnaMonitorCentral
           datos={datosConvocatoria}
           puntoActivo={puntoActivo || 0}
           dispatch={dispatch}
           state={state}
-          esEmpresa={esEmpresa}
           censo={censoPersonas}
         />
 
         <PanelEscrutinio
+          entidadId={entidadIdActiva}
           puntoActivo={puntoActivo || 0}
           dispatch={dispatch}
           state={state}
-          esEmpresa={esEmpresa}
         />
 
       </div>
@@ -188,7 +173,6 @@ export default function Dashboard() {
         setMostrarModalConvocatoria={setMostrarModalConvocatoria}
         fincaSeleccionada={entidadSeleccionada}
         datos={datosConvocatoria}
-        esEmpresa={esEmpresa}
       />
     </div>
   );

@@ -6,8 +6,8 @@ const initialState = {
     if (!saved) return null;
     try {
       const parsed = JSON.parse(saved);
-      if (parsed && !parsed.comunidadesYEmpresas) {
-        parsed.comunidadesYEmpresas = [];
+      if (parsed && !parsed.comunidades) {
+        parsed.comunidades = [];
       }
       return parsed;
     } catch (e) {
@@ -15,12 +15,10 @@ const initialState = {
     }
   })(),
   salaControl: {
-    mercado: 'comunidad', 
+    mercado: 'comunidad',
     puntoActivo: 0,
-    escuchandoIA: false,
     tiempoRestante: 60,
     votosRegistrados: 0,
-    transcripcionesIA: [],
     puntosExpandidos: { 0: true },
     juntasData: {
       // 🏘️ ORDEN DEL DÍA POR DEFECTO PARA COMUNIDADES DE VECINOS
@@ -29,14 +27,6 @@ const initialState = {
           { id: 1, t: "Aprobación de la reforma urgente de impermeabilización del tejado, reparación integral de las bajantes de la letra C y consolidación de grietas en la fachada norte por razones de estanqueidad estructural.", si: 0, no: 0, abs: 0, estado: "Debatiendo" },
           { id: 2, t: "Instalación de cámaras de seguridad con grabación 4K continua y sensores de movimiento perimetrales en los tres accesos al garaje comunitario.", si: 0, no: 0, abs: 0, estado: "Pendiente" },
           { id: 3, t: "Renovación del contrato de mantenimiento técnico del ascensor principal con la empresa Otis, incluyendo cobertura de piezas de desgaste 24/7.", si: 0, no: 0, abs: 0, estado: "Pendiente" }
-        ]
-      },
-      // 🏢 ORDEN DEL DÍA POR DEFECTO PARA SOCIEDADES MERCANTILES (LSC)
-      empresa: {
-        puntos: [
-          { id: 1, t: "Examen y aprobación de las Cuentas Anuales correspondientes al ejercicio económico cerrado, junto con el informe de gestión de los administradores.", si: 0, no: 0, abs: 0, estado: "Debatiendo" },
-          { id: 2, t: "Propuesta de aplicación del resultado del ejercicio económico y correspondiente distribución de dividendos cargados a reservas voluntarias.", si: 0, no: 0, abs: 0, estado: "Pendiente" },
-          { id: 3, t: "Cese, nombramiento o ratificación de los miembros del órgano de administración (Consejo de Administración o Administradores Solidarios).", si: 0, no: 0, abs: 0, estado: "Pendiente" }
         ]
       }
     }
@@ -54,10 +44,10 @@ function votifaiReducer(state, action) {
         tipoOrganizacion: datosServidor.tipo_organizacion || datosServidor.tipoOrganizacion,
         plan: datosServidor.plan_suscripcion || datosServidor.plan || 'trial_15_dias',
         admin: {
-          nombre: datosServidor.admin_nombre || datosServidor.adminNombre || datosServidor.nombre || "Admin General",
+          nombre: datosServidor.nombre_responsable || datosServidor.admin_nombre || datosServidor.adminNombre || datosServidor.nombre || "Admin General",
           despacho: datosServidor.nombre_entidad || datosServidor.nombreEntidad || "Despacho Administrador"
         },
-        comunidadesYEmpresas: datosServidor.comunidadesYEmpresas || []
+        comunidades: datosServidor.comunidades || []
       };
       localStorage.setItem('votifai_tenant', JSON.stringify(nuevoTenant));
       return { ...state, tenant: nuevoTenant };
@@ -66,6 +56,16 @@ function votifaiReducer(state, action) {
     case 'CERRAR_SESION':
       localStorage.removeItem('votifai_tenant');
       return { ...state, tenant: null, salaControl: initialState.salaControl };
+
+    case 'AÑADIR_ENTIDAD': {
+      if (!state.tenant) return state;
+      const tenantActualizado = {
+        ...state.tenant,
+        comunidades: [...(state.tenant.comunidades || []), action.payload]
+      };
+      localStorage.setItem('votifai_tenant', JSON.stringify(tenantActualizado));
+      return { ...state, tenant: tenantActualizado };
+    }
 
     case 'SET_SALA_STATE':
       return {
