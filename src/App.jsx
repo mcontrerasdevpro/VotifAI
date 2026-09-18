@@ -18,6 +18,7 @@ import Documentos from './views/documentos/Documentos.jsx';
 import Reservas from './views/reservas/Reservas.jsx';
 import Crm from './views/crm/Crm.jsx';
 import Agenda from './views/agenda/Agenda.jsx';
+import Contabilidad from './views/contabilidad/Contabilidad.jsx';
 
 function App() {
   return (
@@ -45,6 +46,7 @@ function App() {
               <Route path="documentos" element={<Documentos />} />
               <Route path="reservas" element={<Reservas />} />
               <Route path="crm" element={<Crm />} />
+              <Route path="contabilidad" element={<Contabilidad />} />
             </Route>
 
             <Route path="/admin/empresa/:empresaId" element={<AppShell />}>

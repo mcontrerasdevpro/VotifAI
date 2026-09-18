@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate, useParams } from 'react-router-dom';
 import { useVotifaiStore } from '../store.jsx';
-import { ShieldCheck, LayoutDashboard, Vote, Wrench, Wallet, FileStack, CalendarClock, Headset, ArrowLeft, LogOut } from 'lucide-react';
+import { ShieldCheck, LayoutDashboard, Vote, Wrench, Wallet, FileStack, CalendarClock, Headset, Landmark, ArrowLeft, LogOut } from 'lucide-react';
 
 // "Junta en Vivo" es el diferencial del producto, no un módulo de gestión
 // más — se queda arriba junto al Resumen, con acento propio, separado por
@@ -15,7 +15,8 @@ const GESTION_COMUNIDAD = [
   { to: 'cuotas', icon: Wallet, label: 'Cuotas' },
   { to: 'documentos', icon: FileStack, label: 'Documentos' },
   { to: 'reservas', icon: CalendarClock, label: 'Reservas' },
-  { to: 'crm', icon: Headset, label: 'Atención al Cliente' }
+  { to: 'crm', icon: Headset, label: 'Atención al Cliente' },
+  { to: 'contabilidad', icon: Landmark, label: 'Contabilidad' }
 ];
 
 const GESTION_EMPRESA = [
