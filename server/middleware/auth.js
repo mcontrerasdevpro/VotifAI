@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import { query } from '../db.js';
 
 const COOKIE_NAME = 'votifai_session';
+const VOTER_COOKIE_NAME = 'votifai_voter_session';
 
 export function issueSessionCookie(res, tenant) {
   const token = jwt.sign(
@@ -34,6 +35,47 @@ export function requireAuth(req, res, next) {
     next();
   } catch {
     return res.status(401).json({ error: 'Sesión inválida o expirada.' });
+  }
+}
+
+// =========================================================================
+// 🏘️ SESIÓN DE VECINO (propietario autenticado con email+contraseña,
+// separada de la sesión de despacho — cookie y payload distintos, mismo
+// JWT_SECRET para no duplicar configuración).
+// =========================================================================
+
+export function issueVoterSessionCookie(res, propietario) {
+  const token = jwt.sign(
+    { propietarioId: propietario.id, entityId: propietario.entity_id },
+    process.env.JWT_SECRET,
+    { expiresIn: '180d' }
+  );
+
+  res.cookie(VOTER_COOKIE_NAME, token, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 180 * 24 * 60 * 60 * 1000
+  });
+}
+
+export function clearVoterSessionCookie(res) {
+  res.clearCookie(VOTER_COOKIE_NAME);
+}
+
+export function requireVoterAuth(req, res, next) {
+  const token = req.cookies?.[VOTER_COOKIE_NAME];
+  if (!token) {
+    return res.status(401).json({ error: 'Sesión de vecino no iniciada o expirada.' });
+  }
+
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    req.propietarioId = payload.propietarioId;
+    req.voterEntityId = payload.entityId;
+    next();
+  } catch {
+    return res.status(401).json({ error: 'Sesión de vecino inválida o expirada.' });
   }
 }
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useVotifaiStore } from '../../store.jsx';
-import { Building2, MapPin, Hash, Users, Pencil, Save, X, FileUp, Trash2 } from 'lucide-react';
+import { Building2, MapPin, Hash, Users, Pencil, Save, X, FileUp, Trash2, KeyRound, Check } from 'lucide-react';
 import Card from '../../components/ui/Card.jsx';
 import Field from '../../components/ui/Field.jsx';
 import CensoPropietarios from '../../components/CensoPropietarios.jsx';
@@ -35,6 +35,7 @@ export default function ResumenFinca() {
   const [editDireccion, setEditDireccion] = useState('');
   const [editPresidente, setEditPresidente] = useState('');
   const [editTesorero, setEditTesorero] = useState('');
+  const [codigoCopiado, setCodigoCopiado] = useState(false);
 
   const cargarResumen = async () => {
     if (!tenantId || !entidadIdActiva) {
@@ -138,6 +139,17 @@ export default function ResumenFinca() {
     };
   };
 
+  const copiarCodigoAcceso = async () => {
+    if (!entidad?.codigo_acceso) return;
+    try {
+      await navigator.clipboard.writeText(entidad.codigo_acceso);
+      setCodigoCopiado(true);
+      setTimeout(() => setCodigoCopiado(false), 2000);
+    } catch (err) {
+      console.error('No se pudo copiar el código de acceso:', err);
+    }
+  };
+
   const handleEliminarFinca = async () => {
     const confirmacion = window.confirm(
       `⚠️ ¿Desea eliminar "${entidad?.nombre}"?\n\nEsta acción destruirá el censo de propietarios y todos sus datos asociados.`
@@ -214,7 +226,7 @@ export default function ResumenFinca() {
           <Field label="Tesorero" value={editTesorero} onChange={(e) => setEditTesorero(e.target.value)} placeholder="Ej: Dª. Carmen Ortiz Sanz" />
         </Card>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 shrink-0">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 shrink-0">
           <Card>
             <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Hash size={12} /> CIF</span>
             <p className="text-sm font-mono font-bold text-slate-200 mt-1 uppercase">{entidad?.cif || '—'}</p>
@@ -226,6 +238,15 @@ export default function ResumenFinca() {
           <Card>
             <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><MapPin size={12} /> Dirección</span>
             <p className="text-sm font-medium text-slate-200 mt-1 truncate">{entidad?.direccion || '—'}</p>
+          </Card>
+          <Card className="hover:border-blue-500/30 transition-colors">
+            <button type="button" onClick={copiarCodigoAcceso} className="w-full text-left" disabled={!entidad?.codigo_acceso}>
+              <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><KeyRound size={12} /> Código de Acceso Vecinos</span>
+              <p className="text-sm font-mono font-black text-blue-400 mt-1 flex items-center gap-1.5">
+                {entidad?.codigo_acceso || '—'}
+                {codigoCopiado ? <Check size={13} className="text-emerald-400" /> : null}
+              </p>
+            </button>
           </Card>
         </div>
       )}

@@ -15,6 +15,7 @@ import crmRouter from './routes/crm.js';
 import agendaRouter from './routes/agenda.js';
 import contabilidadRouter from './routes/contabilidad.js';
 import vozRouter from './routes/voz.js';
+import vecinosRouter from './routes/vecinos.js';
 
 dotenv.config();
 const app = express();
@@ -55,6 +56,7 @@ app.use('/api', crmRouter);
 app.use('/api', agendaRouter);
 app.use('/api', contabilidadRouter);
 app.use('/api', vozRouter);
+app.use('/api', vecinosRouter);
 
 // =========================================================================
 // 🔐 1. ENDPOINT POST: /api/auth/register (Alta Multi-tenant Comercial)
@@ -127,7 +129,7 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     const fincasResultado = await query(
-      'SELECT id, nombre, cif, direccion, tipo FROM entities WHERE tenant_id = $1',
+      'SELECT id, nombre, cif, direccion, tipo, codigo_acceso FROM entities WHERE tenant_id = $1',
       [tenantBase.id]
     );
 
@@ -171,7 +173,7 @@ app.get('/api/entities/:tenantId', requireAuth, async (req, res) => {
     );
 
     const fincasResultado = await query(
-      'SELECT id, nombre, cif, direccion, tipo, metadatos_legales, creado_en FROM entities WHERE tenant_id = $1 ORDER BY creado_en DESC',
+      'SELECT id, nombre, cif, direccion, tipo, metadatos_legales, codigo_acceso, creado_en FROM entities WHERE tenant_id = $1 ORDER BY creado_en DESC',
       [tenantId]
     );
 
@@ -213,6 +215,19 @@ if (process.env.NODE_ENV === 'production') {
 // =========================================================================
 // 🏢 4. ENDPOINT POST: /api/entities/create (Persistencia Real de Fincas)
 // =========================================================================
+
+// Código de acceso humano (p.ej. VAI-7X2K-M) que el administrador reparte
+// a los vecinos para que puedan registrarse en /login/comunidad — 4
+// caracteres alfanuméricos + 1 letra, suficiente para no colisionar sin
+// resultar incómodo de teclear en un móvil.
+function generarCodigoAcceso() {
+  const alfabeto = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sin 0/O/1/I para evitar confusiones
+  let bloque = '';
+  for (let i = 0; i < 4; i++) bloque += alfabeto[Math.floor(Math.random() * alfabeto.length)];
+  const letra = alfabeto[Math.floor(Math.random() * alfabeto.length)];
+  return `VAI-${bloque}-${letra}`;
+}
+
 app.post('/api/entities/create', requireAuth, async (req, res) => {
   const { nombre, cif, direccion, metadatos_legales } = req.body;
   if (!nombre) {
@@ -220,22 +235,35 @@ app.post('/api/entities/create', requireAuth, async (req, res) => {
   }
 
   try {
-    const nuevaEntidad = await query(
-      `INSERT INTO entities (tenant_id, nombre, cif, direccion, metadatos_legales, tipo)
-       VALUES ($1, $2, $3, $4, $5, 'comunidad')
-       RETURNING id, nombre, cif, direccion, tipo, creado_en`,
-      [
-        req.tenantId,
-        nombre,
-        cif || '00000000X',
-        direccion || 'Sede Local',
-        JSON.stringify(metadatos_legales || {})
-      ]
-    );
+    let nuevaEntidad = null;
+    for (let intento = 0; intento < 5 && !nuevaEntidad; intento++) {
+      try {
+        const resultado = await query(
+          `INSERT INTO entities (tenant_id, nombre, cif, direccion, metadatos_legales, tipo, codigo_acceso)
+           VALUES ($1, $2, $3, $4, $5, 'comunidad', $6)
+           RETURNING id, nombre, cif, direccion, tipo, codigo_acceso, creado_en`,
+          [
+            req.tenantId,
+            nombre,
+            cif || '00000000X',
+            direccion || 'Sede Local',
+            JSON.stringify(metadatos_legales || {}),
+            generarCodigoAcceso()
+          ]
+        );
+        nuevaEntidad = resultado.rows[0];
+      } catch (errIntento) {
+        if (errIntento.code !== '23505') throw errIntento; // no era choque de código único, propagar
+      }
+    }
+
+    if (!nuevaEntidad) {
+      return res.status(500).json({ error: 'No se pudo generar un código de acceso único, inténtalo de nuevo.' });
+    }
 
     res.status(201).json({
       mensaje: 'Finca dada de alta con éxito en Neon Cloud.',
-      entity: nuevaEntidad.rows[0] 
+      entity: nuevaEntidad
     });
 
   } catch (err) {

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { query } from '../db.js';
-import { requireAuth, entityBelongsToTenant } from '../middleware/auth.js';
+import { requireAuth, requireVoterAuth, entityBelongsToTenant } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -10,51 +10,27 @@ const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
 
 // =========================================================================
-// 🙋 ASISTENCIA (identificación del vecino desde su móvil, sin DNI/login)
+// 🙋 ASISTENCIA (grabación de intervenciones — requiere sesión de vecino
+// real, ver server/routes/vecinos.js para el registro/login)
 // =========================================================================
 
-// Censo mínimo y público-por-enlace: solo lo necesario para que el vecino
-// se identifique eligiendo su nombre. El entity_id (UUID no adivinable)
-// hace de "código de sala" — mismo criterio que ya usaba el enlace de
-// convocatoria antes de esta función.
-router.get('/asistencia/:entityId/censo', async (req, res) => {
+router.post('/asistencia/:entityId/voz', requireVoterAuth, upload.single('audio'), async (req, res) => {
   const entityId = String(req.params.entityId).trim();
-
-  try {
-    const resultado = await query(
-      `SELECT id, nombre_completo, propiedad_detalle FROM propietarios WHERE entity_id = $1::uuid ORDER BY propiedad_detalle ASC`,
-      [entityId]
-    );
-    res.status(200).json({ success: true, propietarios: resultado.rows });
-  } catch (err) {
-    console.error('Error al listar censo de asistencia:', err.message);
-    res.status(500).json({ error: `Fallo al consultar el censo: ${err.message}` });
-  }
-});
-
-router.post('/asistencia/:entityId/voz', upload.single('audio'), async (req, res) => {
-  const entityId = String(req.params.entityId).trim();
-  const { propietario_id, duracion_segundos } = req.body;
+  const { duracion_segundos } = req.body;
 
   if (!req.file) {
     return res.status(400).json({ error: 'No se ha recibido ningún audio.' });
   }
-  if (!propietario_id) {
-    return res.status(400).json({ error: 'Falta identificar al propietario que interviene.' });
+
+  // La sesión de vecino se emitió para una finca concreta — no vale para
+  // hablar en nombre de un propietario de otra finca aunque conozca el
+  // enlace.
+  if (req.voterEntityId !== entityId) {
+    return res.status(403).json({ error: 'Tu sesión no corresponde a esta comunidad.' });
   }
+  const propietario_id = req.propietarioId;
 
   try {
-    // El propietario tiene que pertenecer a ESTA finca (no a otra), para
-    // que nadie con el enlace de una finca pueda hablar en nombre de un
-    // vecino de otra.
-    const propietarioValido = await query(
-      `SELECT id FROM propietarios WHERE id = $1::uuid AND entity_id = $2::uuid`,
-      [propietario_id, entityId]
-    );
-    if (propietarioValido.rows.length === 0) {
-      return res.status(403).json({ error: 'El propietario indicado no pertenece a esta finca.' });
-    }
-
     if (!process.env.OPENAI_API_KEY) {
       return res.status(500).json({ error: 'El servidor no tiene configurada la transcripción por voz (falta OPENAI_API_KEY).' });
     }

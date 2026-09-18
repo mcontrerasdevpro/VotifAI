@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useVotifaiStore } from '../../store.jsx';
-import { ArrowLeft, ShieldCheck, KeyRound, User, Home, Building, Mail, Lock, AlertCircle } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, KeyRound, Building, Mail, Lock, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Field from '../../components/ui/Field.jsx';
 
@@ -15,8 +15,6 @@ export default function Login() {
   const [errorMensaje, setErrorMensaje] = useState('');
 
   const [codigoJunta, setCodigoJunta] = useState('');
-  const [nombreVecino, setNombreVecino] = useState('');
-  const [pisoPuerta, setPisoPuerta] = useState('');
 
   const [cifDespacho, setCifDespacho] = useState('');
   const [emailAdmin, setEmailAdmin] = useState('');
@@ -27,8 +25,27 @@ export default function Login() {
     setErrorMensaje('');
 
     if (esComunidad) {
-      console.log("Datos Vecino:", { codigoJunta, nombreVecino, pisoPuerta });
-      navigate('/voto-vecino');
+      setCargando(true);
+      try {
+        const respuesta = await fetch('/api/vecinos/resolver-codigo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ codigo: codigoJunta })
+        });
+        const resultado = await respuesta.json();
+
+        if (!respuesta.ok) {
+          setErrorMensaje(resultado.error || 'Código de acceso no válido.');
+          setCargando(false);
+          return;
+        }
+
+        navigate(`/asistencia/${resultado.entity_id}`);
+      } catch (error) {
+        console.error('Error al resolver el código de acceso:', error);
+        setErrorMensaje('No se pudo establecer comunicación con el servidor central de VotifAI.');
+        setCargando(false);
+      }
     } else {
       setCargando(true);
 
@@ -126,26 +143,18 @@ export default function Login() {
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
 
           {esComunidad ? (
-            /* FORMULARIO VECINAL */
+            /* FORMULARIO VECINAL: solo el código que reparte el administrador — la
+               identificación real (elegirte del censo + contraseña) vive en /asistencia */
             <div className="space-y-4">
               <Field
-                label="1. Código de Convocatoria" icon={KeyRound}
+                label="Código de Acceso de tu Comunidad" icon={KeyRound}
                 type="text" required placeholder="Ej: VAI-7721-M" value={codigoJunta}
                 onChange={(e) => setCodigoJunta(e.target.value)}
-                inputClassName="font-mono tracking-widest"
+                inputClassName="font-mono tracking-widest uppercase"
               />
-
-              <Field
-                label="2. Nombre y Apellidos" icon={User}
-                type="text" required placeholder="Ej: Carmen Ortiz" value={nombreVecino}
-                onChange={(e) => setNombreVecino(e.target.value)}
-              />
-
-              <Field
-                label="3. Propiedad o Coeficiente" icon={Home}
-                type="text" required placeholder="Ej: Piso 2ºA, Garaje 12" value={pisoPuerta}
-                onChange={(e) => setPisoPuerta(e.target.value)}
-              />
+              <p className="text-4xs text-slate-500 leading-relaxed">
+                Este código te lo facilita el administrador de tu comunidad. Con él identificarás tu vivienda y crearás (o iniciarás) tu cuenta de vecino.
+              </p>
             </div>
           ) : (
             /* FORMULARIO DE ADMINISTRADOR DE FINCAS CONECTADO A NEON */
