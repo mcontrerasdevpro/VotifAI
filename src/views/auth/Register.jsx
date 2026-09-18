@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVotifaiStore } from '../../store.jsx';
 import { ShieldCheck, Building2, Users, ArrowRight, ArrowLeft, Mail, Lock, Sparkles, CreditCard, AudioLines, FileJson, Scale, Phone, MapPin, User } from 'lucide-react';
+import Field from '../../components/ui/Field.jsx';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -211,52 +212,49 @@ export default function Register() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="sm:col-span-2">
-                  <label className="block text-3xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Nombre del Despacho / Razón Social Profesional</label>
-                  <input type="text" required placeholder="Ej: Gestión Inmobiliaria Martínez S.L." value={nombreEntidad} onChange={(e) => setNombreEntidad(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 px-4 text-xs text-slate-200 focus:outline-none focus:border-blue-500" />
-                </div>
-                <div>
-                  <label className="block text-3xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Nombre del Responsable</label>
-                  <div className="relative">
-                    <User className="absolute left-3.5 top-3.5 text-slate-600" size={16} />
-                    <input type="text" required placeholder="Ej: Manuel Contreras" value={nombreResponsable} onChange={(e) => setNombreResponsable(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-xs text-slate-200 focus:outline-none focus:border-blue-500" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-3xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">CIF / NIF del Despacho</label>
-                  <input type="text" required placeholder="Ej: B12345678" value={cif} onChange={(e) => setCif(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 px-4 text-xs font-mono uppercase text-slate-200 focus:outline-none focus:border-blue-500" />
-                </div>
-                <div>
-                  <label className="block text-3xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Teléfono de Contacto</label>
-                  <div className="relative">
-                    <Phone className="absolute left-3.5 top-3.5 text-slate-600" size={16} />
-                    <input type="tel" required placeholder="+34 600 000 000" value={telefono} onChange={(e) => setTelefono(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-xs text-slate-200 focus:outline-none focus:border-blue-500" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-3xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Dirección del Despacho</label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3.5 top-3.5 text-slate-600" size={16} />
-                    <input type="text" required placeholder="Calle Mayor 14, Madrid" value={direccion} onChange={(e) => setDireccion(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-xs text-slate-200 focus:outline-none focus:border-blue-500" />
-                  </div>
-                </div>
+                <Field
+                  className="sm:col-span-2"
+                  label="Nombre del Despacho / Razón Social Profesional"
+                  type="text" required placeholder="Ej: Gestión Inmobiliaria Martínez S.L." value={nombreEntidad}
+                  onChange={(e) => setNombreEntidad(e.target.value)}
+                />
+                <Field
+                  label="Nombre del Responsable" icon={User}
+                  type="text" required placeholder="Ej: Manuel Contreras" value={nombreResponsable}
+                  onChange={(e) => setNombreResponsable(e.target.value)}
+                />
+                <Field
+                  label="CIF / NIF del Despacho"
+                  type="text" required placeholder="Ej: B12345678" value={cif}
+                  onChange={(e) => setCif(e.target.value)}
+                  inputClassName="font-mono uppercase"
+                />
+                <Field
+                  label="Teléfono de Contacto" icon={Phone}
+                  type="tel" required placeholder="+34 600 000 000" value={telefono}
+                  onChange={(e) => setTelefono(e.target.value)}
+                />
+                <Field
+                  label="Dirección del Despacho" icon={MapPin}
+                  type="text" required placeholder="Calle Mayor 14, Madrid" value={direccion}
+                  onChange={(e) => setDireccion(e.target.value)}
+                />
               </div>
 
               <div className="space-y-4 pt-2 border-t border-slate-900">
-                <div>
-                  <label className="block text-3xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 mt-4">Email Maestro del Administrador</label>
-                  <div className="relative">
-                    <Mail className="absolute left-3.5 top-3.5 text-slate-600" size={16} />
-                    <input type="email" required placeholder="director@miempresa.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3.5 pl-10 pr-4 text-xs text-slate-200 focus:outline-none focus:border-blue-500 font-medium" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-3xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Contraseña de Control de Acceso</label>
-                  <div className="relative">
-                    <Lock className="absolute left-3.5 top-3.5 text-slate-600" size={16} />
-                    <input type="password" required minLength={8} placeholder="Mínimo 8 caracteres" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3.5 pl-10 pr-4 text-xs text-slate-200 focus:outline-none focus:border-blue-500 font-medium" />
-                  </div>
-                </div>
+                <Field
+                  className="mt-4"
+                  label="Email Maestro del Administrador" icon={Mail}
+                  type="email" required placeholder="director@miempresa.com" value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  inputClassName="py-3.5 font-medium"
+                />
+                <Field
+                  label="Contraseña de Control de Acceso" icon={Lock}
+                  type="password" required minLength={8} placeholder="Mínimo 8 caracteres" value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  inputClassName="py-3.5 font-medium"
+                />
               </div>
             </div>
           )}
@@ -272,14 +270,18 @@ export default function Register() {
               </div>
 
               <div className="space-y-4">
-                <div>
-                  <label className="block text-3xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Nombre del Titular de la Cuenta Bancaria</label>
-                  <input type="text" required placeholder="Ej: Manuel Contreras Jaén" value={titularCuenta} onChange={(e) => setTitularCuenta(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3.5 px-4 text-xs text-slate-200 focus:outline-none focus:border-blue-500" />
-                </div>
-                <div>
-                  <label className="block text-3xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Código de Cuenta Internacional (IBAN)</label>
-                  <input type="text" required placeholder="ES21 0049 1234 5678 9012 3456" value={iban} onChange={(e) => setIban(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3.5 px-4 text-xs text-slate-200 font-mono focus:outline-none focus:border-blue-500 tracking-wider" />
-                </div>
+                <Field
+                  label="Nombre del Titular de la Cuenta Bancaria"
+                  type="text" required placeholder="Ej: Manuel Contreras Jaén" value={titularCuenta}
+                  onChange={(e) => setTitularCuenta(e.target.value)}
+                  inputClassName="py-3.5"
+                />
+                <Field
+                  label="Código de Cuenta Internacional (IBAN)"
+                  type="text" required placeholder="ES21 0049 1234 5678 9012 3456" value={iban}
+                  onChange={(e) => setIban(e.target.value)}
+                  inputClassName="py-3.5 font-mono tracking-wider"
+                />
               </div>
 
               <div className="bg-slate-950 border border-blue-500/20 p-4 rounded-xl flex justify-between items-center mt-6">

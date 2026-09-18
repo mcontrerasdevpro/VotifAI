@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Radio } from 'lucide-react';
+import Card from './ui/Card.jsx';
+import StatusBadge from './ui/StatusBadge.jsx';
 
 export default function PanelEscrutinio({ puntoActivo, dispatch, state }) {
   const { escuchandoIA, transcripcionesIA, juntasData, mercado } = state?.salaControl || {
@@ -61,16 +63,16 @@ export default function PanelEscrutinio({ puntoActivo, dispatch, state }) {
   }, [escuchandoIA, puntoActivo]);
 
   return (
-    <section className="w-full lg:w-80 bg-slate-900/40 border border-slate-900 rounded-2xl p-4 flex flex-col h-full overflow-hidden justify-between shrink-0">
+    <Card as="section" className="w-full lg:w-80 flex flex-col h-full overflow-hidden justify-between shrink-0" padding="p-4">
       <div className="flex items-center justify-between border-b border-slate-900 pb-3 mb-3 shrink-0">
         <div className="flex items-center gap-2">
           <Radio size={15} className={escuchandoIA ? 'text-rose-500 animate-pulse' : 'text-slate-500'} />
           <h3 className="text-3xs font-black uppercase tracking-widest text-slate-400">Transcripción e IA</h3>
         </div>
         {escuchandoIA && (
-          <span className="text-[8px] font-mono bg-rose-500/10 border border-rose-500/20 text-rose-400 font-bold px-2 py-0.5 rounded animate-pulse uppercase tracking-wider">
+          <StatusBadge tone="danger" className="font-mono animate-pulse">
             ● LIVE REC
-          </span>
+          </StatusBadge>
         )}
       </div>
 
@@ -115,6 +117,6 @@ export default function PanelEscrutinio({ puntoActivo, dispatch, state }) {
           {escuchandoIA ? 'Detener Captura de Sala' : 'Iniciar Captura de Sala'}
         </button>
       </div>
-    </section>
+    </Card>
   );
 }

@@ -1,5 +1,11 @@
 const BASE = 'w-full bg-slate-900 border rounded-xl text-xs text-slate-200 focus:outline-none transition-colors placeholder:text-slate-600';
 
+const FOCO_VARIANTE = {
+  vecino: 'focus:border-blue-500',
+  empresa: 'focus:border-indigo-500',
+  brand: 'focus:border-brand-500'
+};
+
 /**
  * Label + input/select/textarea + error, con icono opcional a la
  * izquierda. Extraído del patrón que se repetía a mano en Login.jsx,
@@ -11,11 +17,13 @@ export default function Field({
   as = 'input',
   error,
   hint,
+  variant = 'vecino',
   className = '',
+  inputClassName = '',
   children,
   ...rest
 }) {
-  const borde = error ? 'border-rose-500/60 focus:border-rose-500' : 'border-slate-800 focus:border-blue-500';
+  const borde = error ? 'border-rose-500/60 focus:border-rose-500' : `border-slate-800 ${FOCO_VARIANTE[variant] || FOCO_VARIANTE.vecino}`;
   const padding = Icon ? 'py-3 pl-10 pr-4' : 'py-3 px-4';
   const Componente = as === 'select' ? 'select' : as === 'textarea' ? 'textarea' : 'input';
 
@@ -29,7 +37,7 @@ export default function Field({
       <div className="relative">
         {Icon && <Icon className="absolute left-3.5 top-3.5 text-slate-600 pointer-events-none" size={16} />}
         <Componente
-          className={`${BASE} ${borde} ${padding} ${as === 'textarea' ? 'resize-none' : ''}`}
+          className={`${BASE} ${borde} ${padding} ${as === 'textarea' ? 'resize-none' : ''} ${inputClassName}`}
           {...rest}
         >
           {children}

@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useVotifaiStore } from '../../store.jsx';
 import { Building2, Search, Plus, FolderOpen, LogOut, Users, UserPlus, Scale } from 'lucide-react';
 import CensoPropietarios from '../../components/CensoPropietarios.jsx';
+import Card from '../../components/ui/Card.jsx';
+import Field from '../../components/ui/Field.jsx';
+import Modal from '../../components/ui/Modal.jsx';
 
 export default function ClientSelector() {
   const navigate = useNavigate();
@@ -265,11 +268,13 @@ export default function ClientSelector() {
       <div className="flex-grow flex flex-col lg:flex-row overflow-hidden p-4 gap-4">
 
         {/* COLUMNA 1: LISTADO Y FILTRADO LATERAL DE FINCAS */}
-        <div className="w-full lg:flex-grow bg-slate-900/30 border border-slate-900 rounded-2xl p-4 flex flex-col h-full overflow-hidden">
-          <div className="relative bg-slate-950 p-1 rounded-2xl border border-slate-900 mb-4 shrink-0">
-            <Search className="absolute left-4 top-4 text-slate-500" size={16} />
-            <input type="text" placeholder="Filtrar por dirección o nombre de finca..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="w-full bg-slate-900 border border-transparent rounded-xl py-2.5 pl-10 pr-4 text-xs text-slate-200 focus:outline-none" />
-          </div>
+        <Card className="w-full lg:flex-grow flex flex-col h-full overflow-hidden" padding="p-4">
+          <Field
+            className="mb-4 shrink-0"
+            icon={Search}
+            type="text" placeholder="Filtrar por dirección o nombre de finca..." value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+          />
 
           <div className="space-y-2 overflow-y-auto flex-grow pr-1 custom-scrollbar">
             {cargandoFincas ? (
@@ -297,9 +302,9 @@ export default function ClientSelector() {
               <div className="text-center py-12 text-4xs text-slate-500 font-bold tracking-wider">No se han encontrado fincas registradas.</div>
             )}
           </div>
-        </div>
+        </Card>
         {/* COLUMNA 2: EXPEDIENTE E INFORMACIÓN REAL DE LA FINCA SELECCIONADA */}
-        <div className="w-full lg:w-7/12 bg-slate-950/40 border border-slate-900 rounded-2xl p-5 flex flex-col h-full overflow-hidden justify-between">
+        <Card className="w-full lg:w-7/12 flex flex-col h-full overflow-hidden justify-between" padding="p-5">
           {entidadSeleccionada ? (
             <div className="flex flex-col h-full overflow-hidden justify-between">
               <div className="flex flex-col flex-grow overflow-hidden">
@@ -367,29 +372,34 @@ export default function ClientSelector() {
                 <div className="my-3 shrink-0">
                   {editandoFinca ? (
                     <div className="bg-slate-900/60 border border-blue-500/30 p-4 rounded-2xl grid grid-cols-1 sm:grid-cols-3 gap-4 shadow-lg">
-                      <div className="sm:col-span-3">
-                        <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Nombre Comercial de la Finca</label>
-                        <input type="text" value={editNombre} onChange={(e) => setEditNombre(e.target.value)} className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-xl py-2 px-3 text-xs text-slate-200 focus:outline-none font-bold" />
-                      </div>
-                      <div>
-                        <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Código CIF Legal</label>
-                        <input type="text" value={editCif} onChange={(e) => setEditCif(e.target.value)} className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-xl py-2 px-3 text-xs text-slate-200 font-mono focus:outline-none uppercase" />
-                      </div>
-                      <div className="sm:col-span-2">
-                        <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Dirección Postal / Sede</label>
-                        <input type="text" value={editDireccion} onChange={(e) => setEditDireccion(e.target.value)} className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-xl py-2 px-3 text-xs text-slate-200 focus:outline-none" />
-                      </div>
+                      <Field
+                        className="sm:col-span-3"
+                        label="Nombre Comercial de la Finca"
+                        type="text" value={editNombre} onChange={(e) => setEditNombre(e.target.value)}
+                        inputClassName="py-2 font-bold"
+                      />
+                      <Field
+                        label="Código CIF Legal"
+                        type="text" value={editCif} onChange={(e) => setEditCif(e.target.value)}
+                        inputClassName="py-2 font-mono uppercase"
+                      />
+                      <Field
+                        className="sm:col-span-2"
+                        label="Dirección Postal / Sede"
+                        type="text" value={editDireccion} onChange={(e) => setEditDireccion(e.target.value)}
+                        inputClassName="py-2"
+                      />
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div className="bg-slate-900/50 border border-slate-900 p-3 rounded-xl shadow-inner">
+                      <Card padding="p-3" className="shadow-inner">
                         <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Código CIF Legal</span>
                         <p className="text-3xs font-mono font-bold text-slate-200 mt-1 uppercase">{entidadSeleccionada?.cif || "H-00000000"}</p>
-                      </div>
-                      <div className="bg-slate-900/50 border border-slate-900 p-3 rounded-xl shadow-inner sm:col-span-2">
+                      </Card>
+                      <Card padding="p-3" className="shadow-inner sm:col-span-2">
                         <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Dirección de la Propiedad</span>
                         <p className="text-3xs font-medium text-slate-200 mt-1 truncate">{entidadSeleccionada?.direccion || "Calle no especificada"}</p>
-                      </div>
+                      </Card>
                     </div>
                   )}
                 </div>
@@ -429,63 +439,59 @@ export default function ClientSelector() {
               <p className="text-5xs text-slate-600 mt-1 max-w-[180px]">Selecciona una finca para interrogar sus credenciales.</p>
             </div>
           )}
-        </div>
+        </Card>
       </div>
 
       {/* 🗳️ MODAL DE GESTIÓN DE VOTO DELEGADO ANTICIPADO */}
-      {mostrarModalDelegar && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <form onSubmit={handleRegistrarDelegacion} className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md space-y-4 shadow-2xl">
-            <div>
-              <h2 className="text-sm font-black text-white flex items-center gap-2">
-                <Scale size={16} className="text-blue-500" /> Otorgar Representación Legal
-              </h2>
-              <p className="text-5xs text-slate-400 mt-1 uppercase tracking-wider">Delegación Anticipada de Cuotas</p>
-            </div>
-            <div>
-              <label className="block text-4xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Seleccionar Propietario Ausente</label>
-              <select
-                required
-                value={vecinoIdDelegante}
-                onChange={(e) => setVecinoIdDelegante(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-3 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-              >
-                <option value="">-- Elige un vecino --</option>
-                {entidadSeleccionada?.propietarios?.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.propiedad} - {v.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-4xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Nombre del Apoderado / Representante</label>
-              <input
-                type="text"
-                required
-                value={representanteNombre}
-                onChange={(e) => setRepresentanteNombre(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-3 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-              />
-            </div>
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setMostrarModalDelegar(false)}
-                className="flex-1 bg-slate-950 text-slate-400 py-2.5 rounded-xl text-xs font-bold border border-slate-900"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                className="flex-1 bg-blue-600 text-white py-2.5 rounded-xl text-xs font-bold"
-              >
-                Emitir Apoderamiento
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+      <Modal
+        open={mostrarModalDelegar}
+        onClose={() => setMostrarModalDelegar(false)}
+        icon={Scale}
+        eyebrow="Delegación Anticipada de Cuotas"
+        title="Otorgar Representación Legal"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setMostrarModalDelegar(false)}
+              className="flex-1 bg-slate-950 text-slate-400 py-2.5 rounded-xl text-xs font-bold border border-slate-900"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              form="form-delegar-voto"
+              className="flex-1 bg-blue-600 text-white py-2.5 rounded-xl text-xs font-bold"
+            >
+              Emitir Apoderamiento
+            </button>
+          </>
+        }
+      >
+        <form id="form-delegar-voto" onSubmit={handleRegistrarDelegacion} className="space-y-4">
+          <Field
+            as="select"
+            label="Seleccionar Propietario Ausente"
+            required
+            value={vecinoIdDelegante}
+            onChange={(e) => setVecinoIdDelegante(e.target.value)}
+          >
+            <option value="">-- Elige un vecino --</option>
+            {entidadSeleccionada?.propietarios?.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.propiedad} - {v.nombre}
+              </option>
+            ))}
+          </Field>
+          <Field
+            label="Nombre del Apoderado / Representante"
+            type="text"
+            required
+            value={representanteNombre}
+            onChange={(e) => setRepresentanteNombre(e.target.value)}
+          />
+        </form>
+      </Modal>
 
     </div>
   );

@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, Building2, Landmark, MapPin, FileUp, CheckCircle, ArrowRight, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useVotifaiStore } from '../store.jsx';
+import Field from './ui/Field.jsx';
+import Card from './ui/Card.jsx';
 
 export default function AltaFinca() {
   const navigate = useNavigate();
@@ -104,38 +106,30 @@ export default function AltaFinca() {
             </div>
           </div>
            {/* Nombre Oficial */}
-          <div className="space-y-1.5">
-            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400">
-              {framework === 'LPH' ? 'Nombre de la Finca / Comunidad' : 'Razón Social / Entidad'}
-            </label>
-            <input
-              type="text" required placeholder={framework === 'LPH' ? 'Ej: Comunidad de Propietarios Calle Mayor 14' : 'Ej: Inversiones Inmobiliarias S.L.'}
-              value={nombre} onChange={(e) => setNombre(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-900 focus:border-indigo-500 focus:outline-none rounded-xl p-3 text-3xs font-medium text-slate-100 placeholder:text-slate-600 shadow-inner"
-            />
-          </div>
+          <Field
+            variant="empresa"
+            label={framework === 'LPH' ? 'Nombre de la Finca / Comunidad' : 'Razón Social / Entidad'}
+            type="text" required placeholder={framework === 'LPH' ? 'Ej: Comunidad de Propietarios Calle Mayor 14' : 'Ej: Inversiones Inmobiliarias S.L.'}
+            value={nombre} onChange={(e) => setNombre(e.target.value)}
+          />
 
           {/* CIF y Ubicación en Grid */}
           <div className="grid grid-cols-3 gap-4">
-            <div className="col-span-1 space-y-1.5">
-              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400">CIF / NIF</label>
-              <input
-                type="text" required placeholder="H1234567J" maxLength={9}
-                value={cif} onChange={(e) => setCif(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-900 focus:border-indigo-500 focus:outline-none rounded-xl p-3 text-3xs font-mono font-bold text-center text-slate-100 placeholder:text-slate-700 shadow-inner"
-              />
-            </div>
-            <div className="col-span-2 space-y-1.5">
-              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Localización / Dirección</label>
-              <div className="relative">
-                <MapPin size={12} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-600" />
-                <input
-                  type="text" placeholder="Madrid, España"
-                  value={ubicacion} onChange={(e) => setUbicacion(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-900 focus:border-indigo-500 focus:outline-none rounded-xl pl-9 pr-4 p-3 text-3xs font-medium text-slate-100 placeholder:text-slate-600 shadow-inner"
-                />
-              </div>
-            </div>
+            <Field
+              className="col-span-1"
+              variant="empresa"
+              label="CIF / NIF"
+              type="text" required placeholder="H1234567J" maxLength={9}
+              value={cif} onChange={(e) => setCif(e.target.value)}
+              inputClassName="font-mono font-bold text-center uppercase"
+            />
+            <Field
+              className="col-span-2"
+              variant="empresa"
+              label="Localización / Dirección" icon={MapPin}
+              type="text" placeholder="Madrid, España"
+              value={ubicacion} onChange={(e) => setUbicacion(e.target.value)}
+            />
           </div>
 
           {/* Capturador de PDF */}
@@ -187,7 +181,7 @@ export default function AltaFinca() {
         <div className="absolute bottom-1/4 left-1/3 w-72 h-72 bg-emerald-500/5 rounded-full blur-3xl" />
 
         {/* Consola de Control Periférico */}
-        <div className="w-full max-w-md bg-slate-900/40 border border-slate-900 rounded-2xl p-5 space-y-4 backdrop-blur-md relative z-10">
+        <Card className="w-full max-w-md space-y-4 backdrop-blur-md relative z-10" padding="p-5">
           <div className="flex justify-between items-center border-b border-slate-800 pb-3">
             <div className="flex items-center gap-2">
               <span className={`h-2 w-2 rounded-full ${procesando ? 'bg-amber-400 animate-ping' : 'bg-emerald-500'}`} />
@@ -260,7 +254,7 @@ export default function AltaFinca() {
             <p className="text-slate-400">✓ Aislamiento relacional PostgreSQL (pgAdmin) verificado en la nube.</p>
           </div>
 
-        </div>
+        </Card>
       </div>
 
     </div>

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, Smartphone, User, Landmark, CheckCircle2, XCircle, AlertTriangle, RefreshCw, Vote } from 'lucide-react';
+import Field from '../../components/ui/Field.jsx';
+import Card from '../../components/ui/Card.jsx';
 
 export default function VoterScreen() {
   const { tokenAcceso } = useParams();
@@ -135,22 +137,17 @@ export default function VoterScreen() {
               </div>
 
               <form onSubmit={handleVerificarIdentidad} className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="block text-5xs font-black text-slate-400 uppercase tracking-widest">DNI / NIF del Propietario</label>
-                  <div className="relative">
-                    <User className="absolute left-3.5 top-3.5 text-slate-500" size={14} />
-                    <input
-                      type="text"
-                      required
-                      maxLength={9}
-                      value={dniIngresado}
-                      onChange={(e) => setDniIngresado(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-xs text-slate-200 font-mono uppercase focus:outline-none focus:border-blue-500 transition-all font-bold placeholder:text-slate-700"
-                      placeholder="Ej: 12345678X"
-                      disabled={autenticando}
-                    />
-                  </div>
-                </div>
+                <Field
+                  label="DNI / NIF del Propietario" icon={User}
+                  type="text"
+                  required
+                  maxLength={9}
+                  value={dniIngresado}
+                  onChange={(e) => setDniIngresado(e.target.value)}
+                  inputClassName="font-mono uppercase font-bold"
+                  placeholder="Ej: 12345678X"
+                  disabled={autenticando}
+                />
 
                 {errorLogin && (
                   <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-start gap-2 text-rose-400 text-4xs leading-relaxed font-bold animate-shake">
@@ -206,7 +203,7 @@ export default function VoterScreen() {
                   </div>
                 ) : (
                   puntosJunta.map((punto) => (
-                    <div key={punto.id} className="bg-slate-900/40 border border-slate-900 rounded-2xl p-4 space-y-3 shadow-md">
+                    <Card key={punto.id} className="space-y-3 shadow-md" padding="p-4">
                       <div className="flex justify-between items-start gap-3">
                         <span className="bg-slate-950 border border-slate-800 px-2 py-0.5 rounded font-mono text-[8px] font-black text-slate-400">PUNTO {punto.id}</span>
                         <p className="text-3xs font-bold text-slate-200 flex-grow leading-normal">{punto.titulo}</p>
@@ -260,7 +257,7 @@ export default function VoterScreen() {
                           <CheckCircle2 size={10} /> Su cuota ha sido computada de forma vinculante
                         </div>
                       )}
-                    </div>
+                    </Card>
                   ))
                 )}
               </div>

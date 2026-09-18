@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Users, PieChart, Timer, ChevronRight, ArrowLeft, Radio } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import Card from './ui/Card.jsx';
 
 export default function ColumnaMonitorCentral({ datos, puntoActivo, dispatch, state }) {
   const navigate = useNavigate();
@@ -84,7 +85,7 @@ export default function ColumnaMonitorCentral({ datos, puntoActivo, dispatch, st
   const todosLosPuntosCerrados = datos?.puntos?.length > 0 && datos.puntos.every(p => p.estado === 'Cerrado');
 
   return (
-    <section className="flex-grow bg-slate-900/40 border border-slate-900 rounded-2xl p-5 flex flex-col h-full overflow-hidden justify-between">
+    <Card as="section" className="flex-grow flex flex-col h-full overflow-hidden justify-between" padding="p-5">
       <div className="space-y-5 overflow-y-auto flex-grow pr-1 custom-scrollbar">
         {/* Cabecera del Monitor */}
         <div className="border-b border-slate-900 pb-4">
@@ -245,6 +246,6 @@ export default function ColumnaMonitorCentral({ datos, puntoActivo, dispatch, st
           <ArrowLeft size={12} /> Salir
         </button>
       </div>
-    </section>
+    </Card>
   );
 }
