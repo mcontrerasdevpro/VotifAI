@@ -11,8 +11,8 @@ const TONOS_ESTADO = { pendiente: 'warning', confirmada: 'success', cancelada: '
 const ETIQUETAS_ESTADO = { pendiente: 'Pendiente', confirmada: 'Confirmada', cancelada: 'Cancelada', rechazada: 'Rechazada' };
 
 export default function Reservas() {
-  const { fincaId, empresaId } = useParams();
-  const entidadId = empresaId || fincaId;
+  const { fincaId } = useParams();
+  const entidadId = fincaId;
 
   const [tab, setTab] = useState('reservas');
   const [reservas, setReservas] = useState([]);

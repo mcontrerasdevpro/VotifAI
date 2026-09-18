@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate, useParams } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useVotifaiStore } from '../store.jsx';
 import { ShieldCheck, LayoutDashboard, Vote, Wrench, Wallet, FileStack, CalendarClock, Headset, Landmark, ArrowLeft, LogOut } from 'lucide-react';
 
@@ -19,25 +19,17 @@ const GESTION_COMUNIDAD = [
   { to: 'contabilidad', icon: Landmark, label: 'Contabilidad' }
 ];
 
-const GESTION_EMPRESA = [
-  { to: 'crm', icon: Headset, label: 'Atención al Cliente' }
-];
-
 /**
- * Layout persistente para la consola de una finca/empresa concreta:
- * sidebar de navegación entre módulos + área de contenido (<Outlet/>).
- * "Junta en Vivo" (Dashboard.jsx) es un módulo más, no la pantalla de
- * entrada — el punto de entrada real sigue siendo /hub.
+ * Layout persistente para la consola de una finca concreta: sidebar de
+ * navegación entre módulos + área de contenido (<Outlet/>). "Junta en
+ * Vivo" (Dashboard.jsx) es un módulo más, no la pantalla de entrada — el
+ * punto de entrada real sigue siendo /hub.
  */
 export default function AppShell() {
   const navigate = useNavigate();
-  const { empresaId } = useParams();
-  const esEmpresa = !!empresaId;
 
   const { state, dispatch } = useVotifaiStore() || { state: { tenant: null }, dispatch: () => {} };
   const admin = state?.tenant?.admin;
-
-  const gestion = esEmpresa ? GESTION_EMPRESA : GESTION_COMUNIDAD;
 
   const handleLogout = async () => {
     try {
@@ -88,7 +80,7 @@ export default function AppShell() {
           <div className="pt-3 mt-3 border-t border-slate-900">
             <p className="px-3 mb-1.5 text-4xs font-black uppercase tracking-widest text-slate-600">Gestión del Despacho</p>
             <div className="space-y-1">
-              {gestion.map((m) => (
+              {GESTION_COMUNIDAD.map((m) => (
                 <NavLink
                   key={m.label}
                   to={m.to}

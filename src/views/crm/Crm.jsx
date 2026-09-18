@@ -14,8 +14,8 @@ const ETIQUETAS_CATEGORIA = { consulta: 'Consulta', reclamacion: 'Reclamación',
 const ETIQUETAS_CANAL = { telefono: 'Teléfono', email: 'Email', whatsapp: 'WhatsApp', presencial: 'Presencial', otro: 'Otro' };
 
 export default function Crm() {
-  const { fincaId, empresaId } = useParams();
-  const entidadId = empresaId || fincaId;
+  const { fincaId } = useParams();
+  const entidadId = fincaId;
 
   const [solicitudes, setSolicitudes] = useState([]);
   const [propietarios, setPropietarios] = useState([]);

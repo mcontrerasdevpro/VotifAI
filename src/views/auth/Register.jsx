@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVotifaiStore } from '../../store.jsx';
-import { ShieldCheck, Building2, Users, ArrowRight, ArrowLeft, Mail, Lock, Sparkles, CreditCard, AudioLines, FileJson, Scale, Phone, MapPin, User } from 'lucide-react';
+import { ShieldCheck, ArrowRight, ArrowLeft, Mail, Lock, Sparkles, CreditCard, AudioLines, FileJson, Scale, Phone, MapPin, User } from 'lucide-react';
 import Field from '../../components/ui/Field.jsx';
 
 export default function Register() {
@@ -9,7 +9,7 @@ export default function Register() {
   const { dispatch } = useVotifaiStore() || { dispatch: () => { } };
 
   const [paso, setPaso] = useState(1);
-  const [tipoOrganizacion, setTipoOrganizacion] = useState('administrador');
+  const tipoOrganizacion = 'administrador';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -166,7 +166,7 @@ export default function Register() {
               {paso === 2 && "Domiciliación Bancaria Directa"}
             </h1>
             <p className="text-3xs text-slate-400 leading-normal">
-              {paso === 1 && "Estos son los datos de tu despacho o gestoría, no de una comunidad o empresa concreta — esas se dan de alta después, ya dentro de tu panel."}
+              {paso === 1 && "Estos son los datos de tu despacho o gestoría, no de una comunidad concreta — esas se dan de alta después, ya dentro de tu panel."}
               {paso === 2 && "Introduce los datos bancarios. Activaremos la prueba de 15 días a coste cero."}
             </p>
 
@@ -192,25 +192,6 @@ export default function Register() {
           {/* ================= PASO 1: DATOS DEL DESPACHO Y ACCESO ================= */}
           {paso === 1 && (
             <div className="space-y-5 animate-fade-in">
-              <div className="space-y-2">
-                <label className="block text-3xs font-bold text-slate-500 uppercase tracking-widest">¿Qué tipo de despacho gestionas principalmente?</label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <button
-                    type="button" onClick={() => setTipoOrganizacion('administrador')}
-                    className={`flex items-center justify-center gap-3 py-4 px-4 text-3xs font-black uppercase tracking-wider rounded-xl transition-all border ${tipoOrganizacion === 'administrador' ? 'bg-blue-600 border-blue-500 text-white shadow-lg' : 'bg-slate-900 border-slate-800 text-slate-400'}`}
-                  >
-                    <Users size={14} /> Admin. Fincas / Vecinos
-                  </button>
-                  <button
-                    type="button" onClick={() => setTipoOrganizacion('empresa')}
-                    className={`flex items-center justify-center gap-3 py-4 px-4 text-3xs font-black uppercase tracking-wider rounded-xl transition-all border ${tipoOrganizacion === 'empresa' ? 'bg-blue-600 border-blue-500 text-white shadow-lg' : 'bg-slate-900 border-slate-800 text-slate-400'}`}
-                  >
-                    <Building2 size={14} /> Empresa / Corporación
-                  </button>
-                </div>
-                <p className="text-4xs text-slate-600">Podrás dar de alta tanto comunidades como empresas después, esto solo adapta el vocabulario de tu panel.</p>
-              </div>
-
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field
                   className="sm:col-span-2"
@@ -245,7 +226,7 @@ export default function Register() {
                 <Field
                   className="mt-4"
                   label="Email Maestro del Administrador" icon={Mail}
-                  type="email" required placeholder="director@miempresa.com" value={email}
+                  type="email" required placeholder="director@midespacho.com" value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   inputClassName="py-3.5 font-medium"
                 />

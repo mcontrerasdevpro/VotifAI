@@ -24,8 +24,8 @@ const ETIQUETAS_ESTADO = {
 };
 
 export default function Cuotas() {
-  const { fincaId, empresaId } = useParams();
-  const entidadId = empresaId || fincaId;
+  const { fincaId } = useParams();
+  const entidadId = fincaId;
 
   const [cuotas, setCuotas] = useState([]);
   const [propietarios, setPropietarios] = useState([]);

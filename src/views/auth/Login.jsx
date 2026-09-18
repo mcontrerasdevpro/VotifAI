@@ -18,8 +18,8 @@ export default function Login() {
   const [nombreVecino, setNombreVecino] = useState('');
   const [pisoPuerta, setPisoPuerta] = useState('');
 
-  const [cifEmpresa, setCifEmpresa] = useState('');
-  const [emailSocio, setEmailSocio] = useState('');
+  const [cifDespacho, setCifDespacho] = useState('');
+  const [emailAdmin, setEmailAdmin] = useState('');
   const [password, setPassword] = useState('');
 
    const handleSubmit = async (e) => {
@@ -33,7 +33,7 @@ export default function Login() {
       setCargando(true);
 
       const payload = {
-        email: emailSocio,
+        email: emailAdmin,
         password: password
       };
 
@@ -57,7 +57,7 @@ export default function Login() {
           const nuevoTenantCaché = {
             tenantId: resultado.tenant.id || resultado.tenant.tenantId,
             nombreEntidad: resultado.tenant.nombre_entidad || resultado.tenant.nombreEntidad || "Despacho Profesional",
-            email: resultado.tenant.email_maestro || resultado.tenant.email || emailSocio,
+            email: resultado.tenant.email_maestro || resultado.tenant.email || emailAdmin,
             tipoOrganizacion: resultado.tenant.tipo_organizacion || resultado.tenant.tipoOrganizacion || 'administrador',
             plan: resultado.tenant.plan_suscripcion || resultado.tenant.plan || 'trial_15_dias',
 
@@ -66,7 +66,7 @@ export default function Login() {
               despacho: resultado.tenant.nombre_entidad || resultado.tenant.nombreEntidad || "Despacho Administrador"
             },
 
-            comunidadesYEmpresas: resultado.tenant.comunidadesYEmpresas || []
+            comunidades: resultado.tenant.comunidades || []
           };
 
           localStorage.setItem('votifai_tenant', JSON.stringify(nuevoTenantCaché));
@@ -107,7 +107,7 @@ export default function Login() {
             <span className="text-xl font-black text-white">Votif<span className="text-blue-500">AI</span></span>
           </div>
           <p className="text-xs text-slate-400 mt-2">
-            {esComunidad ? 'Acreditación para Junta de Propietarios' : 'Identificación de Accionista o Consejero'}
+            {esComunidad ? 'Acreditación para Junta de Propietarios' : 'Acceso de Administrador de Fincas'}
           </p>
         </div>
 
@@ -148,19 +148,19 @@ export default function Login() {
               />
             </div>
           ) : (
-            /* FORMULARIO CORPORATIVO CONECTADO A NEON */
+            /* FORMULARIO DE ADMINISTRADOR DE FINCAS CONECTADO A NEON */
             <div className="space-y-4">
               <Field
-                label="1. CIF de la Sociedad" icon={Building}
-                type="text" required placeholder="Ej: A-82345678" value={cifEmpresa}
-                onChange={(e) => setCifEmpresa(e.target.value)}
+                label="1. CIF del Despacho" icon={Building}
+                type="text" required placeholder="Ej: A-82345678" value={cifDespacho}
+                onChange={(e) => setCifDespacho(e.target.value)}
                 inputClassName="font-mono uppercase"
               />
 
               <Field
                 label="2. Correo Corporativo" icon={Mail}
-                type="email" required placeholder="socio@empresa.com" value={emailSocio}
-                onChange={(e) => setEmailSocio(e.target.value)}
+                type="email" required placeholder="admin@despacho.com" value={emailAdmin}
+                onChange={(e) => setEmailAdmin(e.target.value)}
               />
 
               <Field

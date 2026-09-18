@@ -9,7 +9,7 @@ import {
 const router = Router();
 
 // =========================================================================
-// 🎧 CRM / ATENCIÓN AL CLIENTE (solicitudes de propietarios/socios al despacho)
+// 🎧 CRM / ATENCIÓN AL CLIENTE (solicitudes de propietarios al despacho)
 // =========================================================================
 
 router.get('/crm/lista/:entityId', requireAuth, async (req, res) => {

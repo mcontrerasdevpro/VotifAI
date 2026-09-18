@@ -91,7 +91,7 @@ app.post('/api/auth/register', async (req, res) => {
 
     res.status(201).json({
       mensaje: 'Despacho profesional registrado con éxito en la nube.',
-      tenant: { ...nuevoTenant.rows[0], comunidadesYEmpresas: [] }
+      tenant: { ...nuevoTenant.rows[0], comunidades: [] }
     });
 
    } catch (err) {
@@ -133,7 +133,7 @@ app.post('/api/auth/login', async (req, res) => {
     const { password_hash, ...tenantSinHash } = tenantBase;
     const tenantCompleto = {
       ...tenantSinHash,
-      comunidadesYEmpresas: fincasResultado.rows
+      comunidades: fincasResultado.rows
     };
 
     issueSessionCookie(res, tenantBase);
@@ -212,25 +212,22 @@ if (process.env.NODE_ENV === 'production') {
 // 🏢 4. ENDPOINT POST: /api/entities/create (Persistencia Real de Fincas)
 // =========================================================================
 app.post('/api/entities/create', requireAuth, async (req, res) => {
-  const { nombre, cif, direccion, metadatos_legales, tipo } = req.body;
+  const { nombre, cif, direccion, metadatos_legales } = req.body;
   if (!nombre) {
     return res.status(400).json({ error: 'El Nombre de la finca es obligatorio.' });
   }
 
-  const tipoNormalizado = tipo === 'empresa' ? 'empresa' : 'comunidad';
-
   try {
     const nuevaEntidad = await query(
       `INSERT INTO entities (tenant_id, nombre, cif, direccion, metadatos_legales, tipo)
-       VALUES ($1, $2, $3, $4, $5, $6)
+       VALUES ($1, $2, $3, $4, $5, 'comunidad')
        RETURNING id, nombre, cif, direccion, tipo, creado_en`,
       [
         req.tenantId,
         nombre,
         cif || '00000000X',
         direccion || 'Sede Local',
-        JSON.stringify(metadatos_legales || {}),
-        tipoNormalizado
+        JSON.stringify(metadatos_legales || {})
       ]
     );
 
@@ -312,7 +309,7 @@ app.put('/api/entities/upload-pdf', requireAuth, async (req, res) => {
 });
 
 // =========================================================================
-// 🏢 7. ENDPOINT PUT: /api/entities/update (Actualización en Caliente de Fincas/Empresas)
+// 🏢 7. ENDPOINT PUT: /api/entities/update (Actualización en Caliente de Fincas)
 // =========================================================================
 app.put('/api/entities/update', requireAuth, async (req, res) => {
   const { id, nombre, cif, direccion, presidente, tesorero } = req.body;
@@ -471,20 +468,13 @@ app.delete('/api/entities/delete/:id', requireAuth, async (req, res) => {
       [entityIdClean]
     );
 
-    // B. Eliminamos el censo de propietarios (o socios si compartieran tabla relacional)
+    // B. Eliminamos el censo de propietarios
     await query('DELETE FROM propietarios WHERE entity_id = $1::uuid', [entityIdClean]);
-    
-    // C. Si creaste una tabla específica para socios de empresas, la limpiamos aquí
-    try {
-      await query('DELETE FROM socios WHERE entity_id = $1::uuid OR empresa_id = $1', [entityIdClean]);
-    } catch (e) {
-      console.log("ℹ️ Tabla opcional 'socios' no requirió purga de esquema.");
-    }
 
-    // D. Eliminamos las reuniones/asambleas de la entidad
+    // C. Eliminamos las reuniones/asambleas de la entidad
     await query('DELETE FROM meetings WHERE entity_id = $1::uuid', [entityIdClean]);
 
-    // E. Una vez removidas todas las dependencias, borramos el registro raíz en entities
+    // D. Una vez removidas todas las dependencias, borramos el registro raíz en entities
     const result = await query('DELETE FROM entities WHERE id = $1', [entityIdClean]);
 
     await query('COMMIT');
@@ -546,37 +536,6 @@ app.get('/api/propietarios/lista/:entityId', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('❌ ERROR REAL EN POSTGRESQL (LISTA):', err.message);
     res.status(500).json({ error: `Fallo crítico de red en el catálogo: ${err.message}` });
-  }
-});
-
-// =========================================================================
-// 🏢 11B. ENDPOINT GET: /api/socios/lista/:entityId (NUEVO: Soporte Censo Corporativo)
-// =========================================================================
-app.get('/api/socios/lista/:entityId', requireAuth, async (req, res) => {
-  const { entityId } = req.params;
-  const cleanId = String(entityId).trim();
-
-  try {
-    if (!(await entityBelongsToTenant(cleanId, req.tenantId))) {
-      return res.status(403).json({ error: 'No autorizado para consultar el libro de socios de esta entidad.' });
-    }
-
-    // Si tus socios se guardan en la tabla "propietarios" de forma unificada, los extraemos mapeando semánticamente
-    const sociosResultado = await query(
-      `SELECT id, nombre_completo AS nombre, propiedad_detalle AS acciones, telefono, email, coeficiente AS porcentaje 
-       FROM propietarios 
-       WHERE entity_id = $1::uuid 
-       ORDER BY nombre_completo ASC`,
-      [cleanId]
-    );
-
-    res.status(200).json({
-      success: true,
-      socios: sociosResultado.rows
-    });
-  } catch (err) {
-    console.error('❌ ERROR EN LISTA DE SOCIOS:', err.message);
-    res.status(500).json({ error: `Fallo crítico al recuperar libro de socios: ${err.message}` });
   }
 });
 

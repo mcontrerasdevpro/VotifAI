@@ -16,8 +16,8 @@ const CATEGORIAS = [
 ];
 
 export default function Documentos() {
-  const { fincaId, empresaId } = useParams();
-  const entidadId = empresaId || fincaId;
+  const { fincaId } = useParams();
+  const entidadId = fincaId;
 
   const [tab, setTab] = useState('documentos');
   const [documentos, setDocumentos] = useState([]);

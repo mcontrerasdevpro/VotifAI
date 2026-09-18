@@ -6,10 +6,10 @@ import Card from '../../components/ui/Card.jsx';
 import Field from '../../components/ui/Field.jsx';
 
 /**
- * Hub: selector de la finca/empresa a gestionar, nada más. La ficha
- * completa (editar, PDF, censo, eliminar) vive en ResumenFinca.jsx, una
- * vez dentro — antes se duplicaba aquí sobre un censo de mentira que
- * nunca reflejaba los datos reales de Neon.
+ * Hub: selector de la finca a gestionar, nada más. La ficha completa
+ * (editar, PDF, censo, eliminar) vive en ResumenFinca.jsx, una vez
+ * dentro — antes se duplicaba aquí sobre un censo de mentira que nunca
+ * reflejaba los datos reales de Neon.
  */
 export default function ClientSelector() {
   const navigate = useNavigate();
@@ -105,20 +105,15 @@ export default function ClientSelector() {
               {fincasFiltradas.map((finca) => (
                 <div
                   key={finca.id}
-                  onClick={() => navigate(finca.tipo === 'empresa' ? `/admin/empresa/${finca.id}` : `/admin/${finca.id}`)}
+                  onClick={() => navigate(`/admin/${finca.id}`)}
                   className="p-4 rounded-xl border border-slate-900 bg-slate-950 hover:border-blue-500/40 cursor-pointer transition-all flex items-center justify-between gap-4"
                 >
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-xs font-bold text-white truncate">{finca.nombre}</h3>
-                      <span className="text-5xs font-black uppercase tracking-wider text-slate-500 border border-slate-800 rounded px-1.5 py-0.5 shrink-0">
-                        {finca.tipo === 'empresa' ? 'Empresa' : 'Comunidad'}
-                      </span>
-                    </div>
+                    <h3 className="text-xs font-bold text-white truncate">{finca.nombre}</h3>
                     <p className="text-4xs text-slate-500 font-mono mt-1 truncate">{finca.cif} · {finca.direccion}</p>
                   </div>
                   <button
-                    onClick={(e) => { e.stopPropagation(); navigate(finca.tipo === 'empresa' ? `/admin/empresa/${finca.id}` : `/admin/${finca.id}`); }}
+                    onClick={(e) => { e.stopPropagation(); navigate(`/admin/${finca.id}`); }}
                     className="bg-blue-600 hover:bg-blue-500 transition-colors px-3 py-1.5 rounded-xl text-white text-5xs font-black uppercase tracking-wider shadow-md shrink-0"
                   >
                     Gestionar ➔
@@ -130,7 +125,7 @@ export default function ClientSelector() {
             <div className="flex flex-col items-center justify-center text-center py-16 text-slate-500">
               <Building2 size={32} className="text-slate-700" />
               <h3 className="text-3xs font-black uppercase text-slate-400 mt-2 tracking-widest">Aún no tienes ninguna finca</h3>
-              <p className="text-5xs text-slate-600 mt-1 max-w-[220px]">Da de alta tu primera comunidad o empresa para empezar a gestionarla.</p>
+              <p className="text-5xs text-slate-600 mt-1 max-w-[220px]">Da de alta tu primera comunidad para empezar a gestionarla.</p>
               <button
                 onClick={() => navigate('/alta-finca')}
                 className="mt-4 bg-blue-600 hover:bg-blue-500 transition-colors text-white text-4xs font-bold px-4 py-2.5 rounded-xl shadow-md uppercase tracking-wider"

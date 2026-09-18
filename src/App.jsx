@@ -8,7 +8,6 @@ import Dashboard from './views/dashboard/Dashboard';
 import MinutesAI from './views/minutes/MinutesAI';
 import VoterScreen from './views/voter/VoterScreen';
 import AltaFinca from './components/AltaFinca.jsx';
-import AltaEmpresa from './components/AltaEmpresa.jsx';
 import ProtectedRoute from './components/ProtectedRoute';
 import AppShell from './components/AppShell.jsx';
 import ResumenFinca from './views/resumen/ResumenFinca.jsx';
@@ -29,14 +28,12 @@ function App() {
           <Route path="/login/:perfil" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/voto-vecino" element={<VoterScreen tipoUsuario="vecino" />} />
-          <Route path="/voto-socio" element={<VoterScreen tipoUsuario="empresa" />} />
 
           <Route element={<ProtectedRoute />}>
             <Route path="/hub" element={<ClientSelector />} />
             <Route path="/agenda" element={<Agenda />} />
             <Route path="/acta-ia" element={<MinutesAI />} />
             <Route path="/alta-finca" element={<AltaFinca />} />
-            <Route path="/alta-empresa" element={<AltaEmpresa />} />
 
             <Route path="/admin/:fincaId" element={<AppShell />}>
               <Route index element={<ResumenFinca />} />
@@ -47,12 +44,6 @@ function App() {
               <Route path="reservas" element={<Reservas />} />
               <Route path="crm" element={<Crm />} />
               <Route path="contabilidad" element={<Contabilidad />} />
-            </Route>
-
-            <Route path="/admin/empresa/:empresaId" element={<AppShell />}>
-              <Route index element={<ResumenFinca />} />
-              <Route path="junta" element={<Dashboard />} />
-              <Route path="crm" element={<Crm />} />
             </Route>
           </Route>
 

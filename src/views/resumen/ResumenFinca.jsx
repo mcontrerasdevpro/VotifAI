@@ -8,8 +8,8 @@ import CensoPropietarios from '../../components/CensoPropietarios.jsx';
 
 /**
  * Ficha de la entidad activa: datos generales + número de propietarios +
- * censo completo. Es el índice de la consola de una finca/empresa — antes
- * se entraba directo a "Junta en Vivo", ahora eso es un módulo más.
+ * censo completo. Es el índice de la consola de una finca — antes se
+ * entraba directo a "Junta en Vivo", ahora eso es un módulo más.
  *
  * También es donde vive la edición del expediente (nombre/CIF/dirección/
  * presidente/tesorero), la subida del PDF original y la baja de la
@@ -17,10 +17,9 @@ import CensoPropietarios from '../../components/CensoPropietarios.jsx';
  * censo de mentira; aquí opera sobre los datos reales de la propia finca.
  */
 export default function ResumenFinca() {
-  const { fincaId, empresaId } = useParams();
+  const { fincaId } = useParams();
   const navigate = useNavigate();
-  const entidadIdActiva = empresaId || fincaId;
-  const esEmpresa = !!empresaId;
+  const entidadIdActiva = fincaId;
 
   const { state } = useVotifaiStore() || { state: { tenant: null } };
   const tenantId = state?.tenant?.tenantId || state?.tenant?.id;
@@ -51,13 +50,10 @@ export default function ResumenFinca() {
         setEntidad(encontrada || null);
       }
 
-      const endpointCenso = esEmpresa
-        ? `/api/socios/lista/${entidadIdActiva}`
-        : `/api/propietarios/lista/${entidadIdActiva}`;
-      const resCenso = await fetch(endpointCenso, { credentials: 'include' });
+      const resCenso = await fetch(`/api/propietarios/lista/${entidadIdActiva}`, { credentials: 'include' });
       const dataCenso = await resCenso.json();
       if (resCenso.ok) {
-        setNumPropietarios((esEmpresa ? dataCenso.socios : dataCenso.propietarios)?.length ?? 0);
+        setNumPropietarios(dataCenso.propietarios?.length ?? 0);
       }
     } catch (err) {
       console.error('Fallo al cargar el resumen de la entidad:', err);
@@ -69,7 +65,7 @@ export default function ResumenFinca() {
   useEffect(() => {
     cargarResumen();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tenantId, entidadIdActiva, esEmpresa]);
+  }, [tenantId, entidadIdActiva]);
 
   useEffect(() => {
     if (!entidad) return;
@@ -174,7 +170,7 @@ export default function ResumenFinca() {
             {cargando ? 'Cargando...' : entidad?.nombre || 'Entidad no encontrada'}
           </h1>
           <p className="text-3xs text-slate-500 uppercase tracking-wider mt-1 font-bold">
-            {esEmpresa ? 'Sociedad — Ley de Sociedades de Capital (LSC)' : 'Comunidad de Propietarios — Ley de Propiedad Horizontal (LPH)'}
+            Comunidad de Propietarios — Ley de Propiedad Horizontal (LPH)
           </p>
         </div>
 
@@ -224,7 +220,7 @@ export default function ResumenFinca() {
             <p className="text-sm font-mono font-bold text-slate-200 mt-1 uppercase">{entidad?.cif || '—'}</p>
           </Card>
           <Card>
-            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Users size={12} /> {esEmpresa ? 'Socios' : 'Viviendas'}</span>
+            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Users size={12} /> Viviendas</span>
             <p className="text-sm font-black text-blue-400 mt-1">{numPropietarios ?? '—'}</p>
           </Card>
           <Card>
@@ -236,7 +232,7 @@ export default function ResumenFinca() {
 
       <Card className="flex-grow overflow-hidden flex flex-col min-h-0" padding="p-5">
         <h2 className="text-xs font-black text-white uppercase tracking-wide flex items-center gap-2 mb-4 shrink-0">
-          <Users size={16} className="text-blue-500" /> Censo de {esEmpresa ? 'Socios' : 'Propietarios'}
+          <Users size={16} className="text-blue-500" /> Censo de Propietarios
         </h2>
         <div className="flex-grow overflow-hidden min-h-0">
           <CensoPropietarios fincaId={entidadIdActiva} nombreFinca={entidad?.nombre} />

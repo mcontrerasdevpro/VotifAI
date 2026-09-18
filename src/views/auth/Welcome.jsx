@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Users, Building2, ShieldCheck, ArrowRight, Sparkles } from 'lucide-react';
+import { Users, ShieldCheck, ArrowRight, Sparkles } from 'lucide-react';
 
 export default function Welcome() {
   const navigate = useNavigate();
@@ -33,7 +33,7 @@ export default function Welcome() {
 
       </header>
 
-      {/* 2. CONTENEDOR PRINCIPAL PANORÁMICO (Aumentado de max-w-xl a max-w-7xl) */}
+      {/* 2. CONTENEDOR PRINCIPAL PANORÁMICO */}
       <main className="w-full max-w-7xl mx-auto flex-grow flex flex-col justify-center my-8 space-y-8">
 
         {/* TEXTO DE BIENVENIDA */}
@@ -46,64 +46,32 @@ export default function Welcome() {
           </p>
         </div>
 
-        {/* REJILLA EXPANDIDA A TODA PANTALLA */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+        {/* TARJETA ÚNICA: VECINOS */}
+        <motion.button
+          whileHover={{ scale: 1.01, y: -2 }}
+          whileActive={{ scale: 0.99 }}
+          onClick={() => navigate('/login/comunidad')}
+          className="group relative bg-slate-900/50 border border-slate-800 hover:border-blue-500/40 p-8 rounded-3xl text-left shadow-2xl transition-all flex flex-col justify-between h-64 overflow-hidden max-w-xl mx-auto w-full"
+        >
+          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl group-hover:bg-blue-500/10 transition-all" />
 
-          {/* TARJETA 1: VECINOS */}
-          <motion.button
-            whileHover={{ scale: 1.01, y: -2 }}
-            whileActive={{ scale: 0.99 }}
-            onClick={() => navigate('/login/comunidad')}
-            className="group relative bg-slate-900/50 border border-slate-800 hover:border-blue-500/40 p-8 rounded-3xl text-left shadow-2xl transition-all flex flex-col justify-between h-64 overflow-hidden"
-          >
-            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl group-hover:bg-blue-500/10 transition-all" />
+          <div className="bg-blue-600/10 text-blue-400 p-4 rounded-2xl w-fit border border-blue-500/10 shadow-inner">
+            <Users size={28} />
+          </div>
 
-            <div className="bg-blue-600/10 text-blue-400 p-4 rounded-2xl w-fit border border-blue-500/10 shadow-inner">
-              <Users size={28} />
-            </div>
+          <div className="space-y-2 relative z-10">
+            <h3 className="text-xl font-black text-white group-hover:text-blue-400 transition-colors">
+              Comunidad de Vecinos
+            </h3>
+            <p className="text-xs text-slate-400 leading-relaxed max-w-xl">
+              Accede de forma rápida e intuitiva a tu junta de propietarios asignada. Consulta los puntos del orden del día, delega tu representación y emite tu voto seguro ponderado por coeficientes.
+            </p>
+          </div>
 
-            <div className="space-y-2 relative z-10">
-              <h3 className="text-xl font-black text-white group-hover:text-blue-400 transition-colors">
-                Comunidad de Vecinos
-              </h3>
-              <p className="text-xs text-slate-400 leading-relaxed max-w-xl">
-                Accede de forma rápida e intuitiva a tu junta de propietarios asignada. Consulta los puntos del orden del día, delega tu representación y emite tu voto seguro ponderado por coeficientes.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-1.5 text-2xs text-blue-500 font-bold uppercase tracking-wider mt-4 opacity-0 group-hover:opacity-100 transition-all transform translate-x-[-4px] group-hover:translate-x-0">
-              Entrar a mi junta <ArrowRight size={14} />
-            </div>
-          </motion.button>
-
-          {/* TARJETA 2: CORPORATIVO */}
-          <motion.button
-            whileHover={{ scale: 1.01, y: -2 }}
-            whileActive={{ scale: 0.99 }}
-            onClick={() => navigate('/login/empresa')}
-            className="group relative bg-slate-900/50 border border-slate-800 hover:border-indigo-500/40 p-8 rounded-3xl text-left shadow-2xl transition-all flex flex-col justify-between h-64 overflow-hidden"
-          >
-            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl group-hover:bg-indigo-500/10 transition-all" />
-
-            <div className="bg-indigo-600/10 text-indigo-400 p-4 rounded-2xl w-fit border border-indigo-500/10 shadow-inner">
-              <Building2 size={28} />
-            </div>
-
-            <div className="space-y-2 relative z-10">
-              <h3 className="text-xl font-black text-white group-hover:text-indigo-400 transition-colors">
-                Empresas
-              </h3>
-              <p className="text-xs text-slate-400 leading-relaxed max-w-xl">
-                Entorno profesional blindado para juntas de accionistas, consejos de administración y asambleas sectoriales. Soporte completo para voto confidencial y ponderación exacta por títulos y acciones legales.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-1.5 text-2xs text-indigo-500 font-bold uppercase tracking-wider mt-4 opacity-0 group-hover:opacity-100 transition-all transform translate-x-[-4px] group-hover:translate-x-0">
-              Acceso para socios <ArrowRight size={14} />
-            </div>
-          </motion.button>
-
-        </div>
+          <div className="flex items-center gap-1.5 text-2xs text-blue-500 font-bold uppercase tracking-wider mt-4 opacity-0 group-hover:opacity-100 transition-all transform translate-x-[-4px] group-hover:translate-x-0">
+            Entrar a mi junta <ArrowRight size={14} />
+          </div>
+        </motion.button>
 
         {/* BANNER DE REGISTRO INTEGRADO */}
         <motion.div
@@ -113,7 +81,7 @@ export default function Welcome() {
           className="bg-gradient-to-r from-slate-950 to-slate-900/80 p-6 rounded-2xl border border-slate-800/80 flex flex-col md:flex-row items-center justify-between gap-4 text-left w-full shadow-xl"
         >
           <div className="space-y-1">
-            <h4 className="text-sm font-bold text-white">¿Gestionas múltiples comunidades o sociedades mercantiles?</h4>
+            <h4 className="text-sm font-bold text-white">¿Gestionas varias comunidades de vecinos?</h4>
             <p className="text-2xs text-slate-400">Date de alta de forma autónoma en nuestro ecosistema SaaS para dar cobertura centralizada a toda tu cartera de clientes profesionales.</p>
           </div>
           <button

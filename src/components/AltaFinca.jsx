@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Building2, Landmark, MapPin, FileUp, CheckCircle, ArrowRight, Loader2 } from 'lucide-react';
+import { Shield, MapPin, FileUp, CheckCircle, ArrowRight, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useVotifaiStore } from '../store.jsx';
 import Field from './ui/Field.jsx';
@@ -9,13 +9,12 @@ import Card from './ui/Card.jsx';
 export default function AltaFinca() {
   const navigate = useNavigate();
   const { dispatch } = useVotifaiStore() || { dispatch: () => {} };
-  
+
   const [nombre, setNombre] = useState('');
   const [cif, setCif] = useState('');
   const [ubicacion, setUbicacion] = useState('');
-  const [framework, setFramework] = useState('LPH'); 
   const [archivoPDF, setArchivoPDF] = useState(null);
-  
+
   const [procesando, setProcesando] = useState(false);
   const [completado, setCompletado] = useState(false);
 
@@ -29,7 +28,7 @@ export default function AltaFinca() {
       nombre: nombre,
       cif: cif.toUpperCase(),
       direccion: ubicacion || 'Dirección Registrada de la Finca',
-      tipo: framework === 'LPH' ? 'comunidad' : 'empresa'
+      tipo: 'comunidad'
     };
 
     try {
@@ -41,18 +40,18 @@ export default function AltaFinca() {
       });
 
       if (respuesta.ok) {
-        const resultadoBack = await respuesta.json(); 
-        
-        dispatch({ 
-          type: 'AÑADIR_ENTIDAD', 
+        const resultadoBack = await respuesta.json();
+
+        dispatch({
+          type: 'AÑADIR_ENTIDAD',
           payload: {
-            id: resultadoBack.id, 
+            id: resultadoBack.id,
             nombre: resultadoBack.nombre,
-            tipo: framework === 'LPH' ? 'comunidad' : 'empresa',
+            tipo: 'comunidad',
             cif: resultadoBack.cif,
             direccion: resultadoBack.direccion,
             estado: 'Junta Programada — HOY 18:00',
-            propietarios: [] 
+            propietarios: []
           }
         });
 
@@ -75,41 +74,23 @@ export default function AltaFinca() {
 
   return (
     <div className="h-screen w-screen bg-slate-950 text-slate-100 flex overflow-hidden font-sans antialiased">
-      
+
       {/* SECCIÓN IZQUIERDA: FORMULARIO */}
       <div className="w-full lg:w-5/12 h-full bg-[#0d1117] border-r border-slate-900 p-8 flex flex-col justify-between overflow-y-auto custom-scrollbar">
-        
+
         <div className="space-y-2 shrink-0">
-          <div className="flex items-center gap-2 text-indigo-400 font-mono text-4xs uppercase tracking-widest">
+          <div className="flex items-center gap-2 text-blue-400 font-mono text-4xs uppercase tracking-widest">
             <Shield size={12} /> Ecosistema Multi-Inquilino VotifAI
           </div>
-          <h1 className="text-xl font-black tracking-tight text-white">Desplegar Nueva Entidad</h1>
+          <h1 className="text-xl font-black tracking-tight text-white">Desplegar Nueva Comunidad</h1>
         </div>
 
         <form onSubmit={handleSubmit} className="flex-grow my-6 space-y-4 flex flex-col justify-center max-w-md w-full mx-auto">
-          
-          <div className="space-y-1.5">
-            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Marco Regulatorio</label>
-            <div className="grid grid-cols-2 gap-3 bg-slate-950 p-1 rounded-xl border border-slate-900">
-              <button
-                type="button" onClick={() => setFramework('LPH')}
-                className={`flex items-center justify-center gap-2 py-2 rounded-lg text-3xs font-black uppercase tracking-wider border transition-all ${framework === 'LPH' ? 'bg-indigo-600/10 border-indigo-500 text-indigo-400' : 'bg-transparent border-transparent text-slate-500'}`}
-              >
-                <Building2 size={14} /> Ley P. Horizontal
-              </button>
-              <button
-                type="button" onClick={() => setFramework('LSC')}
-                className={`flex items-center justify-center gap-2 py-2 rounded-lg text-3xs font-black uppercase tracking-wider border transition-all ${framework === 'LSC' ? 'bg-indigo-600/10 border-indigo-500 text-indigo-400' : 'bg-transparent border-transparent text-slate-500'}`}
-              >
-                <Landmark size={14} /> Ley Soc. de Capital
-              </button>
-            </div>
-          </div>
-           {/* Nombre Oficial */}
+
+          {/* Nombre Oficial */}
           <Field
-            variant="empresa"
-            label={framework === 'LPH' ? 'Nombre de la Finca / Comunidad' : 'Razón Social / Entidad'}
-            type="text" required placeholder={framework === 'LPH' ? 'Ej: Comunidad de Propietarios Calle Mayor 14' : 'Ej: Inversiones Inmobiliarias S.L.'}
+            label="Nombre de la Finca / Comunidad"
+            type="text" required placeholder="Ej: Comunidad de Propietarios Calle Mayor 14"
             value={nombre} onChange={(e) => setNombre(e.target.value)}
           />
 
@@ -117,7 +98,6 @@ export default function AltaFinca() {
           <div className="grid grid-cols-3 gap-4">
             <Field
               className="col-span-1"
-              variant="empresa"
               label="CIF / NIF"
               type="text" required placeholder="H1234567J" maxLength={9}
               value={cif} onChange={(e) => setCif(e.target.value)}
@@ -125,7 +105,6 @@ export default function AltaFinca() {
             />
             <Field
               className="col-span-2"
-              variant="empresa"
               label="Localización / Dirección" icon={MapPin}
               type="text" placeholder="Madrid, España"
               value={ubicacion} onChange={(e) => setUbicacion(e.target.value)}
@@ -136,15 +115,15 @@ export default function AltaFinca() {
           <div className="space-y-1.5">
             <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Convocatoria Inicial (Opcional)</label>
             <label className="w-full border border-dashed border-slate-800 hover:border-slate-700 bg-slate-950 rounded-xl p-4 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors shadow-inner">
-              <input 
-                type="file" accept="application/pdf" className="hidden" 
+              <input
+                type="file" accept="application/pdf" className="hidden"
                 onChange={(e) => {
                   if (e.target.files && e.target.files.length > 0) {
                     setArchivoPDF(e.target.files[0]);
                   }
-                }} 
+                }}
               />
-              <FileUp size={16} className={archivoPDF ? 'text-indigo-400 animate-pulse' : 'text-slate-500'} />
+              <FileUp size={16} className={archivoPDF ? 'text-blue-400 animate-pulse' : 'text-slate-500'} />
               <span className="text-4xs font-bold text-slate-400 uppercase tracking-wider truncate max-w-full px-2">
                 {archivoPDF ? archivoPDF.name : 'Adjuntar Documento o Acta Escaneada'}
               </span>
@@ -155,13 +134,13 @@ export default function AltaFinca() {
           <button
             type="submit" disabled={procesando || completado}
             className={`w-full py-3.5 rounded-xl text-3xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-lg ${
-              completado ? 'bg-emerald-600 text-white' : 
-              procesando ? 'bg-slate-900 border border-slate-800 text-slate-500 cursor-not-allowed' : 
-              'bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-indigo-600/10 active:scale-99'
+              completado ? 'bg-emerald-600 text-white' :
+              procesando ? 'bg-slate-900 border border-slate-800 text-slate-500 cursor-not-allowed' :
+              'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/10 active:scale-99'
             }`}
           >
             {procesando ? (
-              <> <Loader2 size={14} className="animate-spin text-indigo-400" /> Desplegando en Neon... </>
+              <> <Loader2 size={14} className="animate-spin text-blue-400" /> Desplegando en Neon... </>
             ) : completado ? (
               <> <CheckCircle size={14} className="animate-bounce" /> Entorno Legal Activo </>
             ) : (
@@ -176,8 +155,8 @@ export default function AltaFinca() {
       </div>
       {/* 🎨 LADO DERECHO: INTERFAZ DE MONITOREO VISUAL */}
       <div className="hidden lg:flex lg:w-7/12 h-full bg-slate-950 flex-col items-center justify-center p-12 relative overflow-hidden">
-        
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl" />
+
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 left-1/3 w-72 h-72 bg-emerald-500/5 rounded-full blur-3xl" />
 
         {/* Consola de Control Periférico */}
@@ -200,13 +179,13 @@ export default function AltaFinca() {
                   key="loading-ui" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
                   className="space-y-2 text-center"
                 >
-                  <p className="text-3xs font-mono text-indigo-400 font-bold uppercase tracking-widest animate-pulse">
+                  <p className="text-3xs font-mono text-blue-400 font-bold uppercase tracking-widest animate-pulse">
                     Mapeando Base de Datos Cruzada...
                   </p>
                   <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden border border-slate-800/80">
-                    <motion.div 
-                      className="bg-indigo-500 h-full rounded-full" 
-                      initial={{ width: "0%" }} animate={{ width: "100%" }} transition={{ duration: 2.3, ease: "easeInOut" }} 
+                    <motion.div
+                      className="bg-blue-500 h-full rounded-full"
+                      initial={{ width: "0%" }} animate={{ width: "100%" }} transition={{ duration: 2.3, ease: "easeInOut" }}
                     />
                   </div>
                   <p className="text-[9px] text-slate-500 font-medium">
@@ -237,11 +216,11 @@ export default function AltaFinca() {
                   </div>
                   <div className="flex justify-between items-center text-4xs">
                     <span className="text-slate-400 font-medium">Identificador Fiscal:</span>
-                    <span className="font-mono font-black text-indigo-400 uppercase">{cif || '—'}</span>
+                    <span className="font-mono font-black text-blue-400 uppercase">{cif || '—'}</span>
                   </div>
                   <div className="flex justify-between items-center text-4xs">
                     <span className="text-slate-400 font-medium">Regulación Aplicada:</span>
-                    <span className="text-slate-200 font-bold">{framework === 'LPH' ? 'LPH Ley 49/1960' : 'LSC Real Decreto 1/2010'}</span>
+                    <span className="text-slate-200 font-bold">LPH Ley 49/1960</span>
                   </div>
                 </motion.div>
               )}
@@ -250,7 +229,7 @@ export default function AltaFinca() {
 
           {/* Logs informativos */}
           <div className="bg-slate-950 p-3 rounded-xl border border-slate-900/60 font-mono text-[9px] text-slate-500 leading-normal space-y-1">
-            <p><span className="text-indigo-500">▶</span> status --isolation-check --tenant</p>
+            <p><span className="text-blue-500">▶</span> status --isolation-check --tenant</p>
             <p className="text-slate-400">✓ Aislamiento relacional PostgreSQL (pgAdmin) verificado en la nube.</p>
           </div>
 

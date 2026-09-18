@@ -35,7 +35,7 @@ export default function MinutesAI() {
 
  useEffect(() => {
     const fincaActivaId = 'd1f5964c-0c2b-40f8-88d6-d0ed253f8413';    
-    const listaFincas = state?.tenant?.comunidadesYEmpresas || [];
+    const listaFincas = state?.tenant?.comunidades || [];
     const fincaData = listaFincas.find(f => f.id === fincaActivaId);
 
     const nombre = fincaData?.nombre || 'Sala de Gobernanza Conectada';

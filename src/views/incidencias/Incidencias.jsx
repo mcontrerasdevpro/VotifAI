@@ -12,8 +12,8 @@ const TONOS_ESTADO = { abierta: 'danger', en_curso: 'warning', resuelta: 'succes
 const ETIQUETAS_ESTADO = { abierta: 'Abierta', en_curso: 'En Curso', resuelta: 'Resuelta', cerrada: 'Cerrada' };
 
 export default function Incidencias() {
-  const { fincaId, empresaId } = useParams();
-  const entidadId = empresaId || fincaId;
+  const { fincaId } = useParams();
+  const entidadId = fincaId;
 
   const [tab, setTab] = useState('incidencias');
   const [incidencias, setIncidencias] = useState([]);
