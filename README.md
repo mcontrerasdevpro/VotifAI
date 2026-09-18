@@ -4,73 +4,82 @@
   <img src="src/components/ShieldCheck.svg" alt="VotifAI Logo" width="80" height="80" style="background: #0f172a; padding: 10px; border-radius: 20px; border: 1px solid #1e293b;" />
   <br />
   <h1>Votif<span style="color: #2563eb;">AI</span></h1>
-  <p><strong>Plataforma de Gobernanza Inteligente y Votaciones con Certificación Legal Automatizada</strong></p>
-  <p>Ecosistema SaaS B2B Multi-Inquilino diseñado bajo el marco de la Ley de Propiedad Horizontal (LPH) y la Ley de Sociedades de Capital (LSC) en España.</p>
+  <p><strong>Plataforma de Gobernanza Inteligente para Administración de Fincas</strong></p>
+  <p>Ecosistema SaaS B2B multi-inquilino para despachos que gestionan comunidades de propietarios bajo la Ley de Propiedad Horizontal (LPH).</p>
 </div>
 
 ---
 
-## 🚀 Propuesta de Valor Comercial
-**VotifAI** transforma la gestión caótica de las juntas de propietarios y asambleas generales en un proceso fluido, digital y blindado jurídicamente. El sistema automatiza las tareas más pesadas de los administradores y secretarios, **ahorrando más de 12 horas de trabajo burocrático por sesión** y eliminando de raíz el riesgo de impugnaciones ante tribunales.
+## 🚀 Propuesta de Valor
 
-### 🔥 Pilares Tecnológicos Centrales
-1. **🎙️ Separación y Diarización de Voz por IA:** Captura el audio de la sala en vivo, aísla las intervenciones de forma asíncrona e identifica a los ponentes asociándolos de forma automática a su propiedad (ej. Vecino 3ºA, Presidente).
-2. **🤖 Redacción de Actas en 2 Minutos:** Un motor cognitivo entrenado en la legislación actual procesa las transcripciones conversacionales ordinarias y redacta un borrador formal de acta adaptado fielmente al orden del día.
-3. **📊 Escrutinio por Coeficientes Cruzados:** Control analítico en tiempo real del cuórum en sala, dobles mayorías simultáneas (voto por cabezas y cuotas de participación) y filtrado de propietarios morosos (Art. 15.2 LPH).
-4. **📲 Estación de Notificación Multicanal:** Envío automatizado instantáneo de la convocatoria oficial o del acta final con su PDF certificado a los correos y terminales móviles de los propietarios vía **WhatsApp API**.
+**VotifAI** transforma la gestión de juntas de propietarios en un proceso digital, y añade encima el resto de lo que necesita un despacho de administración de fincas: incidencias, cuotas, documentos, reservas de zonas comunes, atención al cliente, agenda y contabilidad simple — todo bajo el mismo inquilino (tenant) por despacho.
 
----
+### 🔥 Diferencial: Junta en Vivo con transcripción real
 
-## 🗄️ Arquitectura del Software y Flujo de Datos
+- **🎙️ Manos Alzadas y Transcripción Real:** cada propietario se registra con una cuenta propia (email + contraseña, verificada con el código de acceso de su finca) y graba sus intervenciones desde su propio móvil. La atribución de autoría es exacta — no hay diarización por IA sobre un micrófono de sala, cada persona ya está identificada en su dispositivo. El audio se transcribe con la API de OpenAI y aparece en vivo en el panel del secretario.
+- **📊 Escrutinio por Coeficientes:** control en tiempo real de cuórum por cabezas y por cuota de participación durante la votación.
+- **🔒 Sellado de Actas:** el acta final se archiva de forma inmutable al clausurar la junta.
 
-La aplicación está diseñada bajo un patrón desacoplado y panorámico optimizado para monitores de escritorio:
+### 🧰 Módulos de Gestión del Despacho (tipo ERP)
 
-*   **Frontend (React + Tailwind v4 + Framer Motion):** Interfaz fluida a pantalla partida (*Split Screen*) para el Onboarding y diseño de tipo "Sala de Control" panorámica a tres columnas para la monitorización en vivo del cuórum y los temporizadores regresivos de votos.
-*   **Gestor de Estado (Zustand / Reducer Maestro en Raíz):** Flujo de datos unidireccional y centralizado en `src/store.jsx` para blindar el aislamiento relacional del inquilino activo.
-*   **Backend (Node.js + Express):** API Gateway optimizada para entornos en la nube (`0.0.0.0`) con bypass de ciberseguridad para CORS y proxies de red.
-*   **Base de Datos (PostgreSQL):** Motor relacional con identificadores seguros `UUID` e indexación cruzada para garantizar que los datos de un despacho jamás se mezclen con los de otro (*Multi-tenant Isolation*).
+Una vez dentro de una finca, además de "Junta en Vivo":
 
----
-
-## 📂 Mapa de la Base de Datos Relacional (pgAdmin)
-
-La persistencia local se asienta sobre 6 tablas maestras optimizadas:
-*   `tenants`: Cuentas maestras de los despachos profesionales, facturación SEPA y planes de prueba de 15 días gratuitos.
-*   `entities`: Catálogo privado de fincas, comunidades de vecinos o sociedades mercantiles.
-*   `propietarios`: Censo legal estructurado de los vecinos (nombre, email, teléfono de España y coeficientes exactos).
-*   `meetings`: Historial y estados de las juntas programadas y activas.
-*   `agenda_points`: Puntos del orden del día con contadores dinámicos para congelar el escrutinio de votos.
-*   `minutes`: Archivo inmutable de actas con sellado digital mediante **HASH criptográfico SHA-256** para evitar modificaciones posteriores.
+| Módulo | Qué hace |
+|---|---|
+| **Incidencias** | Partes de avería con timeline de estado y catálogo de proveedores del despacho |
+| **Cuotas** | Cuotas y pagos, con morosidad real sobre el censo de propietarios |
+| **Documentos** | Repositorio de documentos, comunicados, y un editor de texto con plantillas reutilizables |
+| **Reservas** | Reserva de zonas comunes con validación de solape de horarios en el servidor |
+| **Atención al Cliente** | Solicitudes de propietarios al despacho (consultas, reclamaciones...), con timeline |
+| **Agenda** | Calendario único del despacho (no por finca), para juntas y vencimientos de toda la cartera |
+| **Contabilidad** | Ingresos/gastos, presupuestos (previsto vs. ejecutado) y liquidaciones cerradas por periodo |
 
 ---
 
-## 🛠️ Instrucciones de Instalación en Entorno Local
+## 🗄️ Arquitectura del Software
 
-### 1. Clonar y configurar la Base de Datos (pgAdmin)
-1. Abre tu **pgAdmin** local.
-2. Crea una base de datos exclusiva llamada `VOTIFAI`.
-3. Abre el *Query Tool* en esa base de datos y ejecuta el script del mapa de tablas SQL proporcionado en el proyecto.
+- **Frontend (React + Tailwind v4 + Framer Motion):** interfaz oscura con tablas de datos en modo "papel" (fondo blanco) para legibilidad; primitivos de UI compartidos en `src/components/ui/`.
+- **Gestor de Estado (Context + useReducer en `src/store.jsx`):** flujo de datos centralizado en la raíz para la sesión del despacho.
+- **Backend (Node.js + Express):** API en `server/`, con un router por módulo en `server/routes/` montado bajo `/api`.
+- **Base de Datos (PostgreSQL / Neon):** identificadores `UUID`, migraciones versionadas en `server/migrations/` (`pnpm run migrate`), aislamiento estricto por `tenant_id` verificado en cada endpoint.
 
-### 2. Levantar el Servidor Backend (Node.js)
+### Autenticación — dos sesiones independientes
+
+| | Despacho (administrador) | Vecino (propietario) |
+|---|---|---|
+| Credenciales | Email + contraseña | Email + contraseña |
+| Verificación inicial | Registro directo (`/register`) | Código de acceso de su finca (`entities.codigo_acceso`, generado al crear la finca) |
+| Cookie de sesión | `votifai_session` (7 días) | `votifai_voter_session` (180 días) |
+| Alcance | Todas las fincas de su despacho | Solo su propia finca |
+
+---
+
+## 🛠️ Instalación en Entorno Local
+
+### 1. Base de datos (PostgreSQL / Neon)
+Crea una base de datos y copia `.env.example` a `server/.env`, rellenando `DATABASE_URL`, `JWT_SECRET` y (opcional, para la transcripción de voz) `OPENAI_API_KEY`.
+
+### 2. Backend
 ```bash
 cd server
 pnpm install
+pnpm run migrate   # aplica todas las migraciones versionadas
 node index.js
 ```
 
-### 3. Levantar la Interfaz de Usuario (React)
+### 3. Frontend
 ```bash
-
 pnpm install
 pnpm run dev --force
 ```
 
 ---
 
-## 🔒 Certificación de Seguridad de Datos
-El entorno opera bajo encriptación de grado bancario para la custodia de los IBAN de domiciliación, logs de auditoría inmutables y absoluto aislamiento de logs cumpliendo rigurosamente con el **RGPD de la Unión Europea**.
+## 🔒 Seguridad y Aislamiento Multi-Tenant
+
+Cada consulta que toca datos de una finca o de un propietario verifica explícitamente que esa fila pertenece al tenant autenticado (`server/middleware/auth.js`) antes de leer o escribir — sin excepciones por conveniencia. El histórico de cambios de titularidad, las actas y las liquidaciones cerradas son inmutables una vez generadas.
 
 ---
 <div align="center">
-  <p><strong>VotifAI Inc. © 2026 — Sistema de voto electrónico con automatización con IA</strong></p>
+  <p><strong>VotifAI © 2026 — Gobernanza de comunidades con IA</strong></p>
 </div>
