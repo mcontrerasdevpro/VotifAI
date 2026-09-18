@@ -20,9 +20,10 @@ export default function DataTable({
   emptyLabel = 'Sin resultados.',
   light = false
 }) {
-  const cabecera = light
-    ? 'bg-slate-50 text-slate-500 border-b border-slate-200'
-    : 'bg-slate-900 text-slate-400 border-b border-slate-800';
+  // La cabecera se queda siempre con el mismo estilo oscuro, tanto en modo
+  // claro como oscuro — solo cambia el "papel" de debajo (cuerpo de la
+  // tabla), no la cabecera.
+  const cabecera = 'bg-slate-900 text-slate-400 border-b border-slate-800';
   const cuerpo = light ? 'divide-slate-100 text-slate-700' : 'divide-slate-900 text-slate-300';
   const hover = light ? 'hover:bg-slate-50' : 'hover:bg-slate-900/30';
   const vacio = light ? 'text-slate-400' : 'text-slate-600';
