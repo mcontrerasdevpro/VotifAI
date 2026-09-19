@@ -34,7 +34,15 @@ const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173').spli
 // fija se acepta cualquier IP de rango privado en el puerto 5173.
 const RANGO_LAN_DEV = /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}):5173$/;
 
-app.use(cors({
+// CORS solo se aplica a /api: en producción el frontend se sirve desde el
+// mismo servidor Express (misma origen), así que las peticiones a los
+// assets estáticos (JS/CSS con atributo "crossorigin" que Vite añade por
+// defecto) mandan cabecera Origin igual al propio dominio — si el
+// middleware de CORS se aplicara global y ese dominio no estuviera en
+// CORS_ORIGIN, esas peticiones eran rechazadas con un 500 y la app
+// quedaba en blanco. Solo hace falta CORS para /api, donde sí puede haber
+// un frontend en otro origen (el propio Vite dev server en desarrollo).
+app.use('/api', cors({
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
     if (process.env.NODE_ENV !== 'production' && RANGO_LAN_DEV.test(origin)) return callback(null, true);
@@ -797,6 +805,16 @@ app.post('/api/notifications/reenviar-individual', requireAuth, async (req, res)
     console.error('Error crítico en el despachador de reenvíos:', err.message);
     res.status(500).json({ error: `Fallo en la pasarela externa de notificación: ${err.message}` });
   }
+});
+
+// Handler de errores: sin esto, un origen de /api rechazado por CORS (o
+// cualquier otro error pasado a next()) caía en la página HTML de error
+// por defecto de Express en vez de una respuesta JSON consistente con el
+// resto de la API.
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  console.error('Error no controlado:', err.message);
+  res.status(err.status || 500).json({ error: err.message || 'Error interno del servidor.' });
 });
 
 app.listen(PORT, '0.0.0.0', () => {
