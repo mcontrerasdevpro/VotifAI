@@ -23,6 +23,11 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Render (y Cloudflare delante) terminan el TLS antes de llegar a Express, así
+// que sin esto req.protocol siempre da 'http' aunque el navegador esté en
+// https — y la detección de same-origin de más abajo compararía mal.
+app.set('trust proxy', 1);
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -42,17 +47,35 @@ const RANGO_LAN_DEV = /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1
 // CORS_ORIGIN, esas peticiones eran rechazadas con un 500 y la app
 // quedaba en blanco. Solo hace falta CORS para /api, donde sí puede haber
 // un frontend en otro origen (el propio Vite dev server en desarrollo).
-app.use('/api', cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-    if (process.env.NODE_ENV !== 'production' && RANGO_LAN_DEV.test(origin)) return callback(null, true);
+//
+// Además de la whitelist estática, se permite siempre el origen que
+// coincide con el propio host de la petición (mismo dominio que sirve el
+// build) — así el registro/login desde la SPA en producción funciona sin
+// tener que mantener CORS_ORIGIN sincronizado con el dominio de Render,
+// Vercel o el que sea, y sin abrir la API a orígenes de verdad externos.
+const corsOptionsDelegate = (req, callback) => {
+  const origin = req.header('Origin');
+  const origenPropio = `${req.protocol}://${req.get('host')}`;
+  const permitido =
+    !origin ||
+    origin === origenPropio ||
+    allowedOrigins.includes(origin) ||
+    (process.env.NODE_ENV !== 'production' && RANGO_LAN_DEV.test(origin));
+
+  if (!permitido) {
     console.error(`🚫 CORS rechazado: origen "${origin}" no está en la whitelist [${allowedOrigins.join(', ')}]. Añádelo a CORS_ORIGIN en server/.env si es de confianza.`);
-    callback(new Error('Origen no permitido por la política CORS.'));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+    return callback(new Error('Origen no permitido por la política CORS.'));
+  }
+
+  callback(null, {
+    origin: true,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+  });
+};
+
+app.use('/api', cors(corsOptionsDelegate));
 // Límite ampliado: documentos y PDFs en base64 superan fácilmente el
 // límite por defecto de Express (100kb) — esto ya afectaba en silencio a
 // la subida de PDF de fincas (/api/entities/upload-pdf).
