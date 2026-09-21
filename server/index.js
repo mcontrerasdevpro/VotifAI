@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import rateLimit from 'express-rate-limit';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
@@ -24,6 +25,22 @@ import { exigirCapacidadFinca } from './lib/suscripciones.js';
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { error: 'Demasiados intentos. Espera unos minutos antes de volver a intentarlo.' }
+});
+
+const demoLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { error: 'Has alcanzado el límite de solicitudes de demo por ahora.' }
+});
 
 // Render (y Cloudflare delante) terminan el TLS antes de llegar a Express, así
 // que sin esto req.protocol siempre da 'http' aunque el navegador esté en
@@ -79,6 +96,7 @@ const corsOptionsDelegate = (req, callback) => {
 
 app.use('/api', cors(corsOptionsDelegate));
 app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), stripeWebhookHandler);
+app.use('/api/auth', authLimiter);
 // Límite ampliado: documentos y PDFs en base64 superan fácilmente el
 // límite por defecto de Express (100kb) — esto ya afectaba en silencio a
 // la subida de PDF de fincas (/api/entities/upload-pdf).
@@ -95,7 +113,7 @@ app.use('/api', contabilidadRouter);
 app.use('/api', vozRouter);
 app.use('/api', vecinosRouter);
 
-app.post('/api/demo-solicitudes', async (req, res) => {
+app.post('/api/demo-solicitudes', demoLimiter, async (req, res) => {
   const nombre = String(req.body.nombre || '').trim();
   const email = String(req.body.email || '').trim().toLowerCase();
   const telefono = String(req.body.telefono || '').trim();
