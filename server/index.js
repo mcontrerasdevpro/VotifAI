@@ -353,26 +353,6 @@ app.get('/api/entities/:tenantId', requireAuth, async (req, res) => {
 });
 
 // =========================================================================
-// 🚀 INYECCIÓN DEL FRONTEND UNIFICADO
-// =========================================================================
-if (process.env.NODE_ENV === 'production') {
-  console.log("📦 Servidor Express configurado en modo PRODUCCIÓN: Sirviendo interfaz estática.");  
-  app.use(express.static(path.join(__dirname, '../dist')));
-  app.get('*splat', (req, res) => {
-    res.sendFile(path.join(__dirname, '../dist', 'index.html'));
-  });
-} else {
-  console.log("🔌 Servidor Express configurado en modo API PURA: Delegando UI a Vite (Puerto 5173).");  
-  app.get('/', (req, res) => {
-    res.json({ 
-      sistema: "VotifAI API Gateway", 
-      estado: "Operativo", 
-      nota: "Para ver la interfaz de usuario, accede a la URL terminada en -5173.app.github.dev" 
-    });
-  });
-}
-
-// =========================================================================
 // 🏢 4. ENDPOINT POST: /api/entities/create (Persistencia Real de Fincas)
 // =========================================================================
 
@@ -892,6 +872,26 @@ app.post('/api/notifications/reenviar-individual', requireAuth, async (req, res)
     res.status(500).json({ error: `Fallo en la pasarela externa de notificación: ${err.message}` });
   }
 });
+
+// El fallback SPA debe registrarse despues de todas las rutas API. Si se
+// coloca antes, las peticiones GET de endpoints declarados mas abajo reciben
+// index.html y el frontend falla al parsearlas como JSON.
+if (process.env.NODE_ENV === 'production') {
+  console.log("📦 Servidor Express configurado en modo PRODUCCIÓN: Sirviendo interfaz estática.");
+  app.use(express.static(path.join(__dirname, '../dist')));
+  app.get('*splat', (req, res) => {
+    res.sendFile(path.join(__dirname, '../dist', 'index.html'));
+  });
+} else {
+  console.log("🔌 Servidor Express configurado en modo API PURA: Delegando UI a Vite (Puerto 5173).");
+  app.get('/', (req, res) => {
+    res.json({
+      sistema: "VotifAI API Gateway",
+      estado: "Operativo",
+      nota: "Para ver la interfaz de usuario, accede a la URL terminada en -5173.app.github.dev"
+    });
+  });
+}
 
 // Handler de errores: sin esto, un origen de /api rechazado por CORS (o
 // cualquier otro error pasado a next()) caía en la página HTML de error
