@@ -1,146 +1,148 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Chart from 'react-apexcharts';
-import { FileText, AudioLines, Download, CheckCircle, Edit3, ArrowLeft, RefreshCw, Sparkles, Mic, MicOff, BarChart3, Users, Percent, ShieldCheck, Lock, Mail, MessageSquare, Send } from 'lucide-react';
-import { useVotifaiStore } from '../../store.jsx';
+import { FileText, ListChecks, ArrowLeft, CheckCircle, Lock, Send, AlertTriangle } from 'lucide-react';
 import Card from '../../components/ui/Card.jsx';
+import StatusBadge from '../../components/ui/StatusBadge.jsx';
+
+const LABEL_ESTADO = { votando: 'Votando', cerrado: 'Cerrado', pendiente: 'Pendiente' };
+
+function generarActa(meeting, puntos) {
+  if (!meeting) return '';
+  const fecha = meeting.fecha_hora_prevista
+    ? new Date(meeting.fecha_hora_prevista).toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' })
+    : 'fecha por determinar';
+
+  const totalCenso = Number(meeting.censo_total_coeficiente) || 0;
+
+  const lineasPuntos = puntos.map((p) => {
+    if (p.tipo !== 'votacion') {
+      return `* **PUNTO ${p.orden}:** ${p.texto} (informativo, sin votación)`;
+    }
+    const coefSi = Number(p.coeficiente_si) || 0;
+    const coefNo = Number(p.coeficiente_no) || 0;
+    const pctSi = totalCenso > 0 ? ((coefSi / totalCenso) * 100).toFixed(2) : '0.00';
+    const pctNo = totalCenso > 0 ? ((coefNo / totalCenso) * 100).toFixed(2) : '0.00';
+    const resultado = p.estado === 'cerrado' ? (coefSi > coefNo ? 'APROBADO' : 'RECHAZADO') : 'SIN CERRAR';
+    return `* **PUNTO ${p.orden}:** ${p.texto}\n  ${resultado} — A favor: ${pctSi}% · En contra: ${pctNo}% (${p.votos_si || 0} SÍ / ${p.votos_no || 0} NO / ${p.votos_abstencion || 0} ABS.)`;
+  }).join('\n');
+
+  return (
+    `# ACTA DE LA ${meeting.tipo === 'extraordinaria' ? 'JUNTA GENERAL EXTRAORDINARIA' : 'JUNTA GENERAL ORDINARIA'} DE PROPIETARIOS\n` +
+    `**COMUNIDAD:** ${meeting.finca_nombre || ''}\n` +
+    `**CONVOCATORIA:** ${meeting.titulo}\n` +
+    `**FECHA Y HORA:** ${fecha}\n\n` +
+    `## 1. CENSO Y CUÓRUM\n` +
+    `Censo de la finca a fecha de convocatoria: ${meeting.censo_total_propietarios || 0} propietarios (${totalCenso.toFixed(2)}% de coeficiente).\n\n` +
+    `## 2. PUNTOS DEL ORDEN DEL DÍA Y ACUERDOS\n${lineasPuntos || 'Sin puntos registrados.'}`
+  );
+}
 
 export default function MinutesAI() {
   const navigate = useNavigate();
-  const { state } = useVotifaiStore() || { state: { tenant: null } };
+  const location = useLocation();
+  const { meetingId, fincaId } = location.state || {};
 
   const [vistaActiva, setVistaActiva] = useState('documento');
   const [editando, setEditando] = useState(false);
-  const [guardado, setGuardado] = useState(false);
-  const [grabandoVoz, setGrabandoVoz] = useState(false);
+  const [cargando, setCargando] = useState(true);
+
+  const [meeting, setMeeting] = useState(null);
+  const [puntos, setPuntos] = useState([]);
+  const [actaTexto, setActaTexto] = useState('Cargando datos de la junta...');
 
   const [mostrarModalCierre, setMostrarModalCierre] = useState(false);
-  const [envioEstado, setEnvioEstado] = useState('idle');
-  const [contadorEnvio, setContadorEnvio] = useState(0);
+  const [envioEstado, setEnvioEstado] = useState('idle'); // idle | enviando | completado | error
+  const [errorEnvio, setErrorEnvio] = useState('');
 
-  const [actaTexto, setActaTexto] = useState(
-    `# ACTA DE LA JUNTA GENERAL EXTRAORDINARIA DE PROPIETARIOS\n` +
-    `⏳ Cargando entorno relacional y redactando acta oficial con los datos geográficos de Neon Cloud...`
-  );
+  useEffect(() => {
+    if (!meetingId) { setCargando(false); return; }
+    (async () => {
+      try {
+        const respuesta = await fetch(`/api/meetings/detalle/${meetingId}`, { credentials: 'include' });
+        const resultado = await respuesta.json();
+        if (respuesta.ok) {
+          setMeeting(resultado.meeting);
+          setPuntos(resultado.puntos || []);
+          setActaTexto(generarActa(resultado.meeting, resultado.puntos || []));
+        }
+      } catch (err) {
+        console.error('Fallo al cargar la junta:', err);
+      } finally {
+        setCargando(false);
+      }
+    })();
+  }, [meetingId]);
+
+  const chartSeries = useMemo(() => {
+    const totales = puntos.filter((p) => p.tipo === 'votacion').reduce((acc, p) => ({
+      si: acc.si + Number(p.coeficiente_si || 0),
+      no: acc.no + Number(p.coeficiente_no || 0),
+      abstencion: acc.abstencion + Number(p.coeficiente_abstencion || 0)
+    }), { si: 0, no: 0, abstencion: 0 });
+    return [totales.si, totales.no, totales.abstencion];
+  }, [puntos]);
 
   const chartOptions = {
     chart: { type: 'donut', background: 'transparent' },
     colors: ['#10b981', '#f43f5e', '#64748b'],
     labels: ['A Favor', 'En Contra', 'Abstención'],
-    dataLabels: { enabled: false }
+    dataLabels: { enabled: false },
+    legend: { labels: { colors: '#64748b' } }
   };
 
-  const chartSeries =
-
- useEffect(() => {
-    const fincaActivaId = 'd1f5964c-0c2b-40f8-88d6-d0ed253f8413';    
-    const listaFincas = state?.tenant?.comunidades || [];
-    const fincaData = listaFincas.find(f => f.id === fincaActivaId);
-
-    const nombre = fincaData?.nombre || 'Sala de Gobernanza Conectada';
-    const direccion = fincaData?.direccion || fincaData?.ubicacion || 'Dirección Registrada en Neon';
-    const cp = fincaData?.codigo_postal || '28907';
-    const ciudad = fincaData?.ciudad || 'Getafe';
-    const provincia = fincaData?.provincia || 'Madrid';
-
-    setActaTexto(
-      `# ACTA DE LA JUNTA GENERAL EXTRAORDINARIA DE PROPIETARIOS\n` +
-      `**COMUNIDAD DE VECINOS:** ${nombre.toUpperCase()} — ${direccion}, CP: ${cp}, ${ciudad} (${provincia})\n` +
-      `**FECHA Y HORA:** 13 de junio de 2026 — 18:00 Horas\n\n` +
-      `## 1. CUÓRUM Y CONSTITUCIÓN LEGAL\n` +
-      `Se verifica una asistencia de 48 propietarios presentes y representados (100,00% de las cuotas de participación). La Junta queda válidamente constituida de forma conforme según el Art. 16 de la LPH.\n\n` +
-      `## 2. ACUERDOS ADOPTADOS\n` +
-      `* **PUNTO 1:** SE APRUEBA LA REFORMA DEL TEJADO POR DOBLE MAYORÍA LEGAL conforme al Art. 17 de la LPH.`
-    );
-  }, [state]);
-
-  const handleDispararNotificacionesMasivas = async () => {
-    setEnvioEstado('enviando_email');
-    setContadorEnvio(0);
-
-    let i = 0;
-    const intervalEmail = setInterval(async () => {
-      i++;
-      setContadorEnvio(i);
-      if (i >= 20) {
-        clearInterval(intervalEmail);
-
-        setEnvioEstado('enviando_whatsapp');
-        setContadorEnvio(0);
-
-        try {
-          const urlBaseBackend = window.location.origin.replace('-5173.', '-3000.');
-          console.log("📡 Conectando directamente con la API unificada de Node en:", urlBaseBackend);
-
-          const resClausura = await fetch(`${urlBaseBackend}/api/meetings/clausurar`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              fincaId: 'd1f5964c-0c2b-40f8-88d6-d0ed253f8413',
-              acta_texto: actaTexto
-            })
-          });
-
-          if (resClausura.ok) {
-            await fetch(`${urlBaseBackend}/api/notifications/convocar`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                fincaId: 'd1f5964c-0c2b-40f8-88d6-d0ed253f8413',
-                nombreFinca: 'Guanabacoa 2',
-                propietarios: [{ nombre: "Matías Po", propiedad: "tos 2 1a", telefono: "+34 600000000" }]
-              })
-            });
-
-            let j = 0;
-            const intervalWA = setInterval(() => {
-              j++;
-              setContadorEnvio(j);
-              if (j >= 20) {
-                clearInterval(intervalWA);
-                setEnvioEstado('completado');
-
-                setTimeout(() => {
-                  setMostrarModalCierre(false);
-                  navigate('/hub');
-                }, 2000);
-              }
-            }, 40);
-          } else {
-            alert("❌ Fallo crítico: No se pudo sellar la junta en el servidor.");
-            setEnvioEstado('idle');
-          }
-        } catch (err) {
-          console.error("Error al clausurar asamblea:", err);
-          setEnvioEstado('idle');
-        }
+  const handleCerrarJunta = async () => {
+    setEnvioEstado('enviando');
+    setErrorEnvio('');
+    try {
+      const respuesta = await fetch(`/api/meetings/${meetingId}/cerrar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ acta_texto: actaTexto })
+      });
+      const resultado = await respuesta.json();
+      if (respuesta.ok && resultado.success) {
+        setEnvioEstado('completado');
+        setTimeout(() => navigate('/hub'), 2000);
+      } else {
+        setErrorEnvio(resultado.error || 'No se pudo cerrar la junta.');
+        setEnvioEstado('error');
       }
-    }, 30);
+    } catch (err) {
+      console.error('Error al cerrar la junta:', err);
+      setErrorEnvio('Fallo de red al cerrar la junta.');
+      setEnvioEstado('error');
+    }
   };
+
+  if (!meetingId) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center gap-3 text-slate-500">
+        <p className="text-3xs font-bold uppercase tracking-widest">No se ha seleccionado ninguna junta.</p>
+        <button onClick={() => navigate('/hub')} className="text-4xs font-black text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+          <ArrowLeft size={12} /> Volver al hub
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col h-screen overflow-hidden relative">
-
-      {/* NAVEGACIÓN SUPERIOR */}
       <nav className="border-b border-slate-900 bg-slate-950/80 backdrop-blur-md px-6 py-3 flex justify-between items-center gap-4 shrink-0">
         <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/admin')} className="p-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-slate-400"><ArrowLeft size={16} /></button>
+          <button onClick={() => navigate(`/admin/${fincaId}/junta/${meetingId}`)} className="p-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-slate-400"><ArrowLeft size={16} /></button>
           <div>
-            <div className="flex items-center gap-2 text-purple-400 text-4xs font-bold uppercase tracking-widest"><Sparkles size={12} /> Cierre y Difusión Automatizada LPH</div>
-            <h1 className="text-sm font-black text-white">Central de Firmas y Notificación Masiva</h1>
+            <div className="flex items-center gap-2 text-blue-400 text-4xs font-bold uppercase tracking-widest"><FileText size={12} /> Cierre y Difusión de la Junta</div>
+            <h1 className="text-sm font-black text-white">{meeting?.titulo || 'Central de Firmas'}</h1>
           </div>
         </div>
 
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => {
-              if (editando) {
-                setGuardado(true);
-                setTimeout(() => setGuardado(false), 2000);
-              }
-              setEditando(!editando);
-            }}
+            onClick={() => setEditando(!editando)}
             className={`text-3xs font-black uppercase px-4 py-2.5 rounded-xl border transition-all ${editando
               ? 'bg-blue-600 border-blue-500 text-white shadow-md'
               : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white'
@@ -151,7 +153,7 @@ export default function MinutesAI() {
 
           <button
             type="button"
-            disabled={editando}
+            disabled={editando || meeting?.estado === 'cerrada'}
             onClick={() => setMostrarModalCierre(true)}
             className="bg-emerald-600 hover:bg-emerald-500 text-white text-3xs font-black uppercase px-5 py-2.5 rounded-xl shadow-lg active:scale-99 disabled:opacity-40"
           >
@@ -160,12 +162,29 @@ export default function MinutesAI() {
         </div>
       </nav>
 
-      {/* RECUADRO PANORÁMICO */}
       <div className="flex-grow flex flex-col lg:flex-row overflow-hidden p-4 gap-4">
         <Card className="w-full lg:w-5/12 flex flex-col h-full overflow-hidden" padding="p-5">
-          <div className="flex justify-between items-center mb-4 border-b border-slate-900 pb-3"><h3 className="text-3xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5"><AudioLines size={14} className="text-blue-500" /> Conversaciones Indexadas</h3></div>
-          <div className="space-y-4 overflow-y-auto pr-1 flex-grow custom-scrollbar text-2xs italic text-slate-400">
-            <div className="p-3 bg-slate-950 rounded-xl border border-slate-900">[Presidente]: "El acta queda revisada. Procedamos al cierre."</div>
+          <div className="flex justify-between items-center mb-4 border-b border-slate-900 pb-3">
+            <h3 className="text-3xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5"><ListChecks size={14} className="text-blue-500" /> Resultado por Punto</h3>
+          </div>
+          <div className="space-y-3 overflow-y-auto pr-1 flex-grow custom-scrollbar">
+            {cargando ? (
+              <p className="text-4xs text-slate-500 uppercase tracking-widest text-center py-8">Cargando...</p>
+            ) : puntos.length === 0 ? (
+              <p className="text-4xs text-slate-500 uppercase tracking-widest text-center py-8">Sin puntos registrados.</p>
+            ) : (
+              puntos.map((p) => (
+                <div key={p.id} className="p-3 bg-slate-950 rounded-xl border border-slate-900 space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-3xs font-bold text-slate-200">{p.orden}. {p.texto}</span>
+                    <StatusBadge tone={p.estado === 'cerrado' ? 'success' : 'neutral'}>{LABEL_ESTADO[p.estado] || p.estado}</StatusBadge>
+                  </div>
+                  {p.tipo === 'votacion' && (
+                    <p className="text-4xs font-mono text-slate-500">{p.votos_si || 0} SÍ · {p.votos_no || 0} NO · {p.votos_abstencion || 0} ABS.</p>
+                  )}
+                </div>
+              ))
+            )}
           </div>
         </Card>
 
@@ -202,9 +221,6 @@ export default function MinutesAI() {
         </div>
       </div>
 
-      {/* ===================================================================================== */}
-      {/* 🚨 MODAL SAAS DE DISPARO MASIVO DE EMAIL Y WHATSAPP AUTOMÁTICO A LOS 20 VECINOS 🚨 */}
-      {/* ===================================================================================== */}
       <AnimatePresence>
         {mostrarModalCierre && (
           <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 z-50">
@@ -214,35 +230,29 @@ export default function MinutesAI() {
                 <>
                   <div className="w-14 h-14 bg-blue-600/10 text-blue-400 rounded-full flex items-center justify-center mx-auto border border-blue-500/10"><Send size={24} /></div>
                   <div>
-                    <h3 className="text-sm font-black text-white">Consolidar Junta y Desplegar Acta</h3>
-                    <p className="text-3xs text-slate-400 mt-1 leading-normal">¿Deseas cerrar el archivo y activar la pasarela automatizada de comunicación para los **20 propietarios censados** de la comunidad?</p>
+                    <h3 className="text-sm font-black text-white">Cerrar Junta y Notificar a los Propietarios</h3>
+                    <p className="text-3xs text-slate-400 mt-1 leading-normal">Se cerrará la junta y se enviará el acta al censo completo de la finca por email/WhatsApp.</p>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <button type="button" onClick={() => setMostrarModalCierre(false)} className="bg-slate-950 border border-slate-800 text-slate-400 py-2.5 rounded-xl text-3xs font-bold uppercase tracking-wider">Revisar</button>
-                    <button type="button" onClick={handleDispararNotificacionesMasivas} className="bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-xl text-3xs font-black uppercase tracking-wider shadow-lg flex items-center justify-center gap-1.5"><Lock size={12} /> Firmar y Desplegar</button>
+                    <button type="button" onClick={handleCerrarJunta} className="bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-xl text-3xs font-black uppercase tracking-wider shadow-lg flex items-center justify-center gap-1.5"><Lock size={12} /> Cerrar y Notificar</button>
                   </div>
                 </>
               )}
 
-              {envioEstado === 'enviando_email' && (
+              {envioEstado === 'enviando' && (
                 <div className="py-6 space-y-4 animate-fade-in">
-                  <div className="w-12 h-12 bg-blue-600/10 text-blue-400 rounded-xl flex items-center justify-center mx-auto animate-pulse border border-blue-500/20"><Mail size={22} /></div>
-                  <div>
-                    <h3 className="text-xs font-black text-white uppercase tracking-wider">Despachando Emails Legales Certificados</h3>
-                    <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden mt-3 border border-slate-800"><motion.div className="bg-blue-500 h-full rounded-full" animate={{ width: `${(contadorEnvio / 20) * 100}%` }} /></div>
-                    <p className="text-3xs text-slate-400 font-mono mt-2">Enviando: {contadorEnvio} / 20 bandejas de entrada completadas...</p>
-                  </div>
+                  <div className="w-12 h-12 bg-blue-600/10 text-blue-400 rounded-xl flex items-center justify-center mx-auto animate-pulse border border-blue-500/20"><Send size={22} /></div>
+                  <h3 className="text-xs font-black text-white uppercase tracking-wider">Cerrando la junta y notificando al censo...</h3>
                 </div>
               )}
 
-              {envioEstado === 'enviando_whatsapp' && (
+              {envioEstado === 'error' && (
                 <div className="py-6 space-y-4 animate-fade-in">
-                  <div className="w-12 h-12 bg-emerald-600/10 text-emerald-400 rounded-xl flex items-center justify-center mx-auto animate-bounce border border-emerald-500/20"><MessageSquare size={22} /></div>
-                  <div>
-                    <h3 className="text-xs font-black text-white uppercase tracking-wider">Disparando Mensajes de WhatsApp API</h3>
-                    <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden mt-3 border border-slate-800"><motion.div className="bg-emerald-500 h-full rounded-full" animate={{ width: `${(contadorEnvio / 20) * 100}%` }} /></div>
-                    <p className="text-3xs text-emerald-400 font-mono mt-2">Enviados por pasarela telefónica: {contadorEnvio} / 20 propietarios...</p>
-                  </div>
+                  <div className="w-12 h-12 bg-rose-600/10 text-rose-400 rounded-xl flex items-center justify-center mx-auto border border-rose-500/20"><AlertTriangle size={22} /></div>
+                  <h3 className="text-xs font-black text-white uppercase tracking-wider">No se pudo cerrar la junta</h3>
+                  <p className="text-3xs text-rose-400">{errorEnvio}</p>
+                  <button type="button" onClick={() => setEnvioEstado('idle')} className="text-4xs font-black text-slate-400 hover:text-white uppercase tracking-wider">Volver a intentar</button>
                 </div>
               )}
 
@@ -251,8 +261,8 @@ export default function MinutesAI() {
                   <div className="w-12 h-12 bg-emerald-500 text-white rounded-full flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/20">
                     <CheckCircle size={24} />
                   </div>
-                  <h3 className="text-sm font-black text-white uppercase tracking-wider pt-2">¡Difusión Concluida con Éxito!</h3>
-                  <p className="text-4xs text-slate-400 max-w-xs mx-auto">Acta archivada de forma segura. Los propietarios activos han recibido la notificación simultánea por Email y WhatsApp con el enlace de descarga del PDF legal.</p>
+                  <h3 className="text-sm font-black text-white uppercase tracking-wider pt-2">Junta cerrada correctamente</h3>
+                  <p className="text-4xs text-slate-400 max-w-xs mx-auto">Acta archivada. Los propietarios del censo han sido notificados.</p>
                 </div>
               )}
 

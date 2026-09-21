@@ -1,9 +1,11 @@
-import { Shield, FileText } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import Modal from './ui/Modal.jsx';
 import StatusBadge from './ui/StatusBadge.jsx';
 
+const LABEL_ESTADO = { votando: 'Votando', cerrado: 'Cerrado', pendiente: 'Pendiente' };
+
 export default function ModalConvocatoria({
-  mostrarModalConvocatoria, setMostrarModalConvocatoria, fincaSeleccionada, datos
+  mostrarModalConvocatoria, setMostrarModalConvocatoria, fincaSeleccionada, meeting, puntos
 }) {
   return (
     <Modal
@@ -11,9 +13,9 @@ export default function ModalConvocatoria({
       onClose={() => setMostrarModalConvocatoria(false)}
       size="xl"
       icon={FileText}
-      eyebrow={fincaSeleccionada?.documento_adjunto ? "Visor de Documento Original Escaneado" : "Desglose Automatizado del Orden del Día"}
-      title={`Convocatoria Oficial: ${datos.convocatoria}`}
-      subtitle={<>Entorno Activo: <span className="text-slate-300 font-bold">{datos.entidad}</span></>}
+      eyebrow={fincaSeleccionada?.documento_adjunto ? "Visor de Documento Original Escaneado" : "Desglose del Orden del Día"}
+      title={`Convocatoria Oficial: ${meeting?.titulo || ''}`}
+      subtitle={<>Entorno Activo: <span className="text-slate-300 font-bold">{meeting?.finca_nombre}</span></>}
       footer={
         <button
           type="button"
@@ -39,43 +41,33 @@ export default function ModalConvocatoria({
           <div className="bg-slate-950/40 p-4 border border-slate-850 rounded-2xl space-y-1.5">
             <h4 className="text-3xs font-black uppercase tracking-widest text-slate-400">Notificación Informativa Estándar</h4>
             <p className="text-4xs text-slate-400 leading-relaxed font-medium">
-              A falta de documento físico escaneado por el despacho administrador, el motor digital de VotifAI expone los puntos legislativos fijados para el escrutinio cruzado ordinario:
+              A falta de documento físico escaneado por el despacho administrador, el orden del día fijado para esta convocatoria es el siguiente:
             </p>
           </div>
 
           <div className="space-y-2.5">
-            {datos?.puntos?.map((punto) => (
+            {puntos?.map((punto) => (
               <div
                 key={punto.id}
                 className="p-4 bg-slate-950 border border-slate-900 rounded-2xl flex items-start gap-4 hover:border-slate-800 transition-colors"
               >
                 <span className="text-3xs font-mono font-black text-blue-400 bg-blue-500/10 border border-blue-500/20 w-6 h-6 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
-                  {punto.id}
+                  {punto.orden}
                 </span>
                 <div className="space-y-1 flex-grow">
                   <p className="text-3xs text-slate-200 leading-relaxed font-bold">
-                    {punto.t}
+                    {punto.texto}
                   </p>
                   <div className="flex items-center gap-3 text-[9px] font-mono uppercase tracking-widest text-slate-500 font-medium">
-                    <span>EXPEDIENTE: EXP-00{punto.id}</span>
+                    <span>EXPEDIENTE: EXP-{String(punto.orden).padStart(3, '0')}</span>
                     <span>•</span>
-                    <StatusBadge tone={punto.estado === 'Cerrado' ? 'success' : 'neutral'}>
-                      {punto.estado}
+                    <StatusBadge tone={punto.estado === 'cerrado' ? 'success' : 'neutral'}>
+                      {LABEL_ESTADO[punto.estado] || punto.estado}
                     </StatusBadge>
                   </div>
                 </div>
               </div>
             ))}
-          </div>
-
-          <div className="border border-slate-850 bg-slate-900/40 p-4 rounded-2xl flex items-center gap-4 mt-2">
-            <Shield size={18} className="text-emerald-500 shrink-0" />
-            <div className="space-y-0.5">
-              <span className="block text-[8px] font-black text-emerald-400 uppercase tracking-widest">Sello Digital de Respaldo HASH-SHA256</span>
-              <p className="text-[10px] font-mono text-slate-500 tracking-tight break-all leading-none">
-                b4e789a1cdcefd2100874e1db8c8a14b3a1a5b8e9c7d6e5f4a3b2c1d0f9e8d7c
-              </p>
-            </div>
           </div>
         </div>
       )}

@@ -5,6 +5,7 @@ import Login from './views/auth/Login';
 import Register from './views/auth/Register';
 import ClientSelector from './views/clients/ClientSelector';
 import Dashboard from './views/dashboard/Dashboard';
+import HistorialJuntas from './views/juntas/HistorialJuntas';
 import MinutesAI from './views/minutes/MinutesAI';
 import AltaFinca from './components/AltaFinca.jsx';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -49,7 +50,8 @@ function App() {
 
             <Route path="/admin/:fincaId" element={<AppShell />}>
               <Route index element={<ResumenFinca />} />
-              <Route path="junta" element={<Dashboard />} />
+              <Route path="junta" element={<HistorialJuntas />} />
+              <Route path="junta/:meetingId" element={<Dashboard />} />
               <Route path="incidencias" element={<Incidencias />} />
               <Route path="cuotas" element={<Cuotas />} />
               <Route path="documentos" element={<Documentos />} />

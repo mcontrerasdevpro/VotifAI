@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, Search, Mic, Square, CheckCircle2, RefreshCw, AlertTriangle, UserCheck, Mail, Lock, KeyRound, LogOut, ArrowLeft } from 'lucide-react';
+import VotacionVecino from '../../components/VotacionVecino.jsx';
 
 /**
  * Pantalla de "manos alzadas": el vecino accede desde su propio móvil al
@@ -396,6 +397,8 @@ export default function Asistencia() {
                     <LogOut size={11} /> Salir
                   </button>
                 </div>
+
+                <VotacionVecino entityId={entityId} />
 
                 <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-8 flex flex-col items-center justify-center gap-5 min-h-[260px]">
                   {enviando ? (

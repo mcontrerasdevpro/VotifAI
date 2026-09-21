@@ -3,24 +3,15 @@ import { normalizeTenant, loadStoredTenant, hasActiveTenant } from './store/sess
 
 const initialState = {
   tenant: loadStoredTenant(),
+  // Estado de sala puramente de UI (no persistido): qué tarjetas del
+  // orden del día están expandidas y las cifras de asistencia/coeficiente
+  // del censo real de la finca activa. El orden del día, los puntos y los
+  // votos viven en el servidor (ver server/routes/meetings.js) y se
+  // consultan por meetingId, no aquí.
   salaControl: {
-    mercado: 'comunidad',
-    puntoActivo: 0,
-    tiempoRestante: 60,
-    votosRegistrados: 0,
     totalAsistentesSala: 0,
     coeficienteTotal: 0,
-    puntosExpandidos: { 0: true },
-    juntasData: {
-      // 🏘️ ORDEN DEL DÍA POR DEFECTO PARA COMUNIDADES DE VECINOS
-      comunidad: {
-        puntos: [
-          { id: 1, t: "Aprobación de la reforma urgente de impermeabilización del tejado, reparación integral de las bajantes de la letra C y consolidación de grietas en la fachada norte por razones de estanqueidad estructural.", si: 0, no: 0, abs: 0, estado: "Debatiendo" },
-          { id: 2, t: "Instalación de cámaras de seguridad con grabación 4K continua y sensores de movimiento perimetrales en los tres accesos al garaje comunitario.", si: 0, no: 0, abs: 0, estado: "Pendiente" },
-          { id: 3, t: "Renovación del contrato de mantenimiento técnico del ascensor principal con la empresa Otis, incluyendo cobertura de piezas de desgaste 24/7.", si: 0, no: 0, abs: 0, estado: "Pendiente" }
-        ]
-      }
-    }
+    puntosExpandidos: {}
   }
 };
 
@@ -52,18 +43,6 @@ function votifaiReducer(state, action) {
       return {
         ...state,
         salaControl: { ...state.salaControl, ...action.payload }
-      };
-
-    case 'ACTUALIZAR_PUNTOS':
-      return {
-        ...state,
-        salaControl: {
-          ...state.salaControl,
-          juntasData: {
-            ...state.salaControl.juntasData,
-            [state.salaControl.mercado]: { puntos: action.payload }
-          }
-        }
       };
 
     default:
