@@ -19,6 +19,7 @@ import agendaRouter from './routes/agenda.js';
 import contabilidadRouter from './routes/contabilidad.js';
 import vozRouter from './routes/voz.js';
 import vecinosRouter from './routes/vecinos.js';
+import meetingsRouter from './routes/meetings.js';
 import billingRouter, { stripeWebhookHandler } from './routes/billing.js';
 import { notificar } from './lib/notificaciones.js';
 import { exigirCapacidadFinca } from './lib/suscripciones.js';
@@ -113,6 +114,7 @@ app.use('/api', agendaRouter);
 app.use('/api', contabilidadRouter);
 app.use('/api', vozRouter);
 app.use('/api', vecinosRouter);
+app.use('/api', meetingsRouter);
 
 app.post('/api/demo-solicitudes', demoLimiter, async (req, res) => {
   const nombre = String(req.body.nombre || '').trim();

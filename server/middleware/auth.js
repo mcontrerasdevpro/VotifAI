@@ -122,3 +122,32 @@ export async function filaBelongsToTenantDirecto(tabla, filaId, tenantId) {
   );
   return resultado.rows.length > 0;
 }
+
+// Un punto de orden del día cuelga de meeting_puntos -> meetings ->
+// entities, un salto más que filaBelongsToTenant (pensado para tablas que
+// cuelgan directo de entity_id), así que necesita su propio join.
+export async function puntoBelongsToTenant(puntoId, tenantId) {
+  if (!puntoId || !tenantId) return false;
+  const resultado = await query(
+    `SELECT p.id FROM meeting_puntos p
+     JOIN meetings m ON p.meeting_id = m.id
+     JOIN entities e ON m.entity_id = e.id
+     WHERE p.id = $1::uuid AND e.tenant_id = $2`,
+    [String(puntoId).trim(), tenantId]
+  );
+  return resultado.rows.length > 0;
+}
+
+// Lado vecino: comprueba que el punto pertenece a una junta de la misma
+// finca para la que se emitió la sesión de vecino (req.voterEntityId),
+// igual que voz.js hace comparando req.voterEntityId directamente.
+export async function puntoBelongsToEntity(puntoId, entityId) {
+  if (!puntoId || !entityId) return false;
+  const resultado = await query(
+    `SELECT p.id FROM meeting_puntos p
+     JOIN meetings m ON p.meeting_id = m.id
+     WHERE p.id = $1::uuid AND m.entity_id = $2::uuid`,
+    [String(puntoId).trim(), String(entityId).trim()]
+  );
+  return resultado.rows.length > 0;
+}
