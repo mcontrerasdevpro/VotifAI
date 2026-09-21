@@ -38,7 +38,7 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
         if (!fincaId) return;
         setCargando(true);
         try {
-            const res = await fetch(`/api/propietarios/lista/${fincaId}`);
+            const res = await fetch(`/api/propietarios/lista/${fincaId}`, { credentials: 'include' });
             const data = await res.json();
             if (res.ok) {
                 setPropietarios(data.propietarios || []);
@@ -80,6 +80,7 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
         try {
             const respuesta = await fetch('/api/propietarios/cambio-titular', {
                 method: 'POST',
+                credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
@@ -131,6 +132,7 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
         try {
             const res = await fetch('/api/propietarios/create', {
                 method: 'POST',
+                credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
