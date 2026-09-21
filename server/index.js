@@ -5,10 +5,11 @@ import rateLimit from 'express-rate-limit';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
+import jwt from 'jsonwebtoken';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { query } from './db.js';
-import { requireAuth, issueSessionCookie, clearSessionCookie, entityBelongsToTenant, propietarioBelongsToTenant } from './middleware/auth.js';
+import { requireAuth, issueSessionCookie, clearSessionCookie, entityBelongsToTenant, propietarioBelongsToTenant, COOKIE_NAME } from './middleware/auth.js';
 import documentosRouter from './routes/documentos.js';
 import cuotasRouter from './routes/cuotas.js';
 import incidenciasRouter from './routes/incidencias.js';
@@ -252,6 +253,37 @@ app.post('/api/auth/login', async (req, res) => {
 app.post('/api/auth/logout', (req, res) => {
   clearSessionCookie(res);
   res.status(200).json({ success: true, mensaje: 'Sesión cerrada correctamente.' });
+});
+
+app.get('/api/auth/me', async (req, res) => {
+  const token = req.cookies?.[COOKIE_NAME];
+  if (!token) {
+    return res.status(401).json({ authenticated: false, error: 'Sesión no iniciada o expirada.' });
+  }
+
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    const tenantResult = await query(
+      'SELECT id, nombre_entidad, email_maestro, tipo_organizacion, plan_suscripcion, cif, telefono, direccion, nombre_responsable FROM tenants WHERE id = $1',
+      [payload.tenantId]
+    );
+
+    if (tenantResult.rows.length === 0) {
+      return res.status(401).json({ authenticated: false, error: 'Tenant no encontrado.' });
+    }
+
+    const tenantBase = tenantResult.rows[0];
+    const fincasResultado = await query(
+      'SELECT id, nombre, cif, direccion, tipo, codigo_acceso FROM entities WHERE tenant_id = $1',
+      [tenantBase.id]
+    );
+
+    const tenantCompleto = { ...tenantBase, comunidades: fincasResultado.rows };
+    return res.status(200).json({ authenticated: true, tenant: tenantCompleto });
+  } catch (error) {
+    console.error('Error al validar sesión del despacho:', error.message);
+    return res.status(401).json({ authenticated: false, error: 'Sesión inválida o expirada.' });
+  }
 });
 
 // =========================================================================

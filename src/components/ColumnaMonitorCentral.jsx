@@ -1,8 +1,9 @@
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Users, PieChart, Timer, ChevronRight, ArrowLeft, Radio } from 'lucide-react';
+import { Users, PieChart, Timer, ArrowLeft, Radio } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Card from './ui/Card.jsx';
+import { openVotingForPoint, closeCurrentPoint } from '../store/junta.js';
 
 export default function ColumnaMonitorCentral({ datos, puntoActivo, dispatch, state }) {
   const navigate = useNavigate();
@@ -11,7 +12,12 @@ export default function ColumnaMonitorCentral({ datos, puntoActivo, dispatch, st
     tiempoRestante: 60, votosRegistrados: 0
   };
 
-  const totalAsistentesSala = 48;
+  const totalAsistentesSala = Number.isFinite(Number(state?.salaControl?.totalAsistentesSala))
+    ? Number(state.salaControl.totalAsistentesSala)
+    : 0;
+  const coeficienteTotal = Number.isFinite(Number(state?.salaControl?.coeficienteTotal))
+    ? Number(state.salaControl.coeficienteTotal)
+    : 0;
   const puntoActual = datos?.puntos?.[puntoActivo];
 
   useEffect(() => {
@@ -52,12 +58,10 @@ export default function ColumnaMonitorCentral({ datos, puntoActivo, dispatch, st
   const handleAvanzarFlujoPunto = () => {
     if (!puntoActual) return;
     if (puntoActual.estado === 'Debatiendo' || puntoActual.estado === 'Pendiente') {
-      const puntosActualizados = datos.puntos.map((p, idx) =>
-        idx === puntoActivo ? { ...p, estado: 'Votando' } : p
-      );
+      const puntosActualizados = openVotingForPoint(datos.puntos, puntoActivo);
       dispatch({
         type: 'SET_SALA_STATE',
-        payload: { tiempoRestante: 60, votosRegistrados: 0 }
+        payload: { tiempoRestante: 60, votosRegistrados: 0, totalAsistentesSala }
       });
       dispatch({ type: 'ACTUALIZAR_PUNTOS', payload: puntosActualizados });
       return;
@@ -73,12 +77,7 @@ export default function ColumnaMonitorCentral({ datos, puntoActivo, dispatch, st
   };
 
   const handleClausurarEscrutinioManual = () => {
-    const puntosActualizados = datos.puntos.map((p, idx) =>
-      idx === puntoActivo ? { ...p, estado: 'Cerrado', si: 68, no: 22, abs: 10 } : p
-    );
-    if (puntoActivo < datos.puntos.length - 1 && puntosActualizados[puntoActivo + 1]) {
-      puntosActualizados[puntoActivo + 1].estado = 'Debatiendo';
-    }
+    const puntosActualizados = closeCurrentPoint(datos.puntos, puntoActivo, { si: 68, no: 22, abs: 10 });
     dispatch({ type: 'ACTUALIZAR_PUNTOS', payload: puntosActualizados });
   };
 
@@ -108,8 +107,8 @@ export default function ColumnaMonitorCentral({ datos, puntoActivo, dispatch, st
             <span className="text-4xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
               <PieChart size={12} className="text-indigo-500" /> Coeficiente Total
             </span>
-            <div className="text-2xl font-black text-white mt-1">{datos?.coeficiente}</div>
-            <p className="text-4xs text-emerald-500 font-semibold mt-0.5">✓ Cuórum legal válido</p>
+            <div className="text-2xl font-black text-white mt-1">{coeficienteTotal.toFixed(2)}%</div>
+            <p className="text-4xs text-emerald-500 font-semibold mt-0.5">{coeficienteTotal >= 50 ? '✓ Cuórum legal válido' : '⚠️ Cuórum aún insuficiente'}</p>
           </div>
         </div>
 
@@ -156,7 +155,7 @@ export default function ColumnaMonitorCentral({ datos, puntoActivo, dispatch, st
             <div className="flex justify-between items-center text-[10px] bg-slate-900/40 p-2.5 rounded-lg border border-slate-900/60 font-medium text-slate-400">
               <span className="flex items-center gap-1.5"><Users size={11} className="text-blue-400" /> Terminales Emitiendo Voto:</span>
               <span className="font-mono font-bold text-white bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
-                {votosRegistrados} / {totalAsistentesSala} Propietarios
+                {Math.min(votosRegistrados, totalAsistentesSala || votosRegistrados)} / {totalAsistentesSala || votosRegistrados || 0} Propietarios
               </span>
             </div>
           )}

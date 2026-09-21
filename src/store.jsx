@@ -1,24 +1,15 @@
 import React, { createContext, useContext, useReducer } from 'react';
+import { normalizeTenant, loadStoredTenant, hasActiveTenant } from './store/session.js';
 
 const initialState = {
-  tenant: (() => {
-    const saved = localStorage.getItem('votifai_tenant');
-    if (!saved) return null;
-    try {
-      const parsed = JSON.parse(saved);
-      if (parsed && !parsed.comunidades) {
-        parsed.comunidades = [];
-      }
-      return parsed;
-    } catch (e) {
-      return null;
-    }
-  })(),
+  tenant: loadStoredTenant(),
   salaControl: {
     mercado: 'comunidad',
     puntoActivo: 0,
     tiempoRestante: 60,
     votosRegistrados: 0,
+    totalAsistentesSala: 0,
+    coeficienteTotal: 0,
     puntosExpandidos: { 0: true },
     juntasData: {
       // 🏘️ ORDEN DEL DÍA POR DEFECTO PARA COMUNIDADES DE VECINOS
@@ -36,20 +27,10 @@ const initialState = {
 function votifaiReducer(state, action) {
   switch (action.type) {
     case 'REGISTRAR_ORGANIZACION': {
-      const datosServidor = action.payload;
-      const nuevoTenant = {
-        tenantId: datosServidor.id || datosServidor.tenantId,
-        nombreEntidad: datosServidor.nombre_entidad || datosServidor.nombreEntidad || "Despacho Profesional",
-        email: datosServidor.email_maestro || datosServidor.email,
-        tipoOrganizacion: datosServidor.tipo_organizacion || datosServidor.tipoOrganizacion,
-        plan: datosServidor.plan_suscripcion || datosServidor.plan || 'trial_15_dias',
-        admin: {
-          nombre: datosServidor.nombre_responsable || datosServidor.admin_nombre || datosServidor.adminNombre || datosServidor.nombre || "Admin General",
-          despacho: datosServidor.nombre_entidad || datosServidor.nombreEntidad || "Despacho Administrador"
-        },
-        comunidades: datosServidor.comunidades || []
-      };
-      localStorage.setItem('votifai_tenant', JSON.stringify(nuevoTenant));
+      const nuevoTenant = normalizeTenant(action.payload);
+      if (nuevoTenant) {
+        localStorage.setItem('votifai_tenant', JSON.stringify(nuevoTenant));
+      }
       return { ...state, tenant: nuevoTenant };
     }
 

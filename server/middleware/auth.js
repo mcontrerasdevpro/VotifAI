@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { query } from '../db.js';
 
-const COOKIE_NAME = 'votifai_session';
+export const COOKIE_NAME = 'votifai_session';
 const VOTER_COOKIE_NAME = 'votifai_voter_session';
 
 export function issueSessionCookie(res, tenant) {

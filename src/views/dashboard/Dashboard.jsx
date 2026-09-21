@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useVotifaiStore } from '../../store.jsx';
+import { getParticipantesActivos, getCoeficienteTotal } from '../../store/censo.js';
 import SubNavContexto from '../../components/SubNavContexto.jsx';
 import ColumnaOrdenDia from '../../components/ColumnaOrdenDia.jsx';
 import ColumnaMonitorCentral from '../../components/ColumnaMonitorCentral.jsx';
@@ -25,6 +26,18 @@ export default function Dashboard() {
   const [actaHistoricaTexto, setActaHistoricaTexto] = useState('');
   const [personaDestinataria, setPersonaDestinataria] = useState('');
   const [reenviandoPush, setReenviandoPush] = useState(false);
+  const participantesActivos = getParticipantesActivos(censoPersonas);
+  const coeficienteTotal = getCoeficienteTotal(censoPersonas);
+
+  useEffect(() => {
+    dispatch({
+      type: 'SET_SALA_STATE',
+      payload: {
+        totalAsistentesSala: participantesActivos,
+        coeficienteTotal
+      }
+    });
+  }, [dispatch, participantesActivos, coeficienteTotal]);
 
   useEffect(() => {
     let idRealDeNeon = tenantGlobal?.tenantId || tenantGlobal?.id;
@@ -64,7 +77,15 @@ export default function Dashboard() {
         const resCenso = await fetch(`/api/propietarios/lista/${entidadIdActiva}`);
         const dataCenso = await resCenso.json();
         if (resCenso.ok) {
-          setCensoPersonas(dataCenso.propietarios || []);
+          const propietarios = dataCenso.propietarios || [];
+          setCensoPersonas(propietarios);
+          dispatch({
+            type: 'SET_SALA_STATE',
+            payload: {
+              totalAsistentesSala: getParticipantesActivos(propietarios),
+              coeficienteTotal: getCoeficienteTotal(propietarios)
+            }
+          });
         }
 
       } catch (err) {
