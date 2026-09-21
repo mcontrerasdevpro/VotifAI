@@ -81,6 +81,19 @@ pnpm install
 pnpm run dev --force
 ```
 
+## 🚀 Despliegue en Render
+
+El repositorio contiene `render.yaml` para que Render instale las dependencias
+del frontend y del backend antes de compilar. Si el servicio ya existe y no usa
+Blueprints, configura manualmente:
+
+```text
+Build Command: pnpm install --frozen-lockfile && pnpm install --dir server --frozen-lockfile && pnpm build
+Start Command: node server/index.js
+```
+
+En Render configura como mínimo `DATABASE_URL`, `JWT_SECRET` y `CORS_ORIGIN`.
+
 ---
 
 ## 🔒 Seguridad y Aislamiento Multi-Tenant
