@@ -12,11 +12,16 @@ const { Pool, types } = pkg;
 // cualquier consulta que use una columna DATE (agenda, cuotas, reservas...).
 types.setTypeParser(1082, (val) => val);
 
+const databaseSsl = process.env.DATABASE_SSL === 'false'
+  ? false
+  : {
+      rejectUnauthorized: process.env.DATABASE_SSL_REJECT_UNAUTHORIZED === 'true',
+      ...(process.env.DATABASE_SSL_CA ? { ca: process.env.DATABASE_SSL_CA } : {})
+    };
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false 
-  }
+  ssl: databaseSsl
 });
 
 export const query = (text, params) => pool.query(text, params);
