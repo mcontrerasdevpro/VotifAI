@@ -24,3 +24,10 @@ test('un plan desconocido vuelve a Starter', () => {
   assert.equal(obtenerPlan('plan-inexistente'), PLANES.starter);
   assert.equal(obtenerPlan(), PLANES.starter);
 });
+
+test('publica precios orientativos desde y deja Enterprise a medida', () => {
+  assert.equal(PLANES.starter.precioDesde, 49);
+  assert.equal(PLANES.profesional.precioDesde, 99);
+  assert.equal(PLANES.premium.precioDesde, 199);
+  assert.equal(PLANES.enterprise.precioDesde, null);
+});

@@ -18,6 +18,7 @@ router.get('/billing/planes', (req, res) => {
     planes: Object.entries(PLANES).map(([id, plan]) => ({
       id,
       nombre: plan.nombre,
+      precioDesde: plan.precioDesde,
       maxFincas: plan.maxFincas,
       maxPropietariosPorFinca: plan.maxPropietariosPorFinca,
       transcripcionVoz: plan.transcripcionVoz,
