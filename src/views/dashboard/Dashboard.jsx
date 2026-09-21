@@ -51,7 +51,7 @@ export default function Dashboard() {
 
     const inicializarSalaJuntas = async () => {
       try {
-        const resCat = await fetch(`/api/entities/${idRealDeNeon}`);
+        const resCat = await fetch(`/api/entities/${idRealDeNeon}`, { credentials: 'include' });
         const dataCat = await resCat.json();
 
         const listaFiltrada = dataCat.fincas || [];
@@ -61,7 +61,7 @@ export default function Dashboard() {
           const actual = listaFiltrada.find(e => e.id === entidadIdActiva) || listaFiltrada[0];
           setEntidadSeleccionada(actual);
 
-          const resEstado = await fetch(`/api/meetings/estado/${entidadIdActiva}`);
+          const resEstado = await fetch(`/api/meetings/estado/${entidadIdActiva}`, { credentials: 'include' });
           const dataEstado = await resEstado.json();
 
           if (resEstado.ok && dataEstado.estado === 'clausurada') {
@@ -74,7 +74,7 @@ export default function Dashboard() {
           }
         }
 
-        const resCenso = await fetch(`/api/propietarios/lista/${entidadIdActiva}`);
+        const resCenso = await fetch(`/api/propietarios/lista/${entidadIdActiva}`, { credentials: 'include' });
         const dataCenso = await resCenso.json();
         if (resCenso.ok) {
           const propietarios = dataCenso.propietarios || [];

@@ -74,6 +74,7 @@ export default function Login() {
           const nuevoTenantCaché = {
             tenantId: resultado.tenant.id || resultado.tenant.tenantId,
             nombreEntidad: resultado.tenant.nombre_entidad || resultado.tenant.nombreEntidad || "Despacho Profesional",
+            cif: resultado.tenant.cif || resultado.tenant.cifDespacho || resultado.tenant.cifEmpresa || '',
             email: resultado.tenant.email_maestro || resultado.tenant.email || emailAdmin,
             tipoOrganizacion: resultado.tenant.tipo_organizacion || resultado.tenant.tipoOrganizacion || 'administrador',
             plan: resultado.tenant.plan_suscripcion || resultado.tenant.plan || 'trial_15_dias',

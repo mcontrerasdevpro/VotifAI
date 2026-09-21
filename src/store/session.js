@@ -6,6 +6,7 @@ export function normalizeTenant(tenant) {
   return {
     tenantId: tenant.id || tenant.tenantId,
     nombreEntidad: tenant.nombre_entidad || tenant.nombreEntidad || 'Despacho Profesional',
+    cif: tenant.cif || tenant.cifDespacho || tenant.cifEmpresa || '',
     email: tenant.email_maestro || tenant.email || '',
     tipoOrganizacion: tenant.tipo_organizacion || tenant.tipoOrganizacion || 'administrador',
     plan: tenant.plan_suscripcion || tenant.plan || 'trial_15_dias',

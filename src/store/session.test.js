@@ -9,12 +9,14 @@ test('normalizeTenant maps backend fields into the frontend tenant shape', () =>
     email_maestro: 'admin@demo.com',
     tipo_organizacion: 'administrador',
     plan_suscripcion: 'starter',
+    cif: 'H12345678',
     nombre_responsable: 'Ana López',
     comunidades: [{ id: 'entity-1', nombre: 'Finca 1' }]
   });
 
   assert.equal(tenant.tenantId, 'tenant-123');
   assert.equal(tenant.nombreEntidad, 'Despacho Demo');
+  assert.equal(tenant.cif, 'H12345678');
   assert.equal(tenant.admin.nombre, 'Ana López');
   assert.equal(tenant.comunidades.length, 1);
 });

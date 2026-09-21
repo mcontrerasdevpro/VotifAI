@@ -12,9 +12,14 @@ export default function FincasSelector({ cargando, admin, tenantGlobal, fincas, 
         <h3 className="text-xs font-black text-white mt-1 truncate">
           {cargando ? "Verificando Despacho..." : admin ? admin.nombre_entidad : tenantGlobal?.nombreEntidad || "Administrador General"}
         </h3>
-        <p className="text-[10px] text-slate-500 font-medium truncate mt-0.5">
-          {admin ? admin.email_maestro : tenantGlobal?.email || "Conectando con Neon Cloud..."}
-        </p>
+        <div className="mt-1 flex items-center justify-between gap-2">
+          <p className="text-[10px] text-slate-500 font-medium truncate">
+            {admin ? admin.email_maestro : tenantGlobal?.email || "Conectando con Neon Cloud..."}
+          </p>
+          <span className="text-[9px] font-black text-slate-300 font-mono uppercase truncate">
+            {admin?.cif || tenantGlobal?.cif || 'SIN CIF'}
+          </span>
+        </div>
       </div>
 
       {/* Selector de Fincas */}
