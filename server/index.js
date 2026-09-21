@@ -17,7 +17,9 @@ import agendaRouter from './routes/agenda.js';
 import contabilidadRouter from './routes/contabilidad.js';
 import vozRouter from './routes/voz.js';
 import vecinosRouter from './routes/vecinos.js';
+import billingRouter, { stripeWebhookHandler } from './routes/billing.js';
 import { notificar } from './lib/notificaciones.js';
+import { exigirCapacidadFinca } from './lib/suscripciones.js';
 
 dotenv.config();
 const app = express();
@@ -76,11 +78,13 @@ const corsOptionsDelegate = (req, callback) => {
 };
 
 app.use('/api', cors(corsOptionsDelegate));
+app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), stripeWebhookHandler);
 // Límite ampliado: documentos y PDFs en base64 superan fácilmente el
 // límite por defecto de Express (100kb) — esto ya afectaba en silencio a
 // la subida de PDF de fincas (/api/entities/upload-pdf).
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
+app.use('/api', billingRouter);
 app.use('/api', documentosRouter);
 app.use('/api', cuotasRouter);
 app.use('/api', incidenciasRouter);
@@ -91,11 +95,49 @@ app.use('/api', contabilidadRouter);
 app.use('/api', vozRouter);
 app.use('/api', vecinosRouter);
 
+app.post('/api/demo-solicitudes', async (req, res) => {
+  const nombre = String(req.body.nombre || '').trim();
+  const email = String(req.body.email || '').trim().toLowerCase();
+  const telefono = String(req.body.telefono || '').trim();
+  const comunidades = String(req.body.comunidades || '').trim();
+  const mensaje = String(req.body.mensaje || '').trim();
+  const consentimientoPrivacidad = req.body.consentimientoPrivacidad === true || req.body.consentimientoPrivacidad === 'true';
+
+  if (!nombre || !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !consentimientoPrivacidad) {
+    return res.status(400).json({ error: 'Indica un nombre, un correo profesional válido y acepta la política de privacidad.' });
+  }
+
+  try {
+    const resultado = await query(
+      `INSERT INTO demo_solicitudes (nombre, email, telefono, comunidades, mensaje, consentimiento_privacidad, consentimiento_en)
+       VALUES ($1, $2, $3, $4, $5, true, now())
+       RETURNING id, creado_en`,
+      [nombre, email, telefono || null, comunidades || null, mensaje || null]
+    );
+
+    try {
+      await notificar({
+        tipo: 'solicitud_demo_votifai',
+        mensaje: { titulo: 'Nueva solicitud de demo VotifAI', cuerpo: `${nombre} (${email}) solicita una demo.` },
+        destinatarios: [{ nombre: 'Equipo VotifAI', email: process.env.DEMO_NOTIFICATION_EMAIL || process.env.N8N_NOTIFICATION_EMAIL }]
+      });
+    } catch (notificationError) {
+      console.error('Solicitud guardada, pero falló la notificación de demo:', notificationError.message);
+    }
+
+    res.status(201).json({ success: true, solicitud: resultado.rows[0] });
+  } catch (err) {
+    console.error('Error al guardar solicitud de demo:', err.message);
+    res.status(500).json({ error: 'No se pudo registrar la solicitud. Inténtalo de nuevo.' });
+  }
+});
+
 // =========================================================================
 // 🔐 1. ENDPOINT POST: /api/auth/register (Alta Multi-tenant Comercial)
 // =========================================================================
 app.post('/api/auth/register', async (req, res) => {
-  const { tipoOrganizacion, nombreEntidad, nombreResponsable, cif, telefono, direccion, email, password, plan, banco } = req.body;
+  const { tipoOrganizacion, nombreEntidad, nombreResponsable, cif, telefono, direccion, email, password } = req.body;
+  const planInicial = 'starter';
 
   if (!email || !password || password.length < 8) {
     return res.status(400).json({ error: 'Se requiere un email y una contraseña de al menos 8 caracteres.' });
@@ -118,8 +160,8 @@ app.post('/api/auth/register', async (req, res) => {
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING id, nombre_entidad, email_maestro, tipo_organizacion, plan_suscripcion, cif, telefono, direccion, nombre_responsable`,
       [
-        nombreEntidad, email, passwordHash, tipoOrganizacion, plan || 'trial_15_dias',
-        banco?.iban || 'ES0000', banco?.titularCuenta || 'Sin titular',
+        nombreEntidad, email, passwordHash, tipoOrganizacion, planInicial,
+        null, null,
         cif || null, telefono || null, direccion || null, nombreResponsable || null
       ]
     );
@@ -335,6 +377,9 @@ app.post('/api/entities/create', requireAuth, async (req, res) => {
   }
 
   try {
+    const capacidad = await exigirCapacidadFinca(req.tenantId);
+    if (!capacidad.ok) return res.status(capacidad.status).json({ error: capacidad.error });
+
     let nuevaEntidad = null;
     for (let intento = 0; intento < 5 && !nuevaEntidad; intento++) {
       try {

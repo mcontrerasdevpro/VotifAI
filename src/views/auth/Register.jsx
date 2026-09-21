@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVotifaiStore } from '../../store.jsx';
-import { ShieldCheck, ArrowRight, ArrowLeft, Mail, Lock, Sparkles, CreditCard, AudioLines, FileJson, Scale, Phone, MapPin, User } from 'lucide-react';
+import { ShieldCheck, ArrowRight, ArrowLeft, Mail, Lock, Sparkles, AudioLines, FileJson, Scale, Phone, MapPin, User } from 'lucide-react';
 import Field from '../../components/ui/Field.jsx';
 
 export default function Register() {
   const navigate = useNavigate();
   const { dispatch } = useVotifaiStore() || { dispatch: () => { } };
 
-  const [paso, setPaso] = useState(1);
   const tipoOrganizacion = 'administrador';
 
   const [email, setEmail] = useState('');
@@ -20,19 +19,11 @@ export default function Register() {
   const [telefono, setTelefono] = useState('');
   const [direccion, setDireccion] = useState('');
 
-  const [titularCuenta, setTitularCuenta] = useState('');
-  const [iban, setIban] = useState('');
-
   const [enviando, setEnviando] = useState(false);
   const [errorEnvio, setErrorEnvio] = useState('');
 
   const handleSiguientePaso = async (e) => {
     e.preventDefault();
-    if (paso < 2) {
-      setPaso(paso + 1);
-      return;
-    }
-
     setEnviando(true);
     setErrorEnvio('');
 
@@ -45,8 +36,7 @@ export default function Register() {
       direccion,
       email,
       password,
-      plan: 'trial_15_dias',
-      banco: { titularCuenta, iban }
+      plan: 'starter'
     };
 
     try {
@@ -89,7 +79,7 @@ export default function Register() {
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={paso === 1 ? () => navigate('/') : () => setPaso(paso - 1)}
+            onClick={() => navigate('/')}
             className="p-2.5 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-xl transition-all text-slate-400 hover:text-white"
           >
             <ArrowLeft size={16} />
@@ -144,34 +134,25 @@ export default function Register() {
 
         {/* PIE DE COLUMNA */}
         <p className="text-4xs text-slate-500 font-bold tracking-widest uppercase flex items-center gap-2">
-          <ShieldCheck size={12} /> Cumplimiento Normativo RGPD y Estándar Bancario SEPA
+          <ShieldCheck size={12} /> Protección de datos y acceso seguro
         </p>
       </div>
 
-      {/* ================= COLUMNA DERECHA: FORMULARIO EN 2 PASOS (50% de la pantalla) ================= */}
+      {/* ================= COLUMNA DERECHA: FORMULARIO DE ALTA (50% de la pantalla) ================= */}
       <div className="w-full lg:w-1/2 p-8 md:p-16 flex flex-col justify-between overflow-y-auto custom-scrollbar bg-slate-950">
-
-        {/* INDICADOR DE PASOS SUPERIOR */}
-        <div className="flex justify-end gap-4 text-4xs font-black uppercase tracking-widest text-slate-600 shrink-0">
-          <span className={paso === 1 ? "text-blue-500 border-b border-blue-500 pb-1" : ""}>1. Datos del Despacho</span>
-          <span className={paso === 2 ? "text-blue-500 border-b border-blue-500 pb-1" : ""}>2. Domiciliación</span>
-        </div>
 
         {/* CONTENEDOR CENTRAL DEL FORMULARIO */}
         <form onSubmit={handleSiguientePaso} className="my-auto py-8 space-y-6 max-w-xl mx-auto w-full">
 
           <div className="space-y-1">
             <h1 className="text-xl md:text-2xl font-black text-white tracking-tight">
-              {paso === 1 && "Registrar mi Despacho Profesional"}
-              {paso === 2 && "Domiciliación Bancaria Directa"}
+              Registrar mi Despacho Profesional
             </h1>
             <p className="text-3xs text-slate-400 leading-normal">
-              {paso === 1 && "Estos son los datos de tu despacho o gestoría, no de una comunidad concreta — esas se dan de alta después, ya dentro de tu panel."}
-              {paso === 2 && "Introduce los datos bancarios. Activaremos la prueba de 15 días a coste cero."}
+              Crea tu cuenta sin introducir datos bancarios. Podrás dar de alta tus comunidades desde el panel.
             </p>
 
-            {paso === 1 && (
-              <p className="text-4xs text-slate-500 font-medium mt-1">
+            <p className="text-4xs text-slate-500 font-medium mt-1">
                 ¿Ya tienes una cuenta de despacho?{' '}
                 <span
                   onClick={() => navigate('/login/corporativo')}
@@ -179,8 +160,7 @@ export default function Register() {
                 >
                   Iniciar Sesión Aquí
                 </span>
-              </p>
-            )}
+            </p>
           </div>
 
           {errorEnvio && (
@@ -189,9 +169,7 @@ export default function Register() {
             </div>
           )}
 
-          {/* ================= PASO 1: DATOS DEL DESPACHO Y ACCESO ================= */}
-          {paso === 1 && (
-            <div className="space-y-5 animate-fade-in">
+          <div className="space-y-5 animate-fade-in">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field
                   className="sm:col-span-2"
@@ -237,43 +215,12 @@ export default function Register() {
                   inputClassName="py-3.5 font-medium"
                 />
               </div>
-            </div>
-          )}
+          </div>
 
-          {/* ================= PASO 2: DOMICILIACIÓN BANCARIA ================= */}
-          {paso === 2 && (
-            <div className="space-y-4 animate-fade-in">
-              <div className="p-4 bg-slate-950 border border-blue-500/10 rounded-2xl flex gap-3 items-center">
-                <CreditCard size={18} className="text-blue-500" />
-                <p className="text-4xs text-slate-400 leading-normal">
-                  Cumpliendo la normativa bancaria SEPA, registramos un IBAN verificado para mantener activa tu cuenta tras concluir tus **15 días de prueba gratis**. No realizaremos cargos ahora.
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                <Field
-                  label="Nombre del Titular de la Cuenta Bancaria"
-                  type="text" required placeholder="Ej: Manuel Contreras Jaén" value={titularCuenta}
-                  onChange={(e) => setTitularCuenta(e.target.value)}
-                  inputClassName="py-3.5"
-                />
-                <Field
-                  label="Código de Cuenta Internacional (IBAN)"
-                  type="text" required placeholder="ES21 0049 1234 5678 9012 3456" value={iban}
-                  onChange={(e) => setIban(e.target.value)}
-                  inputClassName="py-3.5 font-mono tracking-wider"
-                />
-              </div>
-
-              <div className="bg-slate-950 border border-blue-500/20 p-4 rounded-xl flex justify-between items-center mt-6">
-                <div className="flex gap-2 items-center">
-                  <Sparkles size={14} className="text-blue-400" />
-                  <span className="text-4xs uppercase tracking-wider text-slate-300 font-bold">Modo de Prueba Activado: 15 Días Completos</span>
-                </div>
-                <span className="text-4xs text-emerald-400 font-bold">0€ / Gratis</span>
-              </div>
-            </div>
-          )}
+          <div className="flex items-center justify-between rounded-xl border border-blue-500/20 bg-blue-500/5 p-4">
+            <div className="flex items-center gap-2"><Sparkles size={14} className="text-blue-400" /><span className="text-4xs uppercase tracking-wider text-slate-300 font-bold">Plan Starter · 15 días de prueba</span></div>
+            <span className="text-4xs font-bold text-emerald-400">Gratis</span>
+          </div>
 
           {/* BOTÓN MAESTRO DE ACCIÓN */}
           <button
@@ -281,7 +228,7 @@ export default function Register() {
             disabled={enviando}
             className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl text-3xs uppercase tracking-widest transition-all mt-4 flex items-center justify-center gap-2 shadow-lg active:scale-99 shadow-blue-600/10 disabled:opacity-50"
           >
-            {enviando ? "Registrando despacho..." : paso === 2 ? "Activar Mi Cuenta y Comenzar Prueba de 15 Días" : "Continuar al siguiente paso"}
+            {enviando ? "Registrando despacho..." : "Crear mi cuenta y comenzar"}
             <ArrowRight size={14} />
           </button>
         </form>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVotifaiStore } from '../../store.jsx';
-import { Building2, Search, FolderOpen, LogOut, CalendarDays } from 'lucide-react';
+import { Building2, Search, FolderOpen, LogOut, CalendarDays, CreditCard, AlertTriangle } from 'lucide-react';
 import Card from '../../components/ui/Card.jsx';
 import Field from '../../components/ui/Field.jsx';
 
@@ -18,6 +18,7 @@ export default function ClientSelector() {
   const [busqueda, setBusqueda] = useState('');
   const [fincas, setFincas] = useState([]);
   const [cargandoFincas, setCargandoFincas] = useState(true);
+  const [suscripcion, setSuscripcion] = useState(null);
 
   const tenantIdActual = state.tenant?.tenantId || state.tenant?.id;
   const adminGlobal = state.tenant?.admin;
@@ -38,6 +39,25 @@ export default function ClientSelector() {
     };
     cargarFincasDesdeNeon();
   }, [tenantIdActual]);
+
+  useEffect(() => {
+    const cargarSuscripcion = async () => {
+      if (!tenantIdActual) return;
+      try {
+        const respuesta = await fetch('/api/billing/estado', { credentials: 'include' });
+        const datos = await respuesta.json();
+        if (respuesta.ok) setSuscripcion(datos.estado);
+      } catch (error) {
+        console.error('Fallo al consultar el estado del plan:', error);
+      }
+    };
+    cargarSuscripcion();
+  }, [tenantIdActual]);
+
+  const diasTrial = suscripcion?.trialFin
+    ? Math.max(0, Math.ceil((new Date(suscripcion.trialFin) - new Date()) / 86400000))
+    : null;
+  const trialProximo = suscripcion?.estado === 'trialing' && diasTrial !== null && diasTrial <= 5;
 
   const fincasFiltradas = fincas.filter(f =>
     f.nombre.toLowerCase().includes(busqueda.toLowerCase())
@@ -83,6 +103,11 @@ export default function ClientSelector() {
             Dar de Alta Nueva Finca
           </button>
           <button
+            onClick={() => navigate('/billing')}
+            aria-label="Abrir mi plan y facturación"
+            className="rounded-xl border border-cyan-300/20 bg-cyan-300/10 p-2.5 text-cyan-200 transition-colors hover:bg-cyan-300/20"
+          ><CreditCard size={15} /></button>
+          <button
             onClick={handleLogout}
             className="p-2.5 bg-slate-900 border border-slate-800 text-slate-400 rounded-xl hover:text-white transition-colors"
           ><LogOut size={14} /></button>
@@ -90,6 +115,24 @@ export default function ClientSelector() {
       </header>
 
       <div className="flex-grow overflow-y-auto p-6">
+        <div className="mx-auto mb-4 max-w-5xl">
+          {suscripcion && (
+            <div className={`flex flex-col gap-3 rounded-2xl border px-4 py-3 sm:flex-row sm:items-center sm:justify-between ${trialProximo ? 'border-amber-400/30 bg-amber-400/[0.08]' : 'border-cyan-300/20 bg-cyan-300/[0.06]'}`}>
+              <div className="flex items-center gap-3">
+                {trialProximo ? <AlertTriangle size={18} className="shrink-0 text-amber-300" /> : <CreditCard size={18} className="shrink-0 text-cyan-300" />}
+                <div>
+                  <p className="text-xs font-bold text-white">Plan {suscripcion.nombrePlan}</p>
+                  <p className="mt-0.5 text-4xs text-slate-400">
+                    {suscripcion.uso.fincas} de {suscripcion.limites.fincas ?? '∞'} fincas utilizadas
+                    {suscripcion.estado === 'trialing' && diasTrial !== null ? ` · ${diasTrial} días de prueba restantes` : ` · Estado: ${suscripcion.estado}`}
+                  </p>
+                </div>
+              </div>
+              {trialProximo && <span className="text-4xs font-black uppercase tracking-wider text-amber-300">Revisa tu plan pronto</span>}
+            </div>
+          )}
+        </div>
+
         <Card className="max-w-5xl mx-auto" padding="p-5">
           <Field
             className="mb-4"

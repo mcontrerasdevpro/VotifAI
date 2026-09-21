@@ -23,6 +23,7 @@ import RestablecerPassword from './views/auth/RestablecerPassword.jsx';
 import AvisoLegal from './views/legal/AvisoLegal.jsx';
 import Privacidad from './views/legal/Privacidad.jsx';
 import Terminos from './views/legal/Terminos.jsx';
+import Billing from './views/billing/Billing.jsx';
 
 function App() {
   return (
@@ -41,6 +42,7 @@ function App() {
 
           <Route element={<ProtectedRoute />}>
             <Route path="/hub" element={<ClientSelector />} />
+            <Route path="/billing" element={<Billing />} />
             <Route path="/agenda" element={<Agenda />} />
             <Route path="/acta-ia" element={<MinutesAI />} />
             <Route path="/alta-finca" element={<AltaFinca />} />
