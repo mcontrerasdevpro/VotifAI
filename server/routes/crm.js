@@ -3,6 +3,7 @@ import { query } from '../db.js';
 import {
   requireAuth,
   entityBelongsToTenant,
+  propietarioBelongsToTenant,
   filaBelongsToTenant
 } from '../middleware/auth.js';
 
@@ -46,6 +47,10 @@ router.post('/crm/create', requireAuth, async (req, res) => {
 
   if (!(await entityBelongsToTenant(entity_id, req.tenantId))) {
     return res.status(403).json({ error: 'No autorizado para crear solicitudes en esta entidad.' });
+  }
+
+  if (propietario_id && !(await propietarioBelongsToTenant(propietario_id, req.tenantId))) {
+    return res.status(403).json({ error: 'El propietario indicado no pertenece a esta entidad.' });
   }
 
   try {
