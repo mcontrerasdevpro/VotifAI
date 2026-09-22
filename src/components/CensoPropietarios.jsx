@@ -18,7 +18,6 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
 
     const [mostrarModalAlta, setMostrarModalAlta] = useState(false);
     const [altaNombre, setAltaNombre] = useState('');
-    const [altaDni, setAltaDni] = useState('');
     const [altaDireccion, setAltaDireccion] = useState('');
     const [altaTelefono, setAltaTelefono] = useState('');
     const [altaEmail, setAltaEmail] = useState('');
@@ -27,7 +26,6 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
 
     const [propietarioSustituir, setPropietarioSustituir] = useState(null);
     const [nuevoNombre, setNuevoNombre] = useState('');
-    const [nuevoDni, setNuevoDni] = useState('');
     const [nuevoTelefono, setNuevoTelefono] = useState('');
     const [nuevoEmail, setNuevoEmail] = useState('');
     const [motivoCambio, setMotivoCambio] = useState('venta');
@@ -57,7 +55,7 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
 
     const handleTramitarCambioTitular = async (e) => {
         e.preventDefault();
-        if (!propietarioSustituir || !nuevoNombre || !nuevoDni || !motivoCambio) return;
+        if (!propietarioSustituir || !nuevoNombre || !motivoCambio) return;
 
         if (!nuevoTelefono && !nuevoEmail) {
             alert("❌ Error de Normativa LPH:\n\nEl nuevo titular debe disponer obligatoriamente de al menos un método de contacto (Teléfono o Correo electrónico).");
@@ -69,10 +67,8 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
         const payload = {
             propietario_id: propietarioSustituir.id,
             nuevo_nombre: nuevoNombre,
-            nuevo_dni: nuevoDni,
             nuevo_telefono: nuevoTelefono,
             nuevo_email: nuevoEmail,
-            nuevo_direccion: propietarioSustituir.direccion_postal,
             motivo_cambio: motivoCambio,
             detalles: detalles
         };
@@ -92,7 +88,6 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
 
                 setPropietarioSustituir(null);
                 setNuevoNombre('');
-                setNuevoDni('');
                 setNuevoTelefono('');
                 setNuevoEmail('');
                 setDetalles('');
@@ -143,7 +138,6 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
                 alert("✓ Propietario inscrito correctamente en el censo legal.");
                 setMostrarModalAlta(false);
                 setAltaNombre(''); setAltaDireccion(''); setAltaTelefono(''); setAltaEmail(''); setAltaCoeficiente('5.00');
-                if (typeof setAltaDni === 'function') setAltaDni('');
                 await consultarCensoNeon();
             } else {
                 alert(`❌ Error: ${data.error || 'No se pudo registrar.'}`);

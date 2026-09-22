@@ -99,6 +99,10 @@ const corsOptionsDelegate = (req, callback) => {
 app.use('/api', cors(corsOptionsDelegate));
 app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), stripeWebhookHandler);
 app.use('/api/auth', authLimiter);
+// Mismo límite para el lado vecino: login, registro, reseteo de contraseña
+// y resolver-código (prueba el código de acceso corto de la comunidad)
+// son objetivos de fuerza bruta igual que el login del despacho.
+app.use('/api/vecinos', authLimiter);
 // Límite ampliado: documentos y PDFs en base64 superan fácilmente el
 // límite por defecto de Express (100kb) — esto ya afectaba en silencio a
 // la subida de PDF de fincas (/api/entities/upload-pdf).
