@@ -470,6 +470,74 @@ router.get('/meetings/vecino/:entityId/actual', requireVoterAuth, async (req, re
   }
 });
 
+// Historial + detalle de juntas cerradas para el vecino: sin esto, un
+// propietario al que le falla la notificación (rebote, spam, sin email)
+// no tiene ninguna forma de recuperar el acta — el resto de rutas de
+// vecino solo exponen la junta mientras está 'en_curso'.
+router.get('/meetings/vecino/:entityId/historial', requireVoterAuth, async (req, res) => {
+  const entityId = String(req.params.entityId).trim();
+
+  if (req.voterEntityId !== entityId) {
+    return res.status(403).json({ error: 'Tu sesión no corresponde a esta comunidad.' });
+  }
+
+  try {
+    const resultado = await query(
+      `SELECT id, titulo, tipo, cerrada_en, (acta_pdf_base64 IS NOT NULL) AS tiene_pdf
+       FROM meetings WHERE entity_id = $1::uuid AND estado = 'cerrada'
+       ORDER BY cerrada_en DESC`,
+      [entityId]
+    );
+    res.status(200).json({ success: true, meetings: resultado.rows });
+  } catch (err) {
+    console.error('Error al listar el historial de juntas del vecino:', err.message);
+    res.status(500).json({ error: `Fallo al consultar el historial: ${err.message}` });
+  }
+});
+
+router.get('/meetings/vecino/detalle/:meetingId', requireVoterAuth, async (req, res) => {
+  const meetingId = String(req.params.meetingId).trim();
+
+  try {
+    const resultado = await query(
+      `SELECT m.id, m.titulo, m.tipo, m.cerrada_en, m.acta_texto_final, (m.acta_pdf_base64 IS NOT NULL) AS tiene_pdf, e.nombre AS finca_nombre
+       FROM meetings m JOIN entities e ON m.entity_id = e.id
+       WHERE m.id = $1::uuid AND m.entity_id = $2::uuid AND m.estado = 'cerrada'`,
+      [meetingId, req.voterEntityId]
+    );
+    if (resultado.rows.length === 0) {
+      return res.status(404).json({ error: 'Junta no encontrada o no pertenece a tu comunidad.' });
+    }
+    res.status(200).json({ success: true, meeting: resultado.rows[0] });
+  } catch (err) {
+    console.error('Error al consultar el detalle de la junta (vecino):', err.message);
+    res.status(500).json({ error: `Fallo al consultar la junta: ${err.message}` });
+  }
+});
+
+router.get('/meetings/vecino/:meetingId/acta-pdf', requireVoterAuth, async (req, res) => {
+  const meetingId = String(req.params.meetingId).trim();
+
+  try {
+    const resultado = await query(
+      `SELECT titulo, acta_pdf_base64 FROM meetings WHERE id = $1::uuid AND entity_id = $2::uuid AND estado = 'cerrada'`,
+      [meetingId, req.voterEntityId]
+    );
+    if (resultado.rows.length === 0 || !resultado.rows[0].acta_pdf_base64) {
+      return res.status(404).json({ error: 'No hay PDF de acta disponible para esta junta.' });
+    }
+    const { titulo, acta_pdf_base64 } = resultado.rows[0];
+    const nombreArchivo = `Acta - ${titulo}.pdf`.replace(/[/\\?%*:|"<>]/g, '-');
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${nombreArchivo}"`);
+    res.send(Buffer.from(acta_pdf_base64, 'base64'));
+  } catch (err) {
+    console.error('Error al descargar el PDF del acta (vecino):', err.message);
+    res.status(500).json({ error: `Fallo al descargar el PDF: ${err.message}` });
+  }
+});
+
 router.post('/meetings/vecino/puntos/:puntoId/votar', requireVoterAuth, async (req, res) => {
   const puntoId = String(req.params.puntoId).trim();
   const voto = String(req.body.voto || '').trim();
