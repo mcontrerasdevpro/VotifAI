@@ -82,7 +82,11 @@ router.post('/vecinos/registro', async (req, res) => {
       return res.status(409).json({ error: 'Este propietario ya tiene una cuenta creada. Inicia sesión en su lugar.' });
     }
 
-    const emailExistente = await query(`SELECT id FROM propietarios WHERE email = $1`, [email]);
+    // Excluye la propia fila: el despacho suele precargar el email del
+    // propietario al darlo de alta en el censo (para notificaciones), así
+    // que esa misma fila ya tiene ese email antes de que exista ninguna
+    // cuenta — sin el filtro, el propietario nunca podría auto-registrarse.
+    const emailExistente = await query(`SELECT id FROM propietarios WHERE email = $1 AND id != $2::uuid`, [email, propietario_id]);
     if (emailExistente.rows.length > 0) {
       return res.status(409).json({ error: 'Ya existe una cuenta con ese correo electrónico.' });
     }
