@@ -1,21 +1,15 @@
 import React from 'react';
-import { Shield, FileText, Building2 } from 'lucide-react';
+import { FileText, Building2 } from 'lucide-react';
+import Brand from './Brand.jsx';
 
 export default function SubNavContexto({ setMostrarModalConvocatoria }) {
   return (
     <nav className="border-b border-slate-900 bg-slate-950/80 backdrop-blur-md px-6 py-3 flex justify-between items-center shrink-0">
       <div className="flex items-center gap-3">
-        <div className="p-1.5 rounded-lg text-white bg-blue-600 transition-colors">
-          <Shield size={18} />
-        </div>
-        <div>
-          <span className="text-base font-black text-white">
-            Votif<span className="text-blue-500">AI</span>
-          </span>
-          <span className="text-4xs bg-slate-900 text-slate-400 font-bold px-2 py-0.5 rounded-full border border-slate-800 ml-2 uppercase">
-            Sala de Control
-          </span>
-        </div>
+        <Brand className="h-6" />
+        <span className="text-4xs bg-slate-900 text-slate-400 font-bold px-2 py-0.5 rounded-full border border-slate-800 uppercase">
+          Sala de Control
+        </span>
       </div>
 
       <div className="flex items-center gap-4">

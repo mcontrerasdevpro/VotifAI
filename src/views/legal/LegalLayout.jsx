@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ShieldCheck } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+import Brand from '../../components/Brand.jsx';
 
 export default function LegalLayout({ titulo, children }) {
   const navigate = useNavigate();
@@ -15,10 +16,7 @@ export default function LegalLayout({ titulo, children }) {
           >
             <ArrowLeft size={14} /> Volver
           </button>
-          <div className="flex items-center gap-2 text-slate-500">
-            <ShieldCheck size={16} className="text-blue-500" />
-            <span className="text-xs font-black text-white">Votif<span className="text-blue-500">AI</span></span>
-          </div>
+          <Brand className="h-5" />
         </div>
 
         <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-6 sm:p-10">

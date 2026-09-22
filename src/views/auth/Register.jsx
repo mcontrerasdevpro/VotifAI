@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVotifaiStore } from '../../store.jsx';
 import { ShieldCheck, ArrowRight, ArrowLeft, Mail, Lock, Sparkles, AudioLines, FileJson, Scale, Phone, MapPin, User } from 'lucide-react';
+import Brand from '../../components/Brand.jsx';
 import Field from '../../components/ui/Field.jsx';
 
 export default function Register() {
@@ -85,8 +86,7 @@ export default function Register() {
             <ArrowLeft size={16} />
           </button>
           <div className="flex items-center gap-2">
-            <ShieldCheck size={26} className="text-blue-500" />
-            <span className="text-2xl font-black text-white">Votif<span className="text-blue-500">AI</span></span>
+            <Brand className="h-9" />
           </div>
         </div>
 

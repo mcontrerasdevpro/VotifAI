@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Search, Mic, Square, CheckCircle2, RefreshCw, AlertTriangle, UserCheck, Mail, Lock, KeyRound, LogOut, ArrowLeft } from 'lucide-react';
+import { Search, Mic, Square, CheckCircle2, RefreshCw, AlertTriangle, UserCheck, Mail, Lock, KeyRound, LogOut, ArrowLeft } from 'lucide-react';
 import VotacionVecino from '../../components/VotacionVecino.jsx';
+import Brand from '../../components/Brand.jsx';
 
 /**
  * Pantalla de "manos alzadas": el vecino accede desde su propio móvil al
@@ -233,12 +234,10 @@ export default function Asistencia() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col p-4 font-sans antialiased">
 
-      <header className="w-full max-w-md mx-auto py-4 flex items-center gap-2 shrink-0">
-        <div className="bg-blue-600 p-2 rounded-xl text-white shadow-md shadow-blue-600/10">
-          <Shield size={16} />
-        </div>
+      <header className="w-full max-w-md mx-auto py-4 flex items-center gap-2.5 shrink-0">
+        <Brand className="h-7" />
         <div>
-          <h1 className="text-xs font-black tracking-tight text-white uppercase">VotifAI — Sala de Asistencia</h1>
+          <h1 className="text-4xs font-black tracking-widest text-slate-400 uppercase">Sala de Asistencia</h1>
           <p className="text-[8px] font-mono text-slate-500 uppercase tracking-widest mt-0.5">Manos Alzadas y Transcripción de Intervenciones</p>
         </div>
       </header>

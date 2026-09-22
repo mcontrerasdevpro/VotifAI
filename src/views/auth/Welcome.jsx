@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import Brand from '../../components/Brand.jsx';
 import {
   ArrowRight,
   BarChart3,
@@ -33,14 +34,6 @@ const FAQS = [
   ['¿Qué hace la IA?', 'Ayuda a organizar y preparar información de juntas, transcripciones y borradores. La revisión final siempre permanece bajo el control del despacho.'],
   ['¿Los propietarios necesitan usar la misma cuenta?', 'No. El despacho y los propietarios tienen flujos de acceso separados, con permisos diferentes según su papel.']
 ];
-
-function Brand() {
-  return (
-    <span className="flex items-center gap-2.5">
-      <img src="/Logo%20VotifAI.png" alt="VotifAI" className="h-9 w-auto max-w-[150px] object-contain" />
-    </span>
-  );
-}
 
 function ProductPreview({ activeModule, setActiveModule }) {
   const previewData = {

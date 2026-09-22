@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, ShieldCheck, Mail, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Mail, CheckCircle2 } from 'lucide-react';
 import Field from '../../components/ui/Field.jsx';
+import Brand from '../../components/Brand.jsx';
 
 export default function OlvidePassword() {
   const { perfil } = useParams();
@@ -42,8 +43,7 @@ export default function OlvidePassword() {
       <div className="w-full max-w-md bg-slate-950 rounded-3xl shadow-2xl overflow-hidden border border-slate-800/60">
         <div className="p-6 text-center border-b border-slate-900 bg-slate-950">
           <div className="flex justify-center items-center gap-2 mb-1">
-            <ShieldCheck size={24} className="text-blue-500" />
-            <span className="text-xl font-black text-white">Votif<span className="text-blue-500">AI</span></span>
+            <Brand className="h-8" />
           </div>
           <p className="text-xs text-slate-400 mt-2">Recuperar contraseña</p>
         </div>

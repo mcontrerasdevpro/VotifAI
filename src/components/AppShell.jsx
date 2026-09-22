@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useVotifaiStore } from '../store.jsx';
-import { ShieldCheck, LayoutDashboard, Vote, Wrench, Wallet, FileStack, CalendarClock, Headset, Landmark, ArrowLeft, LogOut } from 'lucide-react';
+import { LayoutDashboard, Vote, Wrench, Wallet, FileStack, CalendarClock, Headset, Landmark, ArrowLeft, LogOut } from 'lucide-react';
+import Brand from './Brand.jsx';
 
 // "Junta en Vivo" es el diferencial del producto, no un módulo de gestión
 // más — se queda arriba junto al Resumen, con acento propio, separado por
@@ -45,8 +46,7 @@ export default function AppShell() {
     <div className="h-screen w-screen flex bg-slate-950 overflow-hidden">
       <aside className="w-56 shrink-0 border-r border-slate-900 bg-slate-950 flex flex-col">
         <div className="h-16 px-4 flex items-center gap-2 border-b border-slate-900 shrink-0">
-          <ShieldCheck size={20} className="text-blue-500" />
-          <span className="text-sm font-black text-white">Votif<span className="text-blue-500">AI</span></span>
+          <Brand className="h-6" />
         </div>
 
         <button
