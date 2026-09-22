@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { query } from '../db.js';
 import { notificar } from '../lib/notificaciones.js';
+import { generarActaPdf } from '../lib/pdfActa.js';
 import {
   requireAuth,
   requireVoterAuth,
@@ -322,7 +323,7 @@ router.post('/meetings/:meetingId/cerrar', requireAuth, async (req, res) => {
 
   try {
     const meetingResultado = await query(
-      `SELECT m.id, m.titulo, m.entity_id, e.nombre AS finca_nombre
+      `SELECT m.id, m.titulo, m.tipo, m.entity_id, e.nombre AS finca_nombre
        FROM meetings m JOIN entities e ON m.entity_id = e.id WHERE m.id = $1::uuid`,
       [meetingId]
     );
@@ -335,22 +336,48 @@ router.post('/meetings/:meetingId/cerrar', requireAuth, async (req, res) => {
       `SELECT id, nombre_completo, propiedad_detalle, telefono, email FROM propietarios WHERE entity_id = $1::uuid`,
       [junta.entity_id]
     );
-    const despachoResultado = await query('SELECT nombre_entidad FROM tenants WHERE id = $1', [req.tenantId]);
+    const despachoResultado = await query(
+      'SELECT nombre_entidad, cif, direccion, telefono, email_maestro FROM tenants WHERE id = $1',
+      [req.tenantId]
+    );
+    const despacho = despachoResultado.rows[0] || {};
+
+    // El PDF lleva el membrete del despacho, no el de VotifAI — si falla
+    // la generación no bloqueamos el cierre de la junta, se manda sin
+    // adjunto y queda registrado en el log del servidor.
+    let actaPdfBase64 = null;
+    try {
+      const pdfBuffer = await generarActaPdf({
+        despacho: { nombre: despacho.nombre_entidad, cif: despacho.cif, direccion: despacho.direccion, telefono: despacho.telefono, email: despacho.email_maestro },
+        finca: { nombre: junta.finca_nombre },
+        meeting: { tipo: junta.tipo, titulo: junta.titulo, cerrada_en: new Date().toISOString() },
+        actaTexto: acta_texto
+      });
+      actaPdfBase64 = pdfBuffer.toString('base64');
+    } catch (errPdf) {
+      console.error('Fallo al generar el PDF del acta (se envía sin adjunto):', errPdf.message);
+    }
+
+    const nombreArchivoPdf = `Acta - ${junta.finca_nombre} - ${new Date().toISOString().slice(0, 10)}.pdf`.replace(/[/\\?%*:|"<>]/g, '-');
 
     const { resultadoEnvio, errorEnvio } = await intentarNotificar({
       tipo: 'acta_cierre',
-      despacho: { id: req.tenantId, nombre: despachoResultado.rows[0]?.nombre_entidad || null },
+      despacho: { id: req.tenantId, nombre: despacho.nombre_entidad || null },
       finca: { id: junta.entity_id, nombre: junta.finca_nombre },
-      mensaje: { titulo: `Acta de la junta — ${junta.titulo}`, cuerpo: acta_texto },
-      destinatarios: censoResultado.rows.map((p) => ({ nombre: p.nombre_completo, propiedad: p.propiedad_detalle, telefono: p.telefono, email: p.email }))
+      mensaje: {
+        titulo: `Acta de la junta — ${junta.titulo}`,
+        cuerpo: `Se adjunta el acta de la junta ${junta.tipo === 'extraordinaria' ? 'extraordinaria' : 'ordinaria'} "${junta.titulo}", ya clausurada. También puede consultarla desde su cuenta en VotifAI.`
+      },
+      destinatarios: censoResultado.rows.map((p) => ({ nombre: p.nombre_completo, propiedad: p.propiedad_detalle, telefono: p.telefono, email: p.email })),
+      ...(actaPdfBase64 ? { archivo_adjunto: { nombre: nombreArchivoPdf, tipo: 'application/pdf', contenido_base64: actaPdfBase64 } } : {})
     });
 
     await query('BEGIN');
     const cierreResultado = await query(
-      `UPDATE meetings SET estado = 'cerrada', cerrada_en = now(), acta_texto_final = $1
-       WHERE id = $2::uuid AND estado = 'en_curso'
+      `UPDATE meetings SET estado = 'cerrada', cerrada_en = now(), acta_texto_final = $1, acta_pdf_base64 = $2
+       WHERE id = $3::uuid AND estado = 'en_curso'
        RETURNING id, estado, cerrada_en`,
-      [acta_texto, meetingId]
+      [acta_texto, actaPdfBase64, meetingId]
     );
     if (cierreResultado.rowCount === 0) {
       await query('ROLLBACK');
@@ -370,6 +397,33 @@ router.post('/meetings/:meetingId/cerrar', requireAuth, async (req, res) => {
     await query('ROLLBACK').catch(() => {});
     console.error('Error al cerrar junta:', err.message);
     res.status(500).json({ error: `Fallo al cerrar la junta: ${err.message}` });
+  }
+});
+
+router.get('/meetings/:meetingId/acta-pdf', requireAuth, async (req, res) => {
+  const meetingId = String(req.params.meetingId).trim();
+
+  if (!(await filaBelongsToTenant('meetings', meetingId, req.tenantId))) {
+    return res.status(403).json({ error: 'No autorizado para descargar esta acta.' });
+  }
+
+  try {
+    const resultado = await query(
+      `SELECT titulo, acta_pdf_base64 FROM meetings WHERE id = $1::uuid AND estado = 'cerrada'`,
+      [meetingId]
+    );
+    if (resultado.rows.length === 0 || !resultado.rows[0].acta_pdf_base64) {
+      return res.status(404).json({ error: 'No hay PDF de acta disponible para esta junta.' });
+    }
+    const { titulo, acta_pdf_base64 } = resultado.rows[0];
+    const nombreArchivo = `Acta - ${titulo}.pdf`.replace(/[/\\?%*:|"<>]/g, '-');
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${nombreArchivo}"`);
+    res.send(Buffer.from(acta_pdf_base64, 'base64'));
+  } catch (err) {
+    console.error('Error al descargar el PDF del acta:', err.message);
+    res.status(500).json({ error: `Fallo al descargar el PDF: ${err.message}` });
   }
 });
 

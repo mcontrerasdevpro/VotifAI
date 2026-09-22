@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Send, ArrowLeft } from 'lucide-react';
+import { Send, ArrowLeft, FileDown } from 'lucide-react';
 import { useVotifaiStore } from '../../store.jsx';
 import { getParticipantesActivos, getCoeficienteTotal } from '../../store/censo.js';
 import SubNavContexto from '../../components/SubNavContexto.jsx';
@@ -171,9 +171,18 @@ export default function Dashboard() {
           </button>
 
           <Card padding="p-5">
-            <span className="text-4xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded font-bold uppercase tracking-wider">
-              Junta cerrada
-            </span>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-4xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded font-bold uppercase tracking-wider">
+                Junta cerrada
+              </span>
+              <a
+                href={`/api/meetings/${meetingId}/acta-pdf`}
+                target="_blank" rel="noreferrer"
+                className="flex items-center gap-1.5 text-4xs font-black text-blue-400 hover:text-blue-300 uppercase tracking-wider shrink-0"
+              >
+                <FileDown size={12} /> Descargar PDF
+              </a>
+            </div>
             <h2 className="text-base font-black text-white mt-2">{meeting.titulo}</h2>
             <p className="text-4xs text-slate-500 font-mono mt-1">{meeting.finca_nombre}</p>
             <div className="mt-4 bg-slate-950 border border-slate-900 rounded-xl p-4 text-3xs text-slate-300 whitespace-pre-line leading-relaxed max-h-[45vh] overflow-y-auto custom-scrollbar">

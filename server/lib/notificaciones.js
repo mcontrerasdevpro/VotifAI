@@ -7,7 +7,7 @@
 // Sin N8N_WEBHOOK_URL configurada, se simula igual que antes (solo log en
 // consola) para no romper nada mientras no haya flujo de n8n montado.
 
-export async function notificar({ tipo, despacho, finca, mensaje, destinatarios }) {
+export async function notificar({ tipo, despacho, finca, mensaje, destinatarios, archivo_adjunto }) {
   const webhookUrl = process.env.N8N_WEBHOOK_URL;
 
   if (!webhookUrl) {
@@ -15,10 +15,11 @@ export async function notificar({ tipo, despacho, finca, mensaje, destinatarios 
     destinatarios.forEach((d) => {
       console.log(`   ➔ ${d.nombre} (${d.propiedad || 's/p'}) — tel: ${d.telefono || '—'} · email: ${d.email || '—'}`);
     });
+    if (archivo_adjunto) console.log(`   📎 Adjunto: ${archivo_adjunto.nombre}`);
     return { enviado: true, real: false };
   }
 
-  const payload = { tipo, despacho, finca, mensaje, destinatarios, disparado_en: new Date().toISOString() };
+  const payload = { tipo, despacho, finca, mensaje, destinatarios, archivo_adjunto: archivo_adjunto || null, disparado_en: new Date().toISOString() };
 
   const respuesta = await fetch(webhookUrl, {
     method: 'POST',
