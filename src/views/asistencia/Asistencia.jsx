@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Mic, Square, CheckCircle2, RefreshCw, AlertTriangle, UserCheck, Mail, Lock, KeyRound, LogOut, ArrowLeft } from 'lucide-react';
 import VotacionVecino from '../../components/VotacionVecino.jsx';
 import HistorialVecino from '../../components/HistorialVecino.jsx';
+import PreferenciaNotificacion from '../../components/PreferenciaNotificacion.jsx';
 import Brand from '../../components/Brand.jsx';
 
 /**
@@ -397,6 +398,11 @@ export default function Asistencia() {
                     <LogOut size={11} /> Salir
                   </button>
                 </div>
+
+                <PreferenciaNotificacion
+                  sesion={sesion}
+                  onActualizado={(canal) => setSesion((actual) => ({ ...actual, canal_notificacion: canal }))}
+                />
 
                 <VotacionVecino entityId={entityId} />
 

@@ -192,7 +192,7 @@ router.post('/meetings/:meetingId/convocar', requireAuth, async (req, res) => {
     const junta = meetingResultado.rows[0];
 
     const censoResultado = await query(
-      `SELECT id, nombre_completo, propiedad_detalle, telefono, email FROM propietarios WHERE entity_id = $1::uuid`,
+      `SELECT id, nombre_completo, propiedad_detalle, telefono, email, canal_notificacion FROM propietarios WHERE entity_id = $1::uuid`,
       [junta.entity_id]
     );
     const despachoResultado = await query('SELECT nombre_entidad FROM tenants WHERE id = $1', [req.tenantId]);
@@ -205,7 +205,7 @@ router.post('/meetings/:meetingId/convocar', requireAuth, async (req, res) => {
         titulo: `Convocatoria — ${junta.titulo}`,
         cuerpo: `Se convoca junta ${junta.tipo} "${junta.titulo}"${junta.fecha_hora_prevista ? ` para el ${new Date(junta.fecha_hora_prevista).toLocaleString('es-ES')}` : ''}. Consulta el orden del día en VotifAI.`
       },
-      destinatarios: censoResultado.rows.map((p) => ({ nombre: p.nombre_completo, propiedad: p.propiedad_detalle, telefono: p.telefono, email: p.email }))
+      destinatarios: censoResultado.rows.map((p) => ({ nombre: p.nombre_completo, propiedad: p.propiedad_detalle, telefono: p.telefono, email: p.email, canal_preferido: p.canal_notificacion }))
     });
 
     await query('BEGIN');
@@ -333,7 +333,7 @@ router.post('/meetings/:meetingId/cerrar', requireAuth, async (req, res) => {
     const junta = meetingResultado.rows[0];
 
     const censoResultado = await query(
-      `SELECT id, nombre_completo, propiedad_detalle, telefono, email FROM propietarios WHERE entity_id = $1::uuid`,
+      `SELECT id, nombre_completo, propiedad_detalle, telefono, email, canal_notificacion FROM propietarios WHERE entity_id = $1::uuid`,
       [junta.entity_id]
     );
     const despachoResultado = await query(
@@ -368,7 +368,7 @@ router.post('/meetings/:meetingId/cerrar', requireAuth, async (req, res) => {
         titulo: `Acta de la junta — ${junta.titulo}`,
         cuerpo: `Se adjunta el acta de la junta ${junta.tipo === 'extraordinaria' ? 'extraordinaria' : 'ordinaria'} "${junta.titulo}", ya clausurada. También puede consultarla desde su cuenta en VotifAI.`
       },
-      destinatarios: censoResultado.rows.map((p) => ({ nombre: p.nombre_completo, propiedad: p.propiedad_detalle, telefono: p.telefono, email: p.email })),
+      destinatarios: censoResultado.rows.map((p) => ({ nombre: p.nombre_completo, propiedad: p.propiedad_detalle, telefono: p.telefono, email: p.email, canal_preferido: p.canal_notificacion })),
       ...(actaPdfBase64 ? { archivo_adjunto: { nombre: nombreArchivoPdf, tipo: 'application/pdf', contenido_base64: actaPdfBase64 } } : {})
     });
 

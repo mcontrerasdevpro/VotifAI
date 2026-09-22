@@ -93,7 +93,7 @@ router.post('/vecinos/registro', async (req, res) => {
 
     const passwordHash = await bcrypt.hash(password, 10);
     const actualizado = await query(
-      `UPDATE propietarios SET email = $1, password_hash = $2 WHERE id = $3 RETURNING id, entity_id, nombre_completo, propiedad_detalle`,
+      `UPDATE propietarios SET email = $1, password_hash = $2 WHERE id = $3 RETURNING id, entity_id, nombre_completo, propiedad_detalle, telefono, email, canal_notificacion`,
       [email, passwordHash, propietario_id]
     );
 
@@ -116,7 +116,7 @@ router.post('/vecinos/login', async (req, res) => {
 
   try {
     const resultado = await query(
-      `SELECT id, entity_id, nombre_completo, propiedad_detalle, password_hash FROM propietarios WHERE email = $1`,
+      `SELECT id, entity_id, nombre_completo, propiedad_detalle, telefono, email, canal_notificacion, password_hash FROM propietarios WHERE email = $1`,
       [email]
     );
     if (resultado.rows.length === 0 || !resultado.rows[0].password_hash) {
@@ -133,7 +133,7 @@ router.post('/vecinos/login', async (req, res) => {
     res.status(200).json({
       success: true,
       mensaje: 'Sesión iniciada correctamente.',
-      vecino: { id: vecino.id, entity_id: vecino.entity_id, nombre_completo: vecino.nombre_completo, propiedad_detalle: vecino.propiedad_detalle }
+      vecino: { id: vecino.id, entity_id: vecino.entity_id, nombre_completo: vecino.nombre_completo, propiedad_detalle: vecino.propiedad_detalle, telefono: vecino.telefono, email: vecino.email, canal_notificacion: vecino.canal_notificacion }
     });
   } catch (err) {
     console.error('Error al iniciar sesión de vecino:', err.message);
@@ -215,7 +215,8 @@ router.post('/vecinos/logout', (req, res) => {
 router.get('/vecinos/sesion', requireVoterAuth, async (req, res) => {
   try {
     const resultado = await query(
-      `SELECT id, entity_id, nombre_completo, propiedad_detalle FROM propietarios WHERE id = $1::uuid`,
+      `SELECT id, entity_id, nombre_completo, propiedad_detalle, telefono, email, canal_notificacion
+       FROM propietarios WHERE id = $1::uuid`,
       [req.propietarioId]
     );
     if (resultado.rows.length === 0) {
@@ -225,6 +226,28 @@ router.get('/vecinos/sesion', requireVoterAuth, async (req, res) => {
   } catch (err) {
     console.error('Error al recuperar la sesión de vecino:', err.message);
     res.status(500).json({ error: `Fallo al recuperar la sesión: ${err.message}` });
+  }
+});
+
+// Por qué canal quiere el vecino sus notificaciones (convocatorias, actas).
+// Se guarda sobre su propia fila en propietarios — nunca se toca la de
+// otro propietario, req.propietarioId viene siempre del JWT de sesión.
+router.put('/vecinos/preferencia-notificacion', requireVoterAuth, async (req, res) => {
+  const canal = String(req.body.canal_notificacion || '').trim();
+
+  if (!['email', 'whatsapp', 'ambos'].includes(canal)) {
+    return res.status(400).json({ error: 'El canal debe ser "email", "whatsapp" o "ambos".' });
+  }
+
+  try {
+    await query(
+      `UPDATE propietarios SET canal_notificacion = $1 WHERE id = $2::uuid`,
+      [canal, req.propietarioId]
+    );
+    res.status(200).json({ success: true, canal_notificacion: canal });
+  } catch (err) {
+    console.error('Error al guardar la preferencia de notificación:', err.message);
+    res.status(500).json({ error: `Fallo al guardar la preferencia: ${err.message}` });
   }
 });
 
