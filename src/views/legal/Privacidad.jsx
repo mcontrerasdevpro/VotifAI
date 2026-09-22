@@ -11,8 +11,9 @@ export default function Privacidad() {
 
       <h2>Responsable del tratamiento</h2>
       <p>
-        <strong>[RAZÓN SOCIAL PENDIENTE DE COMPLETAR]</strong>, con NIF <strong>[NIF PENDIENTE]</strong>, contacto:{' '}
-        <strong>[EMAIL DE CONTACTO PENDIENTE]</strong>.
+        <strong>Miguel Contreras Gallardo</strong> (nombre comercial <strong>NexuraIA</strong>), con NIF{' '}
+        <strong>26035618D</strong> y domicilio en <strong>Calle Guanabacoa 2A Bajo, 28907 Getafe, Madrid</strong>,
+        contacto: <strong>contacto@nexuraia.com</strong>.
       </p>
 
       <h2>Datos que tratamos</h2>
@@ -48,7 +49,7 @@ export default function Privacidad() {
       <h2>Derechos de las personas interesadas</h2>
       <p>
         Puede ejercer sus derechos de acceso, rectificación, supresión, oposición, limitación y portabilidad
-        escribiendo a <strong>[EMAIL DE CONTACTO PENDIENTE]</strong>.
+        escribiendo a <strong>contacto@nexuraia.com</strong>.
       </p>
     </LegalLayout>
   );

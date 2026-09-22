@@ -7,9 +7,11 @@ export default function AvisoLegal() {
       <p>
         En cumplimiento de la Ley 34/2002, de 11 de julio, de Servicios de la Sociedad de la Información y
         Comercio Electrónico (LSSI-CE), se informa de los siguientes datos: VotifAI es un servicio operado por{' '}
-        <strong>[RAZÓN SOCIAL PENDIENTE DE COMPLETAR]</strong>, con NIF <strong>[NIF PENDIENTE]</strong> y
-        domicilio en <strong>[DIRECCIÓN PENDIENTE]</strong>. Para cualquier consulta, puede contactar en{' '}
-        <strong>[EMAIL DE CONTACTO PENDIENTE]</strong>.
+        <strong>Miguel Contreras Gallardo</strong>, autónomo bajo el nombre comercial{' '}
+        <strong>NexuraIA</strong> (<a href="https://www.nexuraia.com" target="_blank" rel="noreferrer">www.nexuraia.com</a>),
+        con NIF <strong>26035618D</strong> y domicilio en{' '}
+        <strong>Calle Guanabacoa 2A Bajo, 28907 Getafe, Madrid</strong>. Para cualquier consulta, puede contactar en{' '}
+        <strong>contacto@nexuraia.com</strong>.
       </p>
 
       <h2>Objeto</h2>

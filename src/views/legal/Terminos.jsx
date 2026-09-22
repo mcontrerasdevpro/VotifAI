@@ -45,7 +45,7 @@ export default function Terminos() {
 
       <h2>Contacto</h2>
       <p>
-        Para cualquier consulta sobre estos términos: <strong>[EMAIL DE CONTACTO PENDIENTE]</strong>.
+        Para cualquier consulta sobre estos términos: <strong>contacto@nexuraia.com</strong>.
       </p>
     </LegalLayout>
   );
