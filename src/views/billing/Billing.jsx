@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Check, CreditCard, LoaderCircle } from 'lucide-react';
+import { ArrowLeft, Check, CreditCard, LoaderCircle, X } from 'lucide-react';
 import { LEMA_PLAN, caracteristicasPlan } from '../../lib/planes.js';
 
 export default function Billing() {
@@ -39,7 +39,7 @@ export default function Billing() {
     // (sin pasar por Stripe Checkout), así que se pide confirmación antes.
     if (estado?.suscripcionPagada) {
       const nombre = planes.find((p) => p.id === plan)?.nombre || plan;
-      if (!window.confirm(`¿Cambiar tu suscripción al plan ${nombre}? La diferencia se prorrateará en tu próxima factura.`)) return;
+      if (!window.confirm(`¿Cambiar tu suscripción al plan ${nombre}?\n\nSi subes de plan, se cobrará ahora en tu tarjeta la parte proporcional de lo que queda de mes. Si bajas, la diferencia quedará como saldo a favor en tu próxima factura.`)) return;
     }
     setProcesando(plan);
     setError('');
@@ -109,7 +109,7 @@ export default function Billing() {
             <div className="flex items-center justify-between"><p className="text-xs font-black uppercase tracking-wider text-cyan-300">{plan.nombre}</p>{actual && <span className="rounded-full bg-cyan-300/15 px-2 py-1 text-[10px] font-bold text-cyan-200">Actual</span>}</div>
             <p className="mt-4 text-2xl font-black text-white">{plan.precioDesde === null ? 'A medida' : <>{plan.precioDesde} €/mes <span className="text-sm font-bold text-slate-400">+ IVA</span></>}</p>
             <p className="mt-5 text-xl font-black text-white">{LEMA_PLAN[plan.id]}</p>
-            <ul className="mt-5 flex-grow space-y-3 text-sm text-slate-400">{caracteristicasPlan(plan).map((linea) => <li key={linea} className="flex gap-2"><Check size={15} className="mt-0.5 shrink-0 text-emerald-300" />{linea}</li>)}</ul>
+            <ul className="mt-5 flex-grow space-y-3 text-sm text-slate-400">{caracteristicasPlan(plan).map(({ texto, incluido }) => <li key={texto} className={`flex gap-2 ${incluido ? '' : 'text-slate-600'}`}>{incluido ? <Check size={15} className="mt-0.5 shrink-0 text-emerald-300" /> : <X size={15} className="mt-0.5 shrink-0 text-slate-600" />}{incluido ? texto : `Sin ${texto.charAt(0).toLowerCase()}${texto.slice(1)}`}</li>)}</ul>
             {plan.id === 'enterprise' ? <a href="mailto:contacto@nexuraia.com?subject=VotifAI%20Enterprise" className="mt-7 flex items-center justify-center gap-2 rounded-xl border border-cyan-300/30 px-4 py-3 text-sm font-bold text-cyan-200 transition hover:bg-cyan-300/10">Contactar</a> : <button type="button" disabled={actual || !plan.disponibleParaCheckout || procesando === plan.id} onClick={() => iniciarCheckout(plan.id)} className="mt-7 flex items-center justify-center gap-2 rounded-xl border border-cyan-300/30 px-4 py-3 text-sm font-bold text-cyan-200 transition hover:bg-cyan-300/10 disabled:cursor-not-allowed disabled:opacity-50">{procesando === plan.id && <LoaderCircle size={15} className="animate-spin" />}{actual ? 'Plan actual' : plan.disponibleParaCheckout ? (estado?.suscripcionPagada ? 'Cambiar a este plan' : 'Elegir plan') : 'Próximamente'}</button>}
           </article>;
         })}</div>}

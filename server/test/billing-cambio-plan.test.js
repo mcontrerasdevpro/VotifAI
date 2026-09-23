@@ -72,6 +72,7 @@ test('con suscripción activa, cambiar de plan actualiza la existente y no abre 
   assert.equal(id, 'sub_1');
   assert.deepEqual(datos.items, [{ id: 'si_1', price: 'price_profesional' }]);
   assert.equal(datos.metadata.plan, 'profesional');
+  assert.equal(datos.proration_behavior, 'always_invoice');
 });
 
 test('elegir el mismo plan que ya se paga da 409', async () => {

@@ -44,8 +44,8 @@ const urlBase = (req) => `${req.protocol}://${req.get('host')}`;
 
 // Un despacho con suscripción ya en marcha NO pasa por un checkout nuevo:
 // eso crearía una segunda suscripción y Stripe le cobraría los dos planes
-// cada mes. Se cambia el precio de la suscripción existente (prorrateando
-// lo ya pagado) y, si no tiene ninguna viva, se abre un checkout normal.
+// cada mes. Se cambia el precio de la suscripción existente y, si no tiene
+// ninguna viva, se abre un checkout normal.
 router.post('/billing/checkout', requireAuth, async (req, res) => {
   const plan = String(req.body.plan || '').trim().toLowerCase();
   const priceEnv = PRICE_ENV_BY_PLAN[plan];
@@ -87,7 +87,12 @@ router.post('/billing/checkout', requireAuth, async (req, res) => {
 
         await stripe.subscriptions.update(suscripcion.id, {
           items: [{ id: suscripcion.items.data[0].id, price: priceId }],
-          proration_behavior: 'create_prorations',
+          // La diferencia se factura y cobra en el acto (en una bajada queda
+          // como saldo a favor). Con 'create_prorations' se dejaba para la
+          // siguiente factura: el despacho disfrutaba el plan superior un
+          // mes sin pagarlo y, si cancelaba antes de renovar, Stripe no
+          // llegaba a cobrar esa diferencia nunca.
+          proration_behavior: 'always_invoice',
           metadata: { tenantId: tenant.id, plan }
         });
         // El webhook customer.subscription.updated lo confirmará igualmente;

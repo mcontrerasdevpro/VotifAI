@@ -193,7 +193,7 @@ export default function Welcome() {
           return <div key={plan.id} className={`flex flex-col rounded-2xl border p-5 ${destacado ? 'border-cyan-300/30 bg-cyan-300/[0.08] shadow-lg shadow-cyan-950/30' : 'border-white/10 bg-white/[0.04]'}`}>
             <p className={`text-xs font-bold ${destacado ? 'text-cyan-200' : 'text-cyan-300'}`}>{plan.nombre} <span className="font-medium text-slate-500">· {LEMA_PLAN[plan.id]}</span></p>
             <p className="mt-3 text-2xl font-black text-white">{plan.precioDesde === null ? 'A medida' : <>{plan.precioDesde} €/mes <span className="text-sm font-bold text-slate-400">+ IVA</span></>}</p>
-            <ul className="mt-4 flex-grow space-y-2 text-sm text-slate-400">{caracteristicasPlan(plan).map((linea) => <li key={linea} className="flex gap-2"><Check size={15} className="mt-0.5 shrink-0 text-emerald-300" />{linea}</li>)}</ul>
+            <ul className="mt-4 flex-grow space-y-2 text-sm text-slate-400">{caracteristicasPlan(plan).map(({ texto, incluido }) => <li key={texto} className={`flex gap-2 ${incluido ? '' : 'text-slate-600'}`}>{incluido ? <Check size={15} className="mt-0.5 shrink-0 text-emerald-300" /> : <X size={15} className="mt-0.5 shrink-0 text-slate-600" />}{incluido ? texto : `Sin ${texto.charAt(0).toLowerCase()}${texto.slice(1)}`}</li>)}</ul>
             <button type="button" onClick={() => goTo(plan.id === 'enterprise' ? '/demo' : `/register?plan=${plan.id}`)} className="mt-5 rounded-xl border border-cyan-300/30 px-4 py-2.5 text-sm font-bold text-cyan-200 transition hover:bg-cyan-300/10">{plan.id === 'enterprise' ? 'Hablemos' : 'Probar 15 días gratis'}</button>
           </div>;
         })}</div></div></div></section>
