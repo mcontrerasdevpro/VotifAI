@@ -47,6 +47,34 @@ export default function Cuotas() {
   const [pagoImporte, setPagoImporte] = useState('');
   const [pagoMetodo, setPagoMetodo] = useState('transferencia');
   const [pagoReferencia, setPagoReferencia] = useState('');
+  const [cobrosCuota, setCobrosCuota] = useState([]);
+
+  // Cobros ya registrados de la cuota abierta, para poder anular uno
+  // registrado por error (también retira su ingreso de la contabilidad).
+  const abrirCobros = async (c) => {
+    setCuotaPago(c);
+    setPagoImporte(Math.max(0, parseFloat(c.importe) - parseFloat(c.total_pagado)).toFixed(2));
+    setCobrosCuota([]);
+    try {
+      const res = await fetch(`/api/cuotas/${c.id}/pagos`, { credentials: 'include' });
+      const data = await res.json();
+      if (res.ok) setCobrosCuota(data.pagos || []);
+    } catch (err) {
+      console.error('Fallo al cargar los cobros:', err);
+    }
+  };
+
+  const handleAnularCobro = async (pago) => {
+    if (!window.confirm(`¿Anular el cobro de ${parseFloat(pago.importe).toFixed(2)} € del ${new Date(pago.fecha_pago).toLocaleDateString('es-ES')}? También se retirará su ingreso de la contabilidad.`)) return;
+    const res = await fetch(`/api/cuotas/pagos/${pago.id}`, { method: 'DELETE', credentials: 'include' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(data.error || 'No se pudo anular el cobro.');
+      return;
+    }
+    setCuotaPago(null);
+    await refrescar();
+  };
 
   const refrescar = useCallback(async () => {
     try {
@@ -177,10 +205,10 @@ export default function Cuotas() {
     { key: 'estado', header: 'Estado', render: (c) => <StatusBadge light tone={TONOS_ESTADO[c.estado] || 'neutral'}>{ETIQUETAS_ESTADO[c.estado] || c.estado}</StatusBadge> },
     { key: 'acciones', header: 'Acciones', align: 'center', render: (c) => (
       <div className="flex items-center justify-center gap-2">
-        {(c.estado === 'pendiente' || c.estado === 'parcial' || c.estado === 'impagada') && (
-          <button onClick={() => { setCuotaPago(c); setPagoImporte((parseFloat(c.importe) - parseFloat(c.total_pagado)).toFixed(2)); }} className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-emerald-400 hover:text-emerald-300" title="Registrar pago">
-          <CreditCard size={12} />
-        </button>
+        {(c.estado === 'pendiente' || c.estado === 'parcial' || c.estado === 'impagada' || parseFloat(c.total_pagado) > 0) && (
+          <button onClick={() => abrirCobros(c)} className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-emerald-400 hover:text-emerald-300" title={c.estado === 'pagada' ? 'Ver cobros' : 'Registrar pago'}>
+            <CreditCard size={12} />
+          </button>
         )}
         <button onClick={() => handleEliminarCuota(c.id)} className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-rose-400 hover:text-rose-300" title="Eliminar">
           <Trash2 size={12} />
@@ -276,13 +304,28 @@ export default function Cuotas() {
         footer={
           <>
             <button type="button" onClick={() => setCuotaPago(null)} className="flex-1 bg-slate-950 text-slate-400 py-2.5 rounded-xl text-xs font-bold border border-slate-900">Cancelar</button>
-            <button type="submit" form="form-registrar-pago" disabled={guardandoPago} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50">
-              {guardandoPago ? 'Registrando...' : 'Registrar Pago'}
-            </button>
+            {cuotaPago?.estado !== 'pagada' && (
+              <button type="submit" form="form-registrar-pago" disabled={guardandoPago} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50">
+                {guardandoPago ? 'Registrando...' : 'Registrar Pago'}
+              </button>
+            )}
           </>
         }
       >
+        {cobrosCuota.length > 0 && (
+          <div className="mb-4 space-y-1.5">
+            <p className="text-5xs font-black uppercase tracking-widest text-slate-400">Cobros registrados</p>
+            {cobrosCuota.map((pg) => (
+              <div key={pg.id} className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 px-3 py-2 text-3xs text-slate-300">
+                <span>{new Date(pg.fecha_pago).toLocaleDateString('es-ES')} · {parseFloat(pg.importe).toFixed(2)} € · {pg.metodo_pago || '—'}{pg.referencia ? ` · ${pg.referencia}` : ''}</span>
+                <button type="button" onClick={() => handleAnularCobro(pg)} className="text-[10px] font-bold uppercase tracking-wider text-rose-400 hover:text-rose-300">Anular</button>
+              </div>
+            ))}
+          </div>
+        )}
+        {cuotaPago?.estado !== 'pagada' && (
         <form id="form-registrar-pago" onSubmit={handleRegistrarPago} className="space-y-3">
+          <p className="text-4xs text-slate-500">El cobro se anotará automáticamente como ingreso en la contabilidad de la comunidad.</p>
           <Field label="Importe (€)" type="number" step="0.01" min="0.01" required value={pagoImporte} onChange={(e) => setPagoImporte(e.target.value)} />
           <Field label="Método de pago" as="select" value={pagoMetodo} onChange={(e) => setPagoMetodo(e.target.value)}>
             <option value="transferencia">Transferencia</option>
@@ -293,6 +336,7 @@ export default function Cuotas() {
           </Field>
           <Field label="Referencia (opcional)" value={pagoReferencia} onChange={(e) => setPagoReferencia(e.target.value)} placeholder="Ej: Nº de transferencia" />
         </form>
+        )}
       </Modal>
     </div>
   );

@@ -209,17 +209,50 @@ router.post('/cuotas/:id/pagos', requireAuth, async (req, res) => {
   }
 
   try {
-    const cuota = await query('SELECT propietario_id FROM cuotas WHERE id = $1', [cuotaId]);
+    const cuota = await query(
+      `SELECT c.propietario_id, c.entity_id, c.concepto, c.periodo, c.tipo, c.importe, c.estado, p.propiedad_detalle, p.nombre_completo,
+              COALESCE((SELECT SUM(importe) FROM pagos WHERE cuota_id = c.id), 0) AS pagado
+       FROM cuotas c JOIN propietarios p ON p.id = c.propietario_id WHERE c.id = $1`,
+      [cuotaId]
+    );
     if (cuota.rows.length === 0) {
       return res.status(404).json({ error: 'Cuota no encontrada.' });
     }
-    const propietarioId = cuota.rows[0].propietario_id;
+    const c = cuota.rows[0];
+    const propietarioId = c.propietario_id;
 
-    await query(
-      `INSERT INTO pagos (cuota_id, importe, metodo_pago, fecha_pago, referencia, notas)
-       VALUES ($1, $2, $3, COALESCE($4, CURRENT_DATE), $5, $6)`,
-      [cuotaId, importe, metodo_pago || null, fecha_pago || null, referencia || null, notas || null]
-    );
+    if (c.estado === 'anulada') {
+      return res.status(409).json({ error: 'Esta cuota está anulada y no admite cobros.' });
+    }
+    // Un cobro mayor que lo pendiente inflaría los ingresos de la
+    // contabilidad con dinero que la comunidad no debía cobrar.
+    const pendiente = Math.round((Number(c.importe) - Number(c.pagado)) * 100) / 100;
+    if (Number(importe) > pendiente + 0.001) {
+      return res.status(400).json({ error: `El pago supera lo pendiente de esta cuota (${pendiente.toFixed(2)} €).` });
+    }
+
+    // Pago e ingreso en contabilidad van juntos, o ninguno de los dos.
+    await withTransaction(async (tx) => {
+      const pago = await tx(
+        `INSERT INTO pagos (cuota_id, importe, metodo_pago, fecha_pago, referencia, notas)
+         VALUES ($1, $2, $3, COALESCE($4, CURRENT_DATE), $5, $6)
+         RETURNING id, fecha_pago`,
+        [cuotaId, importe, metodo_pago || null, fecha_pago || null, referencia || null, notas || null]
+      );
+      await tx(
+        `INSERT INTO movimientos_contables (entity_id, tipo, concepto, categoria, importe, fecha, notas, pago_id, origen)
+         VALUES ($1, 'ingreso', $2, $3, $4, $5, $6, $7, 'cuota')`,
+        [
+          c.entity_id,
+          `Cobro ${c.concepto}${c.periodo ? ` (${c.periodo})` : ''} — ${c.propiedad_detalle || c.nombre_completo}`,
+          c.tipo === 'derrama' ? 'Derramas' : 'Cuotas',
+          importe,
+          pago.rows[0].fecha_pago,
+          referencia ? `Ref. ${referencia}` : null,
+          pago.rows[0].id
+        ]
+      );
+    });
 
     const nuevoEstado = await recalcularEstadoCuota(cuotaId);
     const esMoroso = await recalcularMorosidad(propietarioId);
@@ -228,6 +261,32 @@ router.post('/cuotas/:id/pagos', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('Error al registrar pago:', err.message);
     res.status(500).json({ error: `Fallo al registrar el pago: ${err.message}` });
+  }
+});
+
+// Anular un cobro registrado por error: quita el pago y, en cascada, su
+// ingreso en contabilidad, y recalcula el estado de la cuota y la morosidad.
+router.delete('/cuotas/pagos/:pagoId', requireAuth, async (req, res) => {
+  const pagoId = String(req.params.pagoId).trim();
+
+  try {
+    const pago = await query(
+      `SELECT pg.cuota_id, c.propietario_id FROM pagos pg
+       JOIN cuotas c ON c.id = pg.cuota_id
+       JOIN entities e ON e.id = c.entity_id
+       WHERE pg.id = $1::uuid AND e.tenant_id = $2`,
+      [pagoId, req.tenantId]
+    );
+    if (pago.rows.length === 0) return res.status(404).json({ error: 'Pago no encontrado.' });
+    const { cuota_id: cuotaId, propietario_id: propietarioId } = pago.rows[0];
+
+    await query('DELETE FROM pagos WHERE id = $1::uuid', [pagoId]);
+    const nuevoEstado = await recalcularEstadoCuota(cuotaId);
+    const esMoroso = await recalcularMorosidad(propietarioId);
+    res.json({ success: true, mensaje: 'Cobro anulado. También se ha retirado su ingreso de la contabilidad.', nuevoEstado, esMoroso });
+  } catch (err) {
+    console.error('Error al anular el pago:', err.message);
+    res.status(500).json({ error: 'No se pudo anular el cobro.' });
   }
 });
 

@@ -17,7 +17,7 @@ router.get('/movimientos/lista/:entityId', requireAuth, async (req, res) => {
 
   try {
     const resultado = await query(
-      `SELECT id, tipo, concepto, categoria, importe, fecha, notas, creado_en
+      `SELECT id, tipo, concepto, categoria, importe, fecha, notas, origen, pago_id, creado_en
        FROM movimientos_contables WHERE entity_id = $1::uuid ORDER BY fecha DESC, creado_en DESC`,
       [entityId]
     );
@@ -65,6 +65,13 @@ router.delete('/movimientos/delete/:id', requireAuth, async (req, res) => {
   }
 
   try {
+    // Los ingresos que vienen de cobrar una cuota van ligados al pago: se
+    // anulan desde Cuotas (anulando el cobro), no sueltos, para que cuotas y
+    // contabilidad no se descuadren.
+    const origen = await query('SELECT origen FROM movimientos_contables WHERE id = $1', [id]);
+    if (origen.rows[0]?.origen === 'cuota') {
+      return res.status(409).json({ error: 'Este ingreso viene del cobro de una cuota. Para retirarlo, anula el cobro desde Cuotas.' });
+    }
     const resultado = await query('DELETE FROM movimientos_contables WHERE id = $1', [id]);
     if (resultado.rowCount > 0) {
       res.status(200).json({ success: true, mensaje: 'Movimiento eliminado correctamente.' });

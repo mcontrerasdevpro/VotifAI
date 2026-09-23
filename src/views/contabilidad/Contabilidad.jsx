@@ -207,6 +207,7 @@ export default function Contabilidad() {
       <div>
         <p className="font-bold text-slate-900">{m.concepto}</p>
         {m.categoria && <p className="text-slate-500 mt-0.5">{m.categoria}</p>}
+        {m.origen === 'cuota' && <p className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-600">Automático · cobro de cuota</p>}
       </div>
     ) },
     { key: 'tipo', header: 'Tipo', render: (m) => <StatusBadge light tone={m.tipo === 'ingreso' ? 'success' : 'danger'}>{m.tipo === 'ingreso' ? 'Ingreso' : 'Gasto'}</StatusBadge> },
@@ -217,9 +218,12 @@ export default function Contabilidad() {
       </span>
     ) },
     { key: 'acciones', header: 'Acciones', align: 'center', render: (m) => (
-      <button onClick={() => handleEliminarMovimiento(m.id)} className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-rose-400 hover:text-rose-300" title="Eliminar">
-        <Trash2 size={12} />
-      </button>
+      // Los ingresos de cuotas se retiran anulando el cobro desde Cuotas.
+      m.origen === 'cuota' ? <span className="text-[10px] text-slate-400" title="Se anula desde Cuotas">—</span> : (
+        <button onClick={() => handleEliminarMovimiento(m.id)} className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-rose-400 hover:text-rose-300" title="Eliminar">
+          <Trash2 size={12} />
+        </button>
+      )
     ) }
   ];
 
