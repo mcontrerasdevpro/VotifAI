@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { Wallet, Plus, CreditCard, Trash2, Users } from 'lucide-react';
+import { Wallet, Plus, CreditCard, Trash2, Users, FileText, FileDown } from 'lucide-react';
 import Card from '../../components/ui/Card.jsx';
 import Modal from '../../components/ui/Modal.jsx';
 import Field from '../../components/ui/Field.jsx';
@@ -48,6 +48,20 @@ export default function Cuotas() {
   const [pagoMetodo, setPagoMetodo] = useState('transferencia');
   const [pagoReferencia, setPagoReferencia] = useState('');
   const [cobrosCuota, setCobrosCuota] = useState([]);
+  const [modalCertificadoAbierto, setModalCertificadoAbierto] = useState(false);
+  const [certPropietario, setCertPropietario] = useState('');
+  const [certFinalidad, setCertFinalidad] = useState('');
+
+  // Certificado de deuda (art. 9.1.e LPH): se abre el PDF en otra pestaña.
+  const abrirCertificado = (e) => {
+    e.preventDefault();
+    if (!certPropietario) return;
+    const finalidad = certFinalidad.trim() ? `?finalidad=${encodeURIComponent(certFinalidad.trim())}` : '';
+    window.open(`/api/cuotas/certificado-deuda/${certPropietario}${finalidad}`, '_blank', 'noopener');
+    setModalCertificadoAbierto(false);
+    setCertPropietario('');
+    setCertFinalidad('');
+  };
 
   // Cobros ya registrados de la cuota abierta, para poder anular uno
   // registrado por error (también retira su ingreso de la contabilidad).
@@ -224,6 +238,9 @@ export default function Cuotas() {
           <Wallet className="text-blue-500" size={20} /> Cuotas y Morosidad
         </h1>
         <div className="flex gap-2">
+          <button onClick={() => setModalCertificadoAbierto(true)} className="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 text-5xs font-black uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5">
+            <FileText size={12} /> Certificado de deuda
+          </button>
           <button onClick={() => setModalCuotaAbierto(true)} className="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 text-5xs font-black uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5">
             <Plus size={12} /> Cuota individual
           </button>
@@ -294,6 +311,30 @@ export default function Cuotas() {
         </form>
       </Modal>
 
+      {/* MODAL: CERTIFICADO DE DEUDA */}
+      <Modal
+        open={modalCertificadoAbierto}
+        onClose={() => setModalCertificadoAbierto(false)}
+        icon={FileText}
+        title="Certificado de deuda"
+        subtitle="Art. 9.1.e LPH — el que se exige en la venta de un piso o local"
+        footer={
+          <>
+            <button type="button" onClick={() => setModalCertificadoAbierto(false)} className="flex-1 bg-slate-950 text-slate-400 py-2.5 rounded-xl text-xs font-bold border border-slate-900">Cancelar</button>
+            <button type="submit" form="form-certificado" className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-xl text-xs font-bold transition-all">Generar certificado</button>
+          </>
+        }
+      >
+        <form id="form-certificado" onSubmit={abrirCertificado} className="space-y-3">
+          <Field label="Propietario" as="select" required value={certPropietario} onChange={(e) => setCertPropietario(e.target.value)}>
+            <option value="">-- Selecciona un propietario --</option>
+            {propietarios.map((p) => <option key={p.id} value={p.id}>{p.propiedad_detalle} — {p.nombre_completo}</option>)}
+          </Field>
+          <Field label="Finalidad (opcional)" value={certFinalidad} onChange={(e) => setCertFinalidad(e.target.value)} placeholder="Ej: la compraventa de la vivienda 2ºB" />
+          <p className="text-4xs text-slate-500">Recoge las deudas vencidas (o que está al corriente) y, a título informativo, las cuotas emitidas aún no vencidas. Lleva firma del secretario-administrador y el visto bueno del presidente de la finca.</p>
+        </form>
+      </Modal>
+
       {/* MODAL: REGISTRAR PAGO */}
       <Modal
         open={!!cuotaPago}
@@ -318,7 +359,12 @@ export default function Cuotas() {
             {cobrosCuota.map((pg) => (
               <div key={pg.id} className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 px-3 py-2 text-3xs text-slate-300">
                 <span>{new Date(pg.fecha_pago).toLocaleDateString('es-ES')} · {parseFloat(pg.importe).toFixed(2)} € · {pg.metodo_pago || '—'}{pg.referencia ? ` · ${pg.referencia}` : ''}</span>
-                <button type="button" onClick={() => handleAnularCobro(pg)} className="text-[10px] font-bold uppercase tracking-wider text-rose-400 hover:text-rose-300">Anular</button>
+                <span className="flex shrink-0 items-center gap-3">
+                  <a href={`/api/cuotas/pagos/${pg.id}/recibo`} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-blue-400 hover:text-blue-300">
+                    <FileDown size={11} /> Recibo
+                  </a>
+                  <button type="button" onClick={() => handleAnularCobro(pg)} className="text-[10px] font-bold uppercase tracking-wider text-rose-400 hover:text-rose-300">Anular</button>
+                </span>
               </div>
             ))}
           </div>

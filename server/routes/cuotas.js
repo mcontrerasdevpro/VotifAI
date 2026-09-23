@@ -1,8 +1,9 @@
 import { Router } from 'express';
 import { query, withTransaction } from '../db.js';
-import { requireAuth, entityBelongsToTenant, propietarioBelongsToTenant, filaBelongsToTenant } from '../middleware/auth.js';
+import { requireAuth, requireVoterAuth, entityBelongsToTenant, propietarioBelongsToTenant, filaBelongsToTenant } from '../middleware/auth.js';
 import { marcarVencidas, recalcularMorosidad } from '../lib/morosidad.js';
 import { repartirImporte, generarPeriodos, MESES_POR_FRECUENCIA } from '../lib/reparto.js';
+import { generarReciboPdf, generarCertificadoDeudaPdf } from '../lib/pdfDocumentos.js';
 
 const router = Router();
 
@@ -287,6 +288,146 @@ router.delete('/cuotas/pagos/:pagoId', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('Error al anular el pago:', err.message);
     res.status(500).json({ error: 'No se pudo anular el cobro.' });
+  }
+});
+
+// =========================================================================
+// 🧾 DOCUMENTOS — recibo de un cobro y certificado de deuda (art. 9.1.e
+// LPH), en PDF con el membrete del despacho. El vecino descarga los
+// recibos de sus propios cobros desde su app.
+// =========================================================================
+
+const nombreArchivo = (t) => t.replace(/[/\\?%*:|"<>]/g, '-');
+
+function enviarPdf(res, buffer, archivo) {
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `inline; filename="${nombreArchivo(archivo)}"`);
+  res.send(buffer);
+}
+
+async function datosDocumento(entityId) {
+  const r = await query(
+    `SELECT e.nombre, e.cif, e.direccion, e.metadatos_legales,
+            t.nombre_entidad, t.cif AS t_cif, t.direccion AS t_direccion, t.telefono, t.email_maestro
+     FROM entities e JOIN tenants t ON t.id = e.tenant_id WHERE e.id = $1::uuid`,
+    [entityId]
+  );
+  const f = r.rows[0] || {};
+  const metadatos = typeof f.metadatos_legales === 'string' ? JSON.parse(f.metadatos_legales || '{}') : (f.metadatos_legales || {});
+  return {
+    despacho: { nombre: f.nombre_entidad, cif: f.t_cif, direccion: f.t_direccion, telefono: f.telefono, email: f.email_maestro },
+    finca: { nombre: f.nombre, cif: f.cif, direccion: f.direccion },
+    presidente: metadatos.presidente || null
+  };
+}
+
+// Pago + cuota + propietario, para el recibo. `condicion` restringe quién
+// puede pedirlo (tenant del despacho o el propio vecino).
+async function datosRecibo(pagoId, condicion, valor) {
+  const r = await query(
+    `SELECT pg.id, pg.importe, pg.metodo_pago, pg.fecha_pago, pg.referencia,
+            c.entity_id, c.concepto, c.periodo, c.importe AS importe_cuota,
+            COALESCE((SELECT SUM(importe) FROM pagos WHERE cuota_id = c.id), 0) AS pagado_total,
+            p.id AS propietario_id, p.nombre_completo, p.propiedad_detalle, p.coeficiente
+     FROM pagos pg
+     JOIN cuotas c ON c.id = pg.cuota_id
+     JOIN propietarios p ON p.id = c.propietario_id
+     JOIN entities e ON e.id = c.entity_id
+     WHERE pg.id = $1::uuid AND ${condicion}`,
+    [pagoId, valor]
+  );
+  return r.rows[0] || null;
+}
+
+async function responderRecibo(res, fila) {
+  const { despacho, finca } = await datosDocumento(fila.entity_id);
+  const referencia = `R-${fila.id.slice(0, 8).toUpperCase()}`;
+  const pdf = await generarReciboPdf({
+    despacho,
+    finca,
+    propietario: { nombre_completo: fila.nombre_completo, propiedad_detalle: fila.propiedad_detalle, coeficiente: fila.coeficiente },
+    cuota: { concepto: fila.concepto, periodo: fila.periodo, importe: fila.importe_cuota, pagado_total: fila.pagado_total },
+    pago: { importe: fila.importe, metodo_pago: fila.metodo_pago, fecha_pago: fila.fecha_pago, referencia: fila.referencia },
+    referencia
+  });
+  enviarPdf(res, pdf, `Recibo ${referencia} - ${fila.propiedad_detalle || fila.nombre_completo}.pdf`);
+}
+
+router.get('/cuotas/pagos/:pagoId/recibo', requireAuth, async (req, res) => {
+  try {
+    const fila = await datosRecibo(String(req.params.pagoId).trim(), 'e.tenant_id = $2', req.tenantId);
+    if (!fila) return res.status(404).json({ error: 'Cobro no encontrado.' });
+    await responderRecibo(res, fila);
+  } catch (err) {
+    console.error('Error al generar el recibo:', err.message);
+    res.status(500).json({ error: 'No se pudo generar el recibo.' });
+  }
+});
+
+router.get('/cuotas/certificado-deuda/:propietarioId', requireAuth, async (req, res) => {
+  const propietarioId = String(req.params.propietarioId).trim();
+  const finalidad = String(req.query.finalidad || '').trim().slice(0, 200);
+
+  if (!(await propietarioBelongsToTenant(propietarioId, req.tenantId))) {
+    return res.status(403).json({ error: 'No autorizado para certificar la deuda de este propietario.' });
+  }
+
+  try {
+    const prop = await query('SELECT id, entity_id, nombre_completo, propiedad_detalle, coeficiente FROM propietarios WHERE id = $1::uuid', [propietarioId]);
+    const propietario = prop.rows[0];
+    // El estado de las cuotas vencidas se recalcula antes de certificar.
+    await marcarVencidas(propietario.entity_id);
+
+    const cuotas = await query(
+      `SELECT c.concepto, c.periodo, c.fecha_vencimiento, c.importe, c.estado,
+              COALESCE((SELECT SUM(importe) FROM pagos WHERE cuota_id = c.id), 0) AS pagado
+       FROM cuotas c WHERE c.propietario_id = $1::uuid AND c.estado IN ('pendiente', 'parcial', 'impagada')
+       ORDER BY c.fecha_vencimiento ASC`,
+      [propietarioId]
+    );
+    const vencidas = cuotas.rows.filter((c) => c.estado === 'impagada');
+    const porVencer = cuotas.rows.filter((c) => c.estado !== 'impagada');
+
+    const { despacho, finca, presidente } = await datosDocumento(propietario.entity_id);
+    const hoy = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const referencia = `C-${hoy}-${propietario.id.slice(0, 6).toUpperCase()}`;
+    const pdf = await generarCertificadoDeudaPdf({ despacho, finca, propietario, vencidas, porVencer, presidente, referencia, finalidad });
+    enviarPdf(res, pdf, `Certificado de deuda ${referencia} - ${propietario.propiedad_detalle || propietario.nombre_completo}.pdf`);
+  } catch (err) {
+    console.error('Error al generar el certificado de deuda:', err.message);
+    res.status(500).json({ error: 'No se pudo generar el certificado.' });
+  }
+});
+
+// Lado vecino: sus cuotas (con lo pagado) y el recibo de cada cobro suyo.
+router.get('/cuotas/vecino/mis-cuotas', requireVoterAuth, async (req, res) => {
+  try {
+    await marcarVencidas(req.voterEntityId);
+    const r = await query(
+      `SELECT c.id, c.concepto, c.periodo, c.tipo, c.importe, c.fecha_vencimiento, c.estado,
+              COALESCE(json_agg(json_build_object('id', pg.id, 'importe', pg.importe, 'fecha_pago', pg.fecha_pago) ORDER BY pg.fecha_pago)
+                       FILTER (WHERE pg.id IS NOT NULL), '[]') AS pagos
+       FROM cuotas c LEFT JOIN pagos pg ON pg.cuota_id = c.id
+       WHERE c.propietario_id = $1::uuid AND c.estado <> 'anulada'
+       GROUP BY c.id
+       ORDER BY c.fecha_vencimiento DESC`,
+      [req.propietarioId]
+    );
+    res.json({ success: true, cuotas: r.rows });
+  } catch (err) {
+    console.error('Error al listar las cuotas del vecino:', err.message);
+    res.status(500).json({ error: 'No se pudieron consultar tus cuotas.' });
+  }
+});
+
+router.get('/cuotas/vecino/pagos/:pagoId/recibo', requireVoterAuth, async (req, res) => {
+  try {
+    const fila = await datosRecibo(String(req.params.pagoId).trim(), 'p.id = $2::uuid', req.propietarioId);
+    if (!fila) return res.status(404).json({ error: 'Recibo no encontrado.' });
+    await responderRecibo(res, fila);
+  } catch (err) {
+    console.error('Error al generar el recibo (vecino):', err.message);
+    res.status(500).json({ error: 'No se pudo generar el recibo.' });
   }
 });
 
