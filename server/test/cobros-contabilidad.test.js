@@ -16,6 +16,8 @@ const MOV_CUOTA = '00000000-0000-0000-0000-0000000000a1';
 const MOV_MANUAL = '00000000-0000-0000-0000-0000000000a2';
 
 let cuota;
+let periodoCerrado; // null = abierto; o { periodo_inicio, periodo_fin }
+let cobrosDeLaCuota;
 const escrituras = [];
 
 const fakeQuery = async (text, params) => {
@@ -29,11 +31,20 @@ const fakeQuery = async (text, params) => {
   // recalcularEstadoCuota / recalcularMorosidad
   if (text.startsWith('SELECT importe, fecha_vencimiento, estado FROM cuotas')) return { rows: [{ importe: cuota.importe, fecha_vencimiento: '2027-03-01', estado: 'pendiente' }] };
   if (text.startsWith('SELECT COALESCE(SUM(importe), 0) AS total FROM pagos')) return { rows: [{ total: '0' }] };
-  if (text.startsWith('UPDATE cuotas SET estado')) return { rows: [], rowCount: 1 };
+  if (text.startsWith('UPDATE cuotas SET estado') && !text.includes("'anulada'")) return { rows: [], rowCount: 1 };
   if (text.includes("FROM cuotas WHERE propietario_id = $1 AND estado = 'impagada'")) return { rows: [{ total: '0' }] };
   if (text.startsWith('UPDATE propietarios SET es_moroso')) return { rows: [], rowCount: 1 };
   // Contabilidad
-  if (text.startsWith('SELECT origen FROM movimientos_contables')) return { rows: [{ origen: params[0] === MOV_CUOTA ? 'cuota' : 'manual' }] };
+  if (text.includes('FROM liquidaciones') && text.includes('BETWEEN periodo_inicio AND periodo_fin')) return { rows: periodoCerrado ? [periodoCerrado] : [] };
+  if (text.startsWith('SELECT origen, entity_id, fecha FROM movimientos_contables')) return { rows: [{ origen: params[0] === MOV_CUOTA ? 'cuota' : 'manual', entity_id: 'e1', fecha: '2027-01-15' }] };
+  if (text.startsWith('SELECT propietario_id, (SELECT COUNT(*) FROM pagos')) return { rows: [{ propietario_id: 'p1', cobros: cobrosDeLaCuota }] };
+  if (text.startsWith('DELETE FROM cuotas')) { escrituras.push({ tabla: 'cuota_borrada' }); return { rows: [], rowCount: 1 }; }
+  if (text.startsWith('SELECT id, emision_id, estado, (SELECT COUNT(*) FROM pagos')) return { rows: [{ id: CUOTA, emision_id: 'emision-1', estado: 'pendiente', cobros: cobrosDeLaCuota }] };
+  if (text.startsWith("UPDATE cuotas SET estado = 'anulada'")) {
+    escrituras.push({ tabla: 'anulacion', porEmision: text.includes('emision_id = $3'), motivo: params[1] });
+    return { rows: [{ propietario_id: 'p1' }, { propietario_id: 'p2' }] };
+  }
+  if (text.startsWith('SELECT COUNT(*)::int AS total FROM cuotas WHERE emision_id')) return { rows: [{ total: 1 }] };
   if (text.startsWith('DELETE FROM movimientos_contables')) { escrituras.push({ tabla: 'borrado', id: params[0] }); return { rows: [], rowCount: 1 }; }
   throw new Error(`Query no esperada en el test: ${text}`);
 };
@@ -58,6 +69,8 @@ const cobrar = (importe) => fetch(`${base}/api/cuotas/${CUOTA}/pagos`, {
 beforeEach(() => {
   cuota = { propietario_id: 'p1', entity_id: 'e1', concepto: 'Cuota ordinaria', periodo: 'Enero 2027', tipo: 'ordinaria', importe: '120.00', estado: 'pendiente', propiedad_detalle: '1ºA', nombre_completo: 'Ana', pagado: '20.00' };
   escrituras.length = 0;
+  periodoCerrado = null;
+  cobrosDeLaCuota = 0;
 });
 
 test('cobrar una cuota crea el pago y su ingreso en contabilidad', async () => {
@@ -92,4 +105,38 @@ test('desde Contabilidad no se borra un ingreso que viene de una cuota, uno manu
   const manual = await fetch(`${base}/api/movimientos/delete/${MOV_MANUAL}`, { method: 'DELETE', headers: { Cookie: cookie } });
   assert.equal(manual.status, 200);
   assert.deepEqual(escrituras, [{ tabla: 'borrado', id: MOV_MANUAL }]);
+});
+
+test('no se cobra ni se borra un movimiento dentro de un periodo ya liquidado', async () => {
+  periodoCerrado = { periodo_inicio: '2027-01-01', periodo_fin: '2027-03-31' };
+  const cobro = await cobrar(10);
+  assert.equal(cobro.status, 409);
+  assert.match((await cobro.json()).error, /liquidado/);
+  const borrado = await fetch(`${base}/api/movimientos/delete/${MOV_MANUAL}`, { method: 'DELETE', headers: { Cookie: cookie } });
+  assert.equal(borrado.status, 409);
+  assert.equal(escrituras.length, 0);
+});
+
+test('una cuota con cobros no se borra; sin cobros sí', async () => {
+  cobrosDeLaCuota = 2;
+  assert.equal((await fetch(`${base}/api/cuotas/delete/${CUOTA}`, { method: 'DELETE', headers: { Cookie: cookie } })).status, 409);
+  cobrosDeLaCuota = 0;
+  assert.equal((await fetch(`${base}/api/cuotas/delete/${CUOTA}`, { method: 'DELETE', headers: { Cookie: cookie } })).status, 200);
+  assert.deepEqual(escrituras, [{ tabla: 'cuota_borrada' }]);
+});
+
+test('anular exige motivo y puede anular toda la emisión (sin tocar las que tienen cobros)', async () => {
+  const anular = (body) => fetch(`${base}/api/cuotas/${CUOTA}/anular`, { method: 'POST', headers: { Cookie: cookie, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  assert.equal((await anular({})).status, 400);
+  const r = await anular({ motivo: 'Emisión duplicada', toda_la_emision: true });
+  const data = await r.json();
+  assert.equal(r.status, 200);
+  assert.equal(escrituras[0].porEmision, true);
+  assert.equal(escrituras[0].motivo, 'Emisión duplicada');
+  assert.match(data.mensaje, /tienen cobros/);
+});
+
+test('las liquidaciones no se borran: se anulan con motivo', async () => {
+  const r = await fetch(`${base}/api/liquidaciones/delete/x`, { method: 'DELETE', headers: { Cookie: cookie } });
+  assert.equal(r.status, 409);
 });

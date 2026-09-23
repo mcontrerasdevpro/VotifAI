@@ -4,6 +4,7 @@ import { requireAuth, requireVoterAuth, entityBelongsToTenant, propietarioBelong
 import { marcarVencidas, recalcularMorosidad } from '../lib/morosidad.js';
 import { repartirImporte, generarPeriodos, MESES_POR_FRECUENCIA } from '../lib/reparto.js';
 import { generarReciboPdf, generarCertificadoDeudaPdf } from '../lib/pdfDocumentos.js';
+import { liquidacionQueCierra, mensajePeriodoCerrado } from '../lib/cierre.js';
 
 const router = Router();
 
@@ -153,7 +154,7 @@ router.get('/cuotas/lista/:entityId', requireAuth, async (req, res) => {
     await marcarVencidas(entityId);
 
     const resultado = await query(
-      `SELECT c.id, c.propietario_id, p.nombre_completo, p.propiedad_detalle, c.concepto, c.periodo, c.tipo, c.emision_id,
+      `SELECT c.id, c.propietario_id, p.nombre_completo, p.propiedad_detalle, c.concepto, c.periodo, c.tipo, c.emision_id, c.anulada_en, c.motivo_anulacion,
               c.importe, c.fecha_emision, c.fecha_vencimiento, c.estado,
               COALESCE((SELECT SUM(importe) FROM pagos WHERE cuota_id = c.id), 0) AS total_pagado
        FROM cuotas c
@@ -227,6 +228,9 @@ router.post('/cuotas/:id/pagos', requireAuth, async (req, res) => {
     }
     // Un cobro mayor que lo pendiente inflaría los ingresos de la
     // contabilidad con dinero que la comunidad no debía cobrar.
+    const cierre = await liquidacionQueCierra(c.entity_id, fecha_pago || new Date());
+    if (cierre) return res.status(409).json({ error: mensajePeriodoCerrado(cierre) });
+
     const pendiente = Math.round((Number(c.importe) - Number(c.pagado)) * 100) / 100;
     if (Number(importe) > pendiente + 0.001) {
       return res.status(400).json({ error: `El pago supera lo pendiente de esta cuota (${pendiente.toFixed(2)} €).` });
@@ -272,14 +276,17 @@ router.delete('/cuotas/pagos/:pagoId', requireAuth, async (req, res) => {
 
   try {
     const pago = await query(
-      `SELECT pg.cuota_id, c.propietario_id FROM pagos pg
+      `SELECT pg.cuota_id, pg.fecha_pago, c.propietario_id, c.entity_id FROM pagos pg
        JOIN cuotas c ON c.id = pg.cuota_id
        JOIN entities e ON e.id = c.entity_id
        WHERE pg.id = $1::uuid AND e.tenant_id = $2`,
       [pagoId, req.tenantId]
     );
     if (pago.rows.length === 0) return res.status(404).json({ error: 'Pago no encontrado.' });
-    const { cuota_id: cuotaId, propietario_id: propietarioId } = pago.rows[0];
+    const { cuota_id: cuotaId, propietario_id: propietarioId, entity_id: entityId, fecha_pago: fechaPago } = pago.rows[0];
+
+    const cierre = await liquidacionQueCierra(entityId, fechaPago);
+    if (cierre) return res.status(409).json({ error: mensajePeriodoCerrado(cierre) });
 
     await query('DELETE FROM pagos WHERE id = $1::uuid', [pagoId]);
     const nuevoEstado = await recalcularEstadoCuota(cuotaId);
@@ -450,6 +457,8 @@ router.get('/cuotas/:id/pagos', requireAuth, async (req, res) => {
   }
 });
 
+// Borrar solo vale para una cuota creada por error y sin cobros; lo
+// normal es ANULARLA, que la deja en el historial con su motivo.
 router.delete('/cuotas/delete/:id', requireAuth, async (req, res) => {
   const id = String(req.params.id).trim();
 
@@ -458,20 +467,75 @@ router.delete('/cuotas/delete/:id', requireAuth, async (req, res) => {
   }
 
   try {
-    const cuota = await query('SELECT propietario_id FROM cuotas WHERE id = $1', [id]);
-    const propietarioId = cuota.rows[0]?.propietario_id;
-
-    const resultado = await query('DELETE FROM cuotas WHERE id = $1', [id]);
-    if (propietarioId) await recalcularMorosidad(propietarioId);
-
-    if (resultado.rowCount > 0) {
-      res.status(200).json({ success: true, mensaje: 'Cuota eliminada correctamente.' });
-    } else {
-      res.status(404).json({ error: 'Cuota no encontrada.' });
+    const cuota = await query(
+      'SELECT propietario_id, (SELECT COUNT(*) FROM pagos WHERE cuota_id = c.id)::int AS cobros FROM cuotas c WHERE id = $1',
+      [id]
+    );
+    if (cuota.rows.length === 0) return res.status(404).json({ error: 'Cuota no encontrada.' });
+    if (cuota.rows[0].cobros > 0) {
+      return res.status(409).json({ error: 'Esta cuota tiene cobros registrados y no se puede borrar. Si hubo un error, anula antes los cobros; si la cuota no procede, anúlala.' });
     }
+
+    await query('DELETE FROM cuotas WHERE id = $1', [id]);
+    await recalcularMorosidad(cuota.rows[0].propietario_id);
+    res.status(200).json({ success: true, mensaje: 'Cuota eliminada correctamente.' });
   } catch (err) {
     console.error('Error al eliminar cuota:', err.message);
     res.status(500).json({ error: `Fallo al eliminar la cuota: ${err.message}` });
+  }
+});
+
+// Anular: la cuota deja de reclamarse (no cuenta para morosidad ni para el
+// certificado de deuda) pero sigue en el historial con motivo y fecha. Con
+// `toda_la_emision`, se anulan también las demás cuotas de la misma
+// emisión masiva que no tengan cobros (para deshacer una emisión errónea).
+router.post('/cuotas/:id/anular', requireAuth, async (req, res) => {
+  const id = String(req.params.id).trim();
+  const motivo = String(req.body?.motivo || '').trim();
+  const todaLaEmision = req.body?.toda_la_emision === true;
+
+  if (!motivo) return res.status(400).json({ error: 'Indica el motivo de la anulación.' });
+  if (!(await filaBelongsToTenant('cuotas', id, req.tenantId))) {
+    return res.status(403).json({ error: 'No autorizado para anular esta cuota.' });
+  }
+
+  try {
+    const cuota = await query(
+      'SELECT id, emision_id, estado, (SELECT COUNT(*) FROM pagos WHERE cuota_id = c.id)::int AS cobros FROM cuotas c WHERE id = $1',
+      [id]
+    );
+    const c = cuota.rows[0];
+    if (!c) return res.status(404).json({ error: 'Cuota no encontrada.' });
+    if (c.estado === 'anulada') return res.status(409).json({ error: 'Esta cuota ya estaba anulada.' });
+    if (c.cobros > 0) return res.status(409).json({ error: 'Esta cuota tiene cobros. Anula antes los cobros si no proceden.' });
+
+    const anuladas = await withTransaction(async (tx) => {
+      const r = await tx(
+        `UPDATE cuotas SET estado = 'anulada', anulada_en = now(), motivo_anulacion = $2
+         WHERE estado <> 'anulada'
+           AND NOT EXISTS (SELECT 1 FROM pagos WHERE cuota_id = cuotas.id)
+           AND ${todaLaEmision && c.emision_id ? 'emision_id = $3::uuid' : 'id = $1::uuid'}
+         RETURNING propietario_id`,
+        todaLaEmision && c.emision_id ? [id, motivo, c.emision_id] : [id, motivo]
+      );
+      return r.rows;
+    });
+    for (const propietarioId of new Set(anuladas.map((r) => r.propietario_id))) {
+      await recalcularMorosidad(propietarioId);
+    }
+
+    let mensaje = `${anuladas.length} cuota(s) anulada(s).`;
+    if (todaLaEmision && c.emision_id) {
+      const conCobros = await query(
+        `SELECT COUNT(*)::int AS total FROM cuotas WHERE emision_id = $1::uuid AND estado <> 'anulada'`,
+        [c.emision_id]
+      );
+      if (conCobros.rows[0].total > 0) mensaje += ` ${conCobros.rows[0].total} de la emisión no se han anulado porque tienen cobros.`;
+    }
+    res.json({ success: true, anuladas: anuladas.length, mensaje });
+  } catch (err) {
+    console.error('Error al anular cuota:', err.message);
+    res.status(500).json({ error: 'No se pudo anular la cuota.' });
   }
 });
 

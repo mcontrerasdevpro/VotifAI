@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { query } from '../db.js';
 import { requireAuth, entityBelongsToTenant, filaBelongsToTenant } from '../middleware/auth.js';
+import { liquidacionQueCierra, mensajePeriodoCerrado } from '../lib/cierre.js';
 
 const router = Router();
 
@@ -44,6 +45,9 @@ router.post('/movimientos/create', requireAuth, async (req, res) => {
   }
 
   try {
+    const cierre = await liquidacionQueCierra(entity_id, fecha);
+    if (cierre) return res.status(409).json({ error: mensajePeriodoCerrado(cierre) });
+
     const resultado = await query(
       `INSERT INTO movimientos_contables (entity_id, tipo, concepto, categoria, importe, fecha, notas)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -68,9 +72,13 @@ router.delete('/movimientos/delete/:id', requireAuth, async (req, res) => {
     // Los ingresos que vienen de cobrar una cuota van ligados al pago: se
     // anulan desde Cuotas (anulando el cobro), no sueltos, para que cuotas y
     // contabilidad no se descuadren.
-    const origen = await query('SELECT origen FROM movimientos_contables WHERE id = $1', [id]);
+    const origen = await query('SELECT origen, entity_id, fecha FROM movimientos_contables WHERE id = $1', [id]);
     if (origen.rows[0]?.origen === 'cuota') {
       return res.status(409).json({ error: 'Este ingreso viene del cobro de una cuota. Para retirarlo, anula el cobro desde Cuotas.' });
+    }
+    if (origen.rows[0]) {
+      const cierre = await liquidacionQueCierra(origen.rows[0].entity_id, origen.rows[0].fecha);
+      if (cierre) return res.status(409).json({ error: mensajePeriodoCerrado(cierre) });
     }
     const resultado = await query('DELETE FROM movimientos_contables WHERE id = $1', [id]);
     if (resultado.rowCount > 0) {
@@ -166,7 +174,7 @@ router.get('/liquidaciones/lista/:entityId', requireAuth, async (req, res) => {
 
   try {
     const resultado = await query(
-      `SELECT id, periodo_inicio, periodo_fin, total_ingresos, total_gastos, saldo, notas, creado_en
+      `SELECT id, periodo_inicio, periodo_fin, total_ingresos, total_gastos, saldo, notas, creado_en, anulada_en, motivo_anulacion
        FROM liquidaciones WHERE entity_id = $1::uuid ORDER BY periodo_inicio DESC`,
       [entityId]
     );
@@ -193,6 +201,17 @@ router.post('/liquidaciones/create', requireAuth, async (req, res) => {
   }
 
   try {
+    // Dos liquidaciones vigentes sobre las mismas fechas contarían dos veces
+    // los mismos movimientos.
+    const solapada = await query(
+      `SELECT periodo_inicio, periodo_fin FROM liquidaciones
+       WHERE entity_id = $1::uuid AND anulada_en IS NULL AND periodo_inicio <= $3::date AND periodo_fin >= $2::date LIMIT 1`,
+      [entity_id, periodo_inicio, periodo_fin]
+    );
+    if (solapada.rows.length) {
+      return res.status(409).json({ error: `Ese periodo se solapa con una liquidación vigente (${new Date(solapada.rows[0].periodo_inicio).toLocaleDateString('es-ES')} – ${new Date(solapada.rows[0].periodo_fin).toLocaleDateString('es-ES')}). Anúlala antes si quieres rehacerla.` });
+    }
+
     const sumas = await query(
       `SELECT
          COALESCE(SUM(importe) FILTER (WHERE tipo = 'ingreso'), 0) AS total_ingresos,
@@ -218,23 +237,29 @@ router.post('/liquidaciones/create', requireAuth, async (req, res) => {
   }
 });
 
-router.delete('/liquidaciones/delete/:id', requireAuth, async (req, res) => {
+// Una liquidación no se borra: se anula (sigue en la lista con el motivo) y
+// su periodo se reabre para poder corregir movimientos y volver a liquidar.
+router.delete('/liquidaciones/delete/:id', requireAuth, (req, res) => {
+  res.status(409).json({ error: 'Las liquidaciones no se borran: anúlala indicando el motivo, y seguirá constando en el historial.' });
+});
+
+router.post('/liquidaciones/:id/anular', requireAuth, async (req, res) => {
   const id = String(req.params.id).trim();
-
+  const motivo = String(req.body?.motivo || '').trim();
+  if (!motivo) return res.status(400).json({ error: 'Indica el motivo de la anulación.' });
   if (!(await filaBelongsToTenant('liquidaciones', id, req.tenantId))) {
-    return res.status(403).json({ error: 'No autorizado para eliminar esta liquidación.' });
+    return res.status(403).json({ error: 'No autorizado para anular esta liquidación.' });
   }
-
   try {
-    const resultado = await query('DELETE FROM liquidaciones WHERE id = $1', [id]);
-    if (resultado.rowCount > 0) {
-      res.status(200).json({ success: true, mensaje: 'Liquidación eliminada correctamente.' });
-    } else {
-      res.status(404).json({ error: 'Liquidación no encontrada.' });
-    }
+    const r = await query(
+      `UPDATE liquidaciones SET anulada_en = now(), motivo_anulacion = $2 WHERE id = $1::uuid AND anulada_en IS NULL RETURNING id`,
+      [id, motivo]
+    );
+    if (r.rowCount === 0) return res.status(409).json({ error: 'Esta liquidación ya estaba anulada.' });
+    res.json({ success: true, mensaje: 'Liquidación anulada. Su periodo vuelve a estar abierto.' });
   } catch (err) {
-    console.error('Error al eliminar liquidación:', err.message);
-    res.status(500).json({ error: `Fallo al eliminar la liquidación: ${err.message}` });
+    console.error('Error al anular liquidación:', err.message);
+    res.status(500).json({ error: 'No se pudo anular la liquidación.' });
   }
 });
 

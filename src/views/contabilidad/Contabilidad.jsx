@@ -192,11 +192,21 @@ export default function Contabilidad() {
     }
   };
 
-  const handleEliminarLiquidacion = async (id) => {
-    if (!window.confirm('¿Eliminar esta liquidación?')) return;
+  // Una liquidación no se borra: se anula con motivo (sigue en la lista) y
+  // su periodo vuelve a quedar abierto para corregir y liquidar de nuevo.
+  const handleAnularLiquidacion = async (id) => {
+    const motivo = window.prompt('Motivo de la anulación de esta liquidación (su periodo volverá a quedar abierto para corregir movimientos):');
+    if (!motivo?.trim()) return;
     try {
-      const respuesta = await fetch(`/api/liquidaciones/delete/${id}`, { method: 'DELETE', credentials: 'include' });
-      if (respuesta.ok) await refrescar();
+      const respuesta = await fetch(`/api/liquidaciones/${id}/anular`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ motivo: motivo.trim() })
+      });
+      const data = await respuesta.json().catch(() => ({}));
+      if (!respuesta.ok) alert(data.error || 'No se pudo anular la liquidación.');
+      await refrescar();
     } catch (err) {
       console.error(err);
     }
@@ -245,7 +255,12 @@ export default function Contabilidad() {
 
   const columnasLiquidaciones = [
     { key: 'periodo', header: 'Periodo', render: (l) => (
-      <p className="font-bold text-slate-900">{new Date(l.periodo_inicio).toLocaleDateString('es-ES')} — {new Date(l.periodo_fin).toLocaleDateString('es-ES')}</p>
+      <div>
+        <p className={`font-bold ${l.anulada_en ? 'text-slate-400 line-through' : 'text-slate-900'}`}>{new Date(l.periodo_inicio).toLocaleDateString('es-ES')} — {new Date(l.periodo_fin).toLocaleDateString('es-ES')}</p>
+        {l.anulada_en
+          ? <p className="mt-0.5 text-[10px] font-bold text-amber-600">Anulada el {new Date(l.anulada_en).toLocaleDateString('es-ES')}: {l.motivo_anulacion}</p>
+          : <p className="mt-0.5 text-[10px] text-slate-500">Periodo cerrado: no admite cambios mientras esté vigente</p>}
+      </div>
     ) },
     { key: 'total_ingresos', header: 'Ingresos', align: 'right', render: (l) => <span className="font-mono text-emerald-600">{fmt(l.total_ingresos)} €</span> },
     { key: 'total_gastos', header: 'Gastos', align: 'right', render: (l) => <span className="font-mono text-rose-600">{fmt(l.total_gastos)} €</span> },
@@ -253,9 +268,11 @@ export default function Contabilidad() {
       <StatusBadge light tone={Number(l.saldo) >= 0 ? 'success' : 'danger'}>{fmt(l.saldo)} €</StatusBadge>
     ) },
     { key: 'acciones', header: 'Acciones', align: 'center', render: (l) => (
-      <button onClick={() => handleEliminarLiquidacion(l.id)} className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-rose-400 hover:text-rose-300" title="Eliminar">
-        <Trash2 size={12} />
-      </button>
+      l.anulada_en ? <span className="text-[10px] text-slate-400">—</span> : (
+        <button onClick={() => handleAnularLiquidacion(l.id)} className="px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 text-[10px] font-bold uppercase tracking-wider text-amber-400 hover:text-amber-300" title="Anular y reabrir el periodo">
+          Anular
+        </button>
+      )
     ) }
   ];
 

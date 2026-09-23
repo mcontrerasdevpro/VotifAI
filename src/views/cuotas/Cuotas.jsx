@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { Wallet, Plus, CreditCard, Trash2, Users, FileText, FileDown } from 'lucide-react';
+import { Wallet, Plus, CreditCard, Trash2, Users, FileText, FileDown, Ban } from 'lucide-react';
 import Card from '../../components/ui/Card.jsx';
 import Modal from '../../components/ui/Modal.jsx';
 import Field from '../../components/ui/Field.jsx';
@@ -184,14 +184,33 @@ export default function Cuotas() {
     }
   };
 
+  // Borrar solo para una cuota creada por error y sin cobros; lo normal es
+  // anularla, que la deja en el historial con su motivo.
   const handleEliminarCuota = async (id) => {
-    if (!window.confirm('¿Eliminar esta cuota y todos sus pagos asociados?')) return;
+    if (!window.confirm('¿Borrar esta cuota? Hazlo solo si se creó por error: si no procede cobrarla, es mejor anularla para que quede en el historial.')) return;
     try {
       const respuesta = await fetch(`/api/cuotas/delete/${id}`, { method: 'DELETE', credentials: 'include' });
-      if (respuesta.ok) await refrescar();
+      const data = await respuesta.json().catch(() => ({}));
+      if (!respuesta.ok) alert(data.error || 'No se pudo borrar la cuota.');
+      await refrescar();
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const handleAnularCuota = async (c) => {
+    const motivo = window.prompt(`Motivo de la anulación de "${c.concepto}${c.periodo ? ` (${c.periodo})` : ''}" de ${c.nombre_completo}:`);
+    if (!motivo?.trim()) return;
+    const todaLaEmision = Boolean(c.emision_id) && window.confirm('Esta cuota forma parte de una emisión a toda la comunidad. ¿Anular también el resto de cuotas de esa emisión que no tengan cobros?\n\nAceptar: anular toda la emisión · Cancelar: solo esta cuota');
+    const respuesta = await fetch(`/api/cuotas/${c.id}/anular`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ motivo: motivo.trim(), toda_la_emision: todaLaEmision })
+    });
+    const data = await respuesta.json().catch(() => ({}));
+    alert(respuesta.ok ? data.mensaje : data.error || 'No se pudo anular la cuota.');
+    await refrescar();
   };
 
   const columnas = [
@@ -216,7 +235,12 @@ export default function Cuotas() {
       </div>
     ) },
     { key: 'fecha_vencimiento', header: 'Vencimiento', render: (c) => new Date(c.fecha_vencimiento).toLocaleDateString('es-ES') },
-    { key: 'estado', header: 'Estado', render: (c) => <StatusBadge light tone={TONOS_ESTADO[c.estado] || 'neutral'}>{ETIQUETAS_ESTADO[c.estado] || c.estado}</StatusBadge> },
+    { key: 'estado', header: 'Estado', render: (c) => (
+      <div>
+        <StatusBadge light tone={TONOS_ESTADO[c.estado] || 'neutral'}>{ETIQUETAS_ESTADO[c.estado] || c.estado}</StatusBadge>
+        {c.estado === 'anulada' && c.motivo_anulacion && <p className="mt-1 max-w-[12rem] text-[10px] text-slate-500">{c.motivo_anulacion}</p>}
+      </div>
+    ) },
     { key: 'acciones', header: 'Acciones', align: 'center', render: (c) => (
       <div className="flex items-center justify-center gap-2">
         {(c.estado === 'pendiente' || c.estado === 'parcial' || c.estado === 'impagada' || parseFloat(c.total_pagado) > 0) && (
@@ -224,9 +248,16 @@ export default function Cuotas() {
             <CreditCard size={12} />
           </button>
         )}
-        <button onClick={() => handleEliminarCuota(c.id)} className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-rose-400 hover:text-rose-300" title="Eliminar">
-          <Trash2 size={12} />
-        </button>
+        {c.estado !== 'anulada' && parseFloat(c.total_pagado) === 0 && (
+          <button onClick={() => handleAnularCuota(c)} className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-amber-400 hover:text-amber-300" title="Anular (queda en el historial)">
+            <Ban size={12} />
+          </button>
+        )}
+        {parseFloat(c.total_pagado) === 0 && (
+          <button onClick={() => handleEliminarCuota(c.id)} className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-rose-400 hover:text-rose-300" title="Borrar (solo si se creó por error)">
+            <Trash2 size={12} />
+          </button>
+        )}
       </div>
     ) }
   ];
