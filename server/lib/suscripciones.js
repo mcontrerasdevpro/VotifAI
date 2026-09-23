@@ -145,25 +145,40 @@ export async function exigirJuntaDisponibleEnPrueba(tenantId) {
   return { ok: true };
 }
 
-// Lado vecino, en prueba: la voz solo funciona dentro de una junta en curso
-// y durante sus primeras horas. La junta sigue (votos, cierre, acta); solo
-// se corta la transcripción, que es lo que tiene coste por minuto.
-export async function motivoSinVozEnPrueba(entityId) {
-  const tenantResult = await query(
-    `SELECT t.suscripcion_estado FROM entities e JOIN tenants t ON t.id = e.tenant_id WHERE e.id = $1::uuid`,
-    [String(entityId).trim()]
-  );
-  const tenant = tenantResult.rows[0];
-  if (!tenant || !esPrueba(tenant.suscripcion_estado)) return null;
+// Lado vecino: toda intervención de voz pertenece a la junta en curso de
+// la finca (y al punto del orden del día abierto en ese momento, si lo hay),
+// así el panel y el acta muestran solo las de esa junta. Sin junta en curso
+// no se graba. En prueba, además, la voz se limita a las primeras horas de
+// la junta; la junta sigue (votos, cierre, acta), solo se corta la
+// transcripción, que es lo que tiene coste por minuto.
+export async function juntaParaVoz(entityId) {
+  const id = String(entityId).trim();
+  const [juntaResult, tenantResult] = await Promise.all([
+    query(
+      `SELECT m.id, m.iniciada_en,
+              (SELECT p.id FROM meeting_puntos p WHERE p.meeting_id = m.id AND p.estado = 'votando'
+               ORDER BY p.abierto_en DESC NULLS LAST LIMIT 1) AS punto_id
+       FROM meetings m WHERE m.entity_id = $1::uuid AND m.estado = 'en_curso'
+       ORDER BY m.iniciada_en DESC LIMIT 1`,
+      [id]
+    ),
+    query('SELECT t.suscripcion_estado FROM entities e JOIN tenants t ON t.id = e.tenant_id WHERE e.id = $1::uuid', [id])
+  ]);
 
-  const junta = await query(
-    `SELECT iniciada_en FROM meetings WHERE entity_id = $1::uuid AND estado = 'en_curso' ORDER BY iniciada_en DESC LIMIT 1`,
-    [String(entityId).trim()]
-  );
-  const iniciada = junta.rows[0]?.iniciada_en;
-  if (!iniciada) return 'Durante la prueba gratuita, la transcripción de voz solo está disponible con una junta en curso.';
-  if (Date.now() - new Date(iniciada).getTime() > LIMITES_PRUEBA.horasVozPorJunta * 3600 * 1000) {
-    return `Durante la prueba gratuita, la transcripción de voz está disponible en las ${LIMITES_PRUEBA.horasVozPorJunta} primeras horas de cada junta. La junta puede continuar con normalidad.`;
+  const junta = juntaResult.rows[0];
+  if (!junta) {
+    return { ok: false, codigo: 'SIN_JUNTA_EN_CURSO', error: 'Solo se pueden grabar intervenciones durante una junta en curso.' };
   }
-  return null;
+
+  const tenant = tenantResult.rows[0];
+  const limiteMs = LIMITES_PRUEBA.horasVozPorJunta * 3600 * 1000;
+  if (tenant && esPrueba(tenant.suscripcion_estado) && Date.now() - new Date(junta.iniciada_en).getTime() > limiteMs) {
+    return {
+      ok: false,
+      codigo: 'VOZ_LIMITE_PRUEBA',
+      error: `Durante la prueba gratuita, la transcripción de voz está disponible en las ${LIMITES_PRUEBA.horasVozPorJunta} primeras horas de cada junta. La junta puede continuar con normalidad.`
+    };
+  }
+
+  return { ok: true, meetingId: junta.id, puntoId: junta.punto_id || null };
 }

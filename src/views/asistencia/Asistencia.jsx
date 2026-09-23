@@ -43,6 +43,7 @@ export default function Asistencia() {
 
   // --- Grabación (con sesión) ---
   const [grabando, setGrabando] = useState(false);
+  const [juntaEnCurso, setJuntaEnCurso] = useState(false);
   const [segundos, setSegundos] = useState(0);
   const [enviando, setEnviando] = useState(false);
   const [errorMic, setErrorMic] = useState('');
@@ -409,11 +410,18 @@ export default function Asistencia() {
                   onActualizado={(canal) => setSesion((actual) => ({ ...actual, canal_notificacion: canal }))}
                 />
 
-                <VotacionVecino entityId={entityId} />
+                <VotacionVecino entityId={entityId} onJuntaEnCurso={setJuntaEnCurso} />
 
                 <HistorialVecino entityId={entityId} />
 
-                {sesion.transcripcion_voz !== false && (
+                {sesion.transcripcion_voz !== false && !juntaEnCurso && !grabando && !enviando && (
+                  <p className="rounded-2xl border border-slate-900 bg-slate-900/40 p-4 text-center text-4xs font-bold uppercase tracking-widest text-slate-500">
+                    <Mic size={14} className="mx-auto mb-2 text-slate-600" />
+                    El micrófono para intervenir se activará cuando empiece la junta
+                  </p>
+                )}
+
+                {sesion.transcripcion_voz !== false && (juntaEnCurso || grabando || enviando) && (
                 <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-8 flex flex-col items-center justify-center gap-5 min-h-[260px]">
                   {enviando ? (
                     <>

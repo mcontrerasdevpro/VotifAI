@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { query } from '../db.js';
-import { requireAuth, requireVoterAuth, entityBelongsToTenant } from '../middleware/auth.js';
-import { fincaPermiteTranscripcion, motivoSinVozEnPrueba } from '../lib/suscripciones.js';
+import { requireAuth, requireVoterAuth, filaBelongsToTenant } from '../middleware/auth.js';
+import { fincaPermiteTranscripcion, juntaParaVoz } from '../lib/suscripciones.js';
 
 const router = Router();
 
@@ -36,8 +36,10 @@ router.post('/asistencia/:entityId/voz', requireVoterAuth, upload.single('audio'
       return res.status(402).json({ error: 'La transcripción por voz no está incluida en el plan de tu administrador de fincas.', codigo: 'VOZ_NO_INCLUIDA' });
     }
 
-    const motivoPrueba = await motivoSinVozEnPrueba(entityId);
-    if (motivoPrueba) return res.status(402).json({ error: motivoPrueba, codigo: 'VOZ_LIMITE_PRUEBA' });
+    // Se decide ANTES de llamar a OpenAI: sin junta en curso (o fuera del
+    // tiempo de la prueba) no se gasta ni un minuto de transcripción.
+    const junta = await juntaParaVoz(entityId);
+    if (!junta.ok) return res.status(junta.codigo === 'VOZ_LIMITE_PRUEBA' ? 402 : 409).json({ error: junta.error, codigo: junta.codigo });
 
     if (!process.env.OPENAI_API_KEY) {
       return res.status(500).json({ error: 'El servidor no tiene configurada la transcripción por voz (falta OPENAI_API_KEY).' });
@@ -69,10 +71,10 @@ router.post('/asistencia/:entityId/voz', requireVoterAuth, upload.single('audio'
     }
 
     const resultado = await query(
-      `INSERT INTO transcripciones (entity_id, propietario_id, texto, duracion_segundos)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO transcripciones (entity_id, meeting_id, punto_id, propietario_id, texto, duracion_segundos)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id, texto, creado_en`,
-      [entityId, propietario_id, texto, duracion_segundos || null]
+      [entityId, junta.meetingId, junta.puntoId, propietario_id, texto, duracion_segundos || null]
     );
 
     res.status(201).json({ success: true, transcripcion: resultado.rows[0] });
@@ -86,22 +88,24 @@ router.post('/asistencia/:entityId/voz', requireVoterAuth, upload.single('audio'
 // 📝 TRANSCRIPCIONES (panel del secretario, requiere sesión de despacho)
 // =========================================================================
 
-router.get('/transcripciones/lista/:entityId', requireAuth, async (req, res) => {
-  const entityId = String(req.params.entityId).trim();
+// Solo las intervenciones de ESTA junta (antes se listaban todas las de la
+// finca, de cualquier junta).
+router.get('/transcripciones/junta/:meetingId', requireAuth, async (req, res) => {
+  const meetingId = String(req.params.meetingId).trim();
 
-  if (!(await entityBelongsToTenant(entityId, req.tenantId))) {
-    return res.status(403).json({ error: 'No autorizado para consultar las transcripciones de esta entidad.' });
+  if (!(await filaBelongsToTenant('meetings', meetingId, req.tenantId))) {
+    return res.status(403).json({ error: 'No autorizado para consultar las transcripciones de esta junta.' });
   }
 
   try {
     const resultado = await query(
-      `SELECT t.id, t.texto, t.duracion_segundos, t.creado_en, t.propietario_id,
+      `SELECT t.id, t.texto, t.duracion_segundos, t.creado_en, t.propietario_id, t.punto_id,
               p.nombre_completo AS propietario_nombre, p.propiedad_detalle
        FROM transcripciones t
        LEFT JOIN propietarios p ON t.propietario_id = p.id
-       WHERE t.entity_id = $1::uuid
+       WHERE t.meeting_id = $1::uuid
        ORDER BY t.creado_en ASC`,
-      [entityId]
+      [meetingId]
     );
     res.status(200).json({ success: true, transcripciones: resultado.rows });
   } catch (err) {

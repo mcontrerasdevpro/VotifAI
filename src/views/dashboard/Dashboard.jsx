@@ -241,7 +241,7 @@ export default function Dashboard() {
           onClausurarAsamblea={handleClausurarAsamblea}
         />
 
-        <PanelEscrutinio entidadId={fincaId} />
+        <PanelEscrutinio entidadId={fincaId} meetingId={meetingId} />
       </div>
 
       <ModalConvocatoria

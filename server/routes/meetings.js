@@ -165,7 +165,18 @@ router.get('/meetings/detalle/:meetingId', requireAuth, async (req, res) => {
       [meetingId]
     );
 
-    res.status(200).json({ success: true, meeting: meetingResultado.rows[0], puntos: puntosResultado.rows });
+    // Intervenciones de voz de esta junta, para que el borrador del acta las
+    // recoja con el nombre de quien habló y el punto en que lo hizo.
+    const intervencionesResultado = await query(
+      `SELECT t.id, t.texto, t.creado_en, t.punto_id, p.nombre_completo AS propietario_nombre, p.propiedad_detalle
+       FROM transcripciones t
+       LEFT JOIN propietarios p ON t.propietario_id = p.id
+       WHERE t.meeting_id = $1::uuid
+       ORDER BY t.creado_en ASC`,
+      [meetingId]
+    );
+
+    res.status(200).json({ success: true, meeting: meetingResultado.rows[0], puntos: puntosResultado.rows, intervenciones: intervencionesResultado.rows });
   } catch (err) {
     console.error('Error al consultar el detalle de la junta:', err.message);
     res.status(500).json({ error: `Fallo al consultar la junta: ${err.message}` });

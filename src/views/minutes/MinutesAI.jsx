@@ -8,7 +8,29 @@ import StatusBadge from '../../components/ui/StatusBadge.jsx';
 
 const LABEL_ESTADO = { votando: 'Votando', cerrado: 'Cerrado', pendiente: 'Pendiente' };
 
-function generarActa(meeting, puntos) {
+const hora = (fecha) => new Date(fecha).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+
+// Intervenciones de voz de los vecinos, agrupadas por el punto del orden
+// del día que estaba abierto al grabarlas. El administrador las revisa y
+// edita en el borrador antes de cerrar, igual que el resto del acta.
+function seccionIntervenciones(puntos, intervenciones) {
+  if (!intervenciones.length) return '';
+  const linea = (i) => `* **${i.propietario_nombre || 'Propietario'}${i.propiedad_detalle ? ` (${i.propiedad_detalle})` : ''}**, ${hora(i.creado_en)}: ${i.texto}`;
+
+  const bloques = puntos
+    .map((p) => {
+      const suyas = intervenciones.filter((i) => i.punto_id === p.id);
+      return suyas.length ? `**Punto ${p.orden}: ${p.texto}**\n${suyas.map(linea).join('\n')}` : null;
+    })
+    .filter(Boolean);
+
+  const sinPunto = intervenciones.filter((i) => !puntos.some((p) => p.id === i.punto_id));
+  if (sinPunto.length) bloques.push(`**Intervenciones generales**\n${sinPunto.map(linea).join('\n')}`);
+
+  return `\n\n## 3. INTERVENCIONES DE LOS PROPIETARIOS\n${bloques.join('\n\n')}`;
+}
+
+function generarActa(meeting, puntos, intervenciones = []) {
   if (!meeting) return '';
   const fecha = meeting.fecha_hora_prevista
     ? new Date(meeting.fecha_hora_prevista).toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' })
@@ -35,7 +57,8 @@ function generarActa(meeting, puntos) {
     `**FECHA Y HORA:** ${fecha}\n\n` +
     `## 1. CENSO Y CUÓRUM\n` +
     `Censo de la finca a fecha de convocatoria: ${meeting.censo_total_propietarios || 0} propietarios (${totalCenso.toFixed(2)}% de coeficiente).\n\n` +
-    `## 2. PUNTOS DEL ORDEN DEL DÍA Y ACUERDOS\n${lineasPuntos || 'Sin puntos registrados.'}`
+    `## 2. PUNTOS DEL ORDEN DEL DÍA Y ACUERDOS\n${lineasPuntos || 'Sin puntos registrados.'}` +
+    seccionIntervenciones(puntos, intervenciones)
   );
 }
 
@@ -65,7 +88,7 @@ export default function MinutesAI() {
         if (respuesta.ok) {
           setMeeting(resultado.meeting);
           setPuntos(resultado.puntos || []);
-          setActaTexto(generarActa(resultado.meeting, resultado.puntos || []));
+          setActaTexto(generarActa(resultado.meeting, resultado.puntos || [], resultado.intervenciones || []));
         }
       } catch (err) {
         console.error('Fallo al cargar la junta:', err);

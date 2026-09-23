@@ -9,22 +9,23 @@ import StatusBadge from './ui/StatusBadge.jsx';
  * móvil en /asistencia/:entityId (ver Asistencia.jsx), ya identificado
  * porque eligió su nombre del censo — no hay micrófono de sala ni
  * diarización por IA, la atribución es exacta por diseño. Este panel solo
- * hace polling de lo que ya se ha transcrito y guardado en el servidor.
+ * hace polling de lo que ya se ha transcrito y guardado en el servidor,
+ * solo de ESTA junta (`meetingId`); `entidadId` es para el enlace de acceso.
  */
-export default function PanelEscrutinio({ entidadId }) {
+export default function PanelEscrutinio({ entidadId, meetingId }) {
   const [transcripciones, setTranscripciones] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [enlaceCopiado, setEnlaceCopiado] = useState(false);
   const contenedorRef = useRef(null);
 
   useEffect(() => {
-    if (!entidadId) { setCargando(false); return; }
+    if (!meetingId) { setCargando(false); return; }
 
     let activo = true;
 
     const refrescar = async () => {
       try {
-        const respuesta = await fetch(`/api/transcripciones/lista/${entidadId}`, { credentials: 'include' });
+        const respuesta = await fetch(`/api/transcripciones/junta/${meetingId}`, { credentials: 'include' });
         const resultado = await respuesta.json();
         if (activo && respuesta.ok) setTranscripciones(resultado.transcripciones || []);
       } catch (err) {
@@ -37,7 +38,7 @@ export default function PanelEscrutinio({ entidadId }) {
     refrescar();
     const intervalo = setInterval(refrescar, 4000);
     return () => { activo = false; clearInterval(intervalo); };
-  }, [entidadId]);
+  }, [meetingId]);
 
   useEffect(() => {
     if (contenedorRef.current) {

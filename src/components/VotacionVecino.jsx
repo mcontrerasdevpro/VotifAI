@@ -11,7 +11,10 @@ const ETIQUETA_VOTO = { si: 'SÍ', no: 'NO', abstencion: 'ABSTENCIÓN' };
  * resultado se revela cuando el despacho cierra el punto, para evitar el
  * efecto arrastre de ver cómo van votando los demás.
  */
-export default function VotacionVecino({ entityId }) {
+// `onJuntaEnCurso(bool)`: avisa al padre de si hay junta en curso, para que
+// Asistencia muestre el micrófono solo entonces (la voz se guarda ligada a
+// esa junta y el servidor la rechaza sin junta).
+export default function VotacionVecino({ entityId, onJuntaEnCurso }) {
   const [meeting, setMeeting] = useState(null);
   const [puntos, setPuntos] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -28,6 +31,7 @@ export default function VotacionVecino({ entityId }) {
         if (activo && respuesta.ok) {
           setMeeting(resultado.meeting);
           setPuntos(resultado.puntos || []);
+          onJuntaEnCurso?.(Boolean(resultado.meeting));
         }
       } catch (err) {
         console.error('Fallo al consultar la junta en curso:', err);
@@ -39,6 +43,7 @@ export default function VotacionVecino({ entityId }) {
     refrescar();
     const intervalo = setInterval(refrescar, 4000);
     return () => { activo = false; clearInterval(intervalo); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- el callback del padre no debe reiniciar el sondeo
   }, [entityId]);
 
   const emitirVoto = async (puntoId, voto) => {
