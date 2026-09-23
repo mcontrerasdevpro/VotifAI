@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { query } from '../db.js';
+import { query, withTransaction } from '../db.js';
 import { notificar } from '../lib/notificaciones.js';
 import { generarActaPdf } from '../lib/pdfActa.js';
 import {
@@ -32,47 +32,45 @@ router.post('/meetings/create', requireAuth, async (req, res) => {
   const tipoJunta = tipo === 'extraordinaria' ? 'extraordinaria' : 'ordinaria';
 
   try {
-    await query('BEGIN');
-
-    // Se congela aquí el tamaño del censo (cabezas y coeficiente) para que
-    // el cuórum de esta junta no cambie si el censo se edita más adelante.
-    const censoResultado = await query(
-      `SELECT COUNT(*)::int AS total, COALESCE(SUM(coeficiente), 0) AS coeficiente_total
-       FROM propietarios WHERE entity_id = $1::uuid`,
-      [entity_id]
-    );
-
-    const meetingResultado = await query(
-      `INSERT INTO meetings (entity_id, titulo, tipo, fecha_hora_prevista, censo_total_propietarios, censo_total_coeficiente)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id, entity_id, titulo, tipo, estado, fecha_hora_prevista, censo_total_propietarios, censo_total_coeficiente, creado_en`,
-      [entity_id, titulo, tipoJunta, fecha_hora_prevista || null, censoResultado.rows[0].total, censoResultado.rows[0].coeficiente_total]
-    );
-    const junta = meetingResultado.rows[0];
-
-    const puntosCreados = [];
-    for (let i = 0; i < puntos.length; i++) {
-      const texto = String(puntos[i]?.texto || '').trim();
-      if (!texto) continue;
-      const tipoPunto = puntos[i]?.tipo === 'informativo' ? 'informativo' : 'votacion';
-      const puntoResultado = await query(
-        `INSERT INTO meeting_puntos (meeting_id, orden, texto, tipo)
-         VALUES ($1, $2, $3, $4)
-         RETURNING id, orden, texto, tipo, estado`,
-        [junta.id, i + 1, texto, tipoPunto]
+    const creada = await withTransaction(async (tx) => {
+      // Se congela aquí el tamaño del censo (cabezas y coeficiente) para que
+      // el cuórum de esta junta no cambie si el censo se edita más adelante.
+      const censoResultado = await tx(
+        `SELECT COUNT(*)::int AS total, COALESCE(SUM(coeficiente), 0) AS coeficiente_total
+         FROM propietarios WHERE entity_id = $1::uuid`,
+        [entity_id]
       );
-      puntosCreados.push(puntoResultado.rows[0]);
-    }
 
-    if (puntosCreados.length === 0) {
-      await query('ROLLBACK');
+      const meetingResultado = await tx(
+        `INSERT INTO meetings (entity_id, titulo, tipo, fecha_hora_prevista, censo_total_propietarios, censo_total_coeficiente)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING id, entity_id, titulo, tipo, estado, fecha_hora_prevista, censo_total_propietarios, censo_total_coeficiente, creado_en`,
+        [entity_id, titulo, tipoJunta, fecha_hora_prevista || null, censoResultado.rows[0].total, censoResultado.rows[0].coeficiente_total]
+      );
+      const junta = meetingResultado.rows[0];
+
+      const puntosCreados = [];
+      for (let i = 0; i < puntos.length; i++) {
+        const texto = String(puntos[i]?.texto || '').trim();
+        if (!texto) continue;
+        const tipoPunto = puntos[i]?.tipo === 'informativo' ? 'informativo' : 'votacion';
+        const puntoResultado = await tx(
+          `INSERT INTO meeting_puntos (meeting_id, orden, texto, tipo)
+           VALUES ($1, $2, $3, $4)
+           RETURNING id, orden, texto, tipo, estado`,
+          [junta.id, i + 1, texto, tipoPunto]
+        );
+        puntosCreados.push(puntoResultado.rows[0]);
+      }
+
+      return puntosCreados.length === 0 ? { rollback: true } : { junta, puntosCreados };
+    });
+
+    if (creada.rollback) {
       return res.status(400).json({ error: 'El orden del día debe incluir al menos un punto con texto.' });
     }
-
-    await query('COMMIT');
-    res.status(201).json({ success: true, meeting: { ...junta, puntos: puntosCreados } });
+    res.status(201).json({ success: true, meeting: { ...creada.junta, puntos: creada.puntosCreados } });
   } catch (err) {
-    await query('ROLLBACK').catch(() => {});
     console.error('Error al crear junta:', err.message);
     res.status(500).json({ error: `Fallo al crear la junta: ${err.message}` });
   }
@@ -208,10 +206,10 @@ router.post('/meetings/:meetingId/convocar', requireAuth, async (req, res) => {
       destinatarios: censoResultado.rows.map((p) => ({ nombre: p.nombre_completo, propiedad: p.propiedad_detalle, telefono: p.telefono, email: p.email, canal_preferido: p.canal_notificacion }))
     });
 
-    await query('BEGIN');
-    await query(`UPDATE meetings SET convocada_en = COALESCE(convocada_en, now()) WHERE id = $1::uuid`, [meetingId]);
-    await registrarNotificaciones(meetingId, 'convocatoria', censoResultado.rows, resultadoEnvio);
-    await query('COMMIT');
+    await withTransaction(async (tx) => {
+      await tx(`UPDATE meetings SET convocada_en = COALESCE(convocada_en, now()) WHERE id = $1::uuid`, [meetingId]);
+      await registrarNotificaciones(tx, meetingId, 'convocatoria', censoResultado.rows, resultadoEnvio);
+    });
 
     res.status(200).json({
       success: true,
@@ -221,7 +219,6 @@ router.post('/meetings/:meetingId/convocar', requireAuth, async (req, res) => {
       resultado: resultadoEnvio
     });
   } catch (err) {
-    await query('ROLLBACK').catch(() => {});
     console.error('Error al convocar junta:', err.message);
     res.status(500).json({ error: `Fallo al convocar la junta: ${err.message}` });
   }
@@ -372,19 +369,20 @@ router.post('/meetings/:meetingId/cerrar', requireAuth, async (req, res) => {
       ...(actaPdfBase64 ? { archivo_adjunto: { nombre: nombreArchivoPdf, tipo: 'application/pdf', contenido_base64: actaPdfBase64 } } : {})
     });
 
-    await query('BEGIN');
-    const cierreResultado = await query(
-      `UPDATE meetings SET estado = 'cerrada', cerrada_en = now(), acta_texto_final = $1, acta_pdf_base64 = $2
-       WHERE id = $3::uuid AND estado = 'en_curso'
-       RETURNING id, estado, cerrada_en`,
-      [acta_texto, actaPdfBase64, meetingId]
-    );
-    if (cierreResultado.rowCount === 0) {
-      await query('ROLLBACK');
+    const cierre = await withTransaction(async (tx) => {
+      const cierreResultado = await tx(
+        `UPDATE meetings SET estado = 'cerrada', cerrada_en = now(), acta_texto_final = $1, acta_pdf_base64 = $2
+         WHERE id = $3::uuid AND estado = 'en_curso'
+         RETURNING id, estado, cerrada_en`,
+        [acta_texto, actaPdfBase64, meetingId]
+      );
+      if (cierreResultado.rowCount === 0) return { rollback: true };
+      await registrarNotificaciones(tx, meetingId, 'acta_cierre', censoResultado.rows, resultadoEnvio);
+      return {};
+    });
+    if (cierre.rollback) {
       return res.status(409).json({ error: 'Solo se puede cerrar una junta que esté en curso.' });
     }
-    await registrarNotificaciones(meetingId, 'acta_cierre', censoResultado.rows, resultadoEnvio);
-    await query('COMMIT');
 
     res.status(200).json({
       success: true,
@@ -394,7 +392,6 @@ router.post('/meetings/:meetingId/cerrar', requireAuth, async (req, res) => {
       resultado: resultadoEnvio
     });
   } catch (err) {
-    await query('ROLLBACK').catch(() => {});
     console.error('Error al cerrar junta:', err.message);
     res.status(500).json({ error: `Fallo al cerrar la junta: ${err.message}` });
   }
@@ -602,9 +599,9 @@ async function intentarNotificar(payload) {
   }
 }
 
-async function registrarNotificaciones(meetingId, tipo, propietarios, resultado) {
+async function registrarNotificaciones(tx, meetingId, tipo, propietarios, resultado) {
   for (const p of propietarios) {
-    await query(
+    await tx(
       `INSERT INTO meeting_notificaciones (meeting_id, propietario_id, tipo, destinatario_nombre, destinatario_propiedad, destinatario_email, destinatario_telefono, resultado)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
       [meetingId, p.id, tipo, p.nombre_completo, p.propiedad_detalle, p.email, p.telefono, resultado]

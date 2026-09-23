@@ -8,7 +8,7 @@ import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { query } from './db.js';
+import { query, withTransaction } from './db.js';
 import { requireAuth, issueSessionCookie, clearSessionCookie, entityBelongsToTenant, propietarioBelongsToTenant, COOKIE_NAME } from './middleware/auth.js';
 import documentosRouter from './routes/documentos.js';
 import cuotasRouter from './routes/cuotas.js';
@@ -613,29 +613,31 @@ app.post('/api/propietarios/cambio-titular', requireAuth, async (req, res) => {
   }
 
   try {
-    await query('BEGIN');
+    const cambio = await withTransaction(async (tx) => {
+      // FOR UPDATE: dos traspasos simultáneos del mismo propietario no
+      // pueden leer ambos el mismo "anterior titular".
+      const propietarioActual = await tx('SELECT nombre_completo FROM propietarios WHERE id = $1 FOR UPDATE', [propietario_id]);
+      if (propietarioActual.rows.length === 0) return { rollback: true };
+      const anteriorTitularNombre = propietarioActual.rows[0].nombre_completo;
 
-    const propietarioActual = await query('SELECT nombre_completo FROM propietarios WHERE id = $1', [propietario_id]);
-    if (propietarioActual.rows.length === 0) {
-      await query('ROLLBACK');
+      await tx(
+        `UPDATE propietarios 
+         SET nombre_completo = $1, telefono = $2, email = $3
+         WHERE id = $4`,
+        [nuevo_nombre, nuevo_telefono || null, nuevo_email || null, propietario_id]
+      );
+
+      await tx(
+        `INSERT INTO historial_titularidad (propietario_id, anterior_titular, nuevo_titular, motivo_cambio, detalles)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [propietario_id, anteriorTitularNombre, nuevo_nombre, motivo_cambio, detalles || 'Sustitución ordinaria de titularidad']
+      );
+      return {};
+    });
+
+    if (cambio.rollback) {
       return res.status(404).json({ error: 'No se encuentra el propietario a sustituir.' });
     }
-    const anteriorTitularNombre = propietarioActual.rows[0].nombre_completo;
-
-    await query(
-      `UPDATE propietarios 
-       SET nombre_completo = $1, telefono = $2, email = $3
-       WHERE id = $4`,
-      [nuevo_nombre, nuevo_telefono || null, nuevo_email || null, propietario_id]
-    );
-
-    await query(
-      `INSERT INTO historial_titularidad (propietario_id, anterior_titular, nuevo_titular, motivo_cambio, detalles)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [propietario_id, anteriorTitularNombre, nuevo_nombre, motivo_cambio, detalles || 'Sustitución ordinaria de titularidad']
-    );
-
-    await query('COMMIT');
 
     res.status(200).json({
       success: true,
@@ -643,7 +645,6 @@ app.post('/api/propietarios/cambio-titular', requireAuth, async (req, res) => {
     });
 
   } catch (err) {
-    await query('ROLLBACK');
     console.error('Fallo en la transacción de cambio de titular:', err.message);
     res.status(500).json({ error: 'Fallo interno al procesar el cambio de titularidad legal.' });
   }
@@ -663,26 +664,25 @@ app.delete('/api/entities/delete/:id', requireAuth, async (req, res) => {
 
     console.log(`\n🧹 [Neon Cloud] Ejecutando purga integral para la entidad ID: ${entityIdClean}`);
 
-    // Iniciamos una transacción para asegurar la consistencia absoluta de los datos
-    await query('BEGIN');
+    // Todo o nada: si falla cualquier paso, la finca queda intacta en vez
+    // de sin censo pero todavía existiendo.
+    const result = await withTransaction(async (tx) => {
+      // A. Eliminamos el historial de titularidad vinculado a los propietarios de esta entidad
+      await tx(
+        `DELETE FROM historial_titularidad 
+         WHERE propietario_id IN (SELECT id FROM propietarios WHERE entity_id = $1::uuid)`,
+        [entityIdClean]
+      );
 
-    // A. Eliminamos el historial de titularidad vinculado a los propietarios de esta entidad
-    await query(
-      `DELETE FROM historial_titularidad 
-       WHERE propietario_id IN (SELECT id FROM propietarios WHERE entity_id = $1::uuid)`,
-      [entityIdClean]
-    );
+      // B. Eliminamos el censo de propietarios
+      await tx('DELETE FROM propietarios WHERE entity_id = $1::uuid', [entityIdClean]);
 
-    // B. Eliminamos el censo de propietarios
-    await query('DELETE FROM propietarios WHERE entity_id = $1::uuid', [entityIdClean]);
+      // C. Eliminamos las reuniones/asambleas de la entidad
+      await tx('DELETE FROM meetings WHERE entity_id = $1::uuid', [entityIdClean]);
 
-    // C. Eliminamos las reuniones/asambleas de la entidad
-    await query('DELETE FROM meetings WHERE entity_id = $1::uuid', [entityIdClean]);
-
-    // D. Una vez removidas todas las dependencias, borramos el registro raíz en entities
-    const result = await query('DELETE FROM entities WHERE id = $1', [entityIdClean]);
-
-    await query('COMMIT');
+      // D. Una vez removidas todas las dependencias, borramos el registro raíz en entities
+      return tx('DELETE FROM entities WHERE id = $1', [entityIdClean]);
+    });
 
     if (result.rowCount > 0) {
       console.log(`✅ [Neon Cloud] Entidad ${entityIdClean} y sus datos dependientes purgados con éxito.`);
@@ -691,7 +691,6 @@ app.delete('/api/entities/delete/:id', requireAuth, async (req, res) => {
       res.status(404).json({ success: false, error: 'La entidad solicitada no se encuentra en pgAdmin.' });
     }
   } catch (err) {
-    await query('ROLLBACK');
     console.error("❌ Fallo crítico en el proceso de purga de PostgreSQL:", err.message);
     res.status(500).json({ success: false, error: `Fallo interno al intentar purgar el registro: ${err.message}` });
   }

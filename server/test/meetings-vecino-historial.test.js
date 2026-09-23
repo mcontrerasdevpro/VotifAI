@@ -18,6 +18,8 @@ const MEETING_ID = 'meeting-cerrada-1';
 const calls = [];
 mock.module('../db.js', {
   namedExports: {
+    // Misma forma que el helper real: fn recibe una query equivalente.
+    withTransaction: async (fn) => fn((await import('../db.js')).query),
     query: async (text, params) => {
       calls.push({ text, params });
 

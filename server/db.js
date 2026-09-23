@@ -26,3 +26,28 @@ const pool = new Pool({
 
 export const query = (text, params) => pool.query(text, params);
 export { pool };
+
+// Una transacción tiene que ir entera por la misma conexión: con
+// query('BEGIN') sobre el pool, cada sentencia puede salir por una conexión
+// distinta, así que el ROLLBACK no deshace nada y el BEGIN deja una conexión
+// "colgada" dentro de una transacción abierta que luego reutiliza otra
+// petición cualquiera.
+//
+// `fn` recibe un `tx(text, params)` con la misma forma que `query`. Para
+// abortar sin error (p. ej. una validación que falla a mitad), `fn` devuelve
+// un objeto con `rollback: true` y se hace ROLLBACK en vez de COMMIT; lo
+// que devuelva `fn` se devuelve tal cual en ambos casos.
+export async function withTransaction(fn) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const resultado = await fn((text, params) => client.query(text, params));
+    await client.query(resultado?.rollback ? 'ROLLBACK' : 'COMMIT');
+    return resultado;
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+}
