@@ -1,3 +1,6 @@
+import { useState } from 'react';
+import VerPassword from './VerPassword.jsx';
+
 const BASE = 'w-full bg-slate-900 border rounded-xl text-xs text-slate-200 focus:outline-none transition-colors placeholder:text-slate-600';
 
 const FOCO_VARIANTE = {
@@ -21,10 +24,13 @@ export default function Field({
   className = '',
   inputClassName = '',
   children,
+  type,
   ...rest
 }) {
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const esPassword = as === 'input' && type === 'password';
   const borde = error ? 'border-rose-500/60 focus:border-rose-500' : `border-slate-800 ${FOCO_VARIANTE[variant] || FOCO_VARIANTE.vecino}`;
-  const padding = Icon ? 'py-3 pl-10 pr-4' : 'py-3 px-4';
+  const padding = `py-3 ${Icon ? 'pl-10' : 'pl-4'} ${esPassword ? 'pr-10' : 'pr-4'}`;
   const Componente = as === 'select' ? 'select' : as === 'textarea' ? 'textarea' : 'input';
 
   return (
@@ -38,10 +44,12 @@ export default function Field({
         {Icon && <Icon className="absolute left-3.5 top-3.5 text-slate-600 pointer-events-none" size={16} />}
         <Componente
           className={`${BASE} ${borde} ${padding} ${as === 'textarea' ? 'resize-none' : ''} ${inputClassName}`}
+          type={esPassword && passwordVisible ? 'text' : type}
           {...rest}
         >
           {children}
         </Componente>
+        {esPassword && <VerPassword visible={passwordVisible} onToggle={() => setPasswordVisible((v) => !v)} />}
       </div>
       {error ? (
         <p className="text-4xs text-rose-400 font-bold mt-1">{error}</p>

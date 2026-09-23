@@ -6,6 +6,7 @@ import VotacionVecino from '../../components/VotacionVecino.jsx';
 import HistorialVecino from '../../components/HistorialVecino.jsx';
 import PreferenciaNotificacion from '../../components/PreferenciaNotificacion.jsx';
 import Brand from '../../components/Brand.jsx';
+import VerPassword from '../../components/ui/VerPassword.jsx';
 
 /**
  * Pantalla de "manos alzadas": el vecino accede desde su propio móvil al
@@ -37,6 +38,8 @@ export default function Asistencia() {
   const [regCodigo, setRegCodigo] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
+  const [verLoginPassword, setVerLoginPassword] = useState(false);
+  const [verRegPassword, setVerRegPassword] = useState(false);
 
   // --- Grabación (con sesión) ---
   const [grabando, setGrabando] = useState(false);
@@ -288,9 +291,10 @@ export default function Asistencia() {
                       <label className="block text-5xs font-black text-slate-400 uppercase tracking-widest">Contraseña</label>
                       <div className="relative">
                         <Lock className="absolute left-3.5 top-3.5 text-slate-500" size={14} />
-                        <input type="password" required value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)}
+                        <input type={verLoginPassword ? 'text' : 'password'} required value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)}
                           placeholder="••••••••"
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-xs text-slate-200 focus:outline-none focus:border-blue-500" />
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-10 text-xs text-slate-200 focus:outline-none focus:border-blue-500" />
+                        <VerPassword visible={verLoginPassword} onToggle={() => setVerLoginPassword((v) => !v)} />
                       </div>
                     </div>
                     <button type="submit" disabled={enviandoAuth}
@@ -372,9 +376,10 @@ export default function Asistencia() {
                       <label className="block text-5xs font-black text-slate-400 uppercase tracking-widest">Crea una Contraseña</label>
                       <div className="relative">
                         <Lock className="absolute left-3.5 top-3.5 text-slate-500" size={14} />
-                        <input type="password" required minLength={8} value={regPassword} onChange={(e) => setRegPassword(e.target.value)}
+                        <input type={verRegPassword ? 'text' : 'password'} required minLength={8} value={regPassword} onChange={(e) => setRegPassword(e.target.value)}
                           placeholder="Mínimo 8 caracteres"
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-xs text-slate-200 focus:outline-none focus:border-blue-500" />
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-10 text-xs text-slate-200 focus:outline-none focus:border-blue-500" />
+                        <VerPassword visible={verRegPassword} onToggle={() => setVerRegPassword((v) => !v)} />
                       </div>
                     </div>
 
