@@ -84,6 +84,42 @@ router.post('/billing/checkout', requireAuth, async (req, res) => {
   }
 });
 
+// Traduce el estado de Stripe a los estados propios de tenants
+// (trialing/active/past_due/canceled/incomplete). Cualquier estado de
+// Stripe sin acceso (unpaid, paused, incomplete_expired) cuenta como
+// cancelado para que el despacho pase a solo lectura.
+const ESTADO_POR_STATUS_STRIPE = {
+  active: 'active',
+  trialing: 'active',
+  past_due: 'past_due',
+  incomplete: 'incomplete',
+  unpaid: 'canceled',
+  paused: 'canceled',
+  incomplete_expired: 'canceled',
+  canceled: 'canceled'
+};
+
+export function cambioDesdeEventoStripe(tipo, object) {
+  if (tipo === 'checkout.session.completed') {
+    if (object.payment_status !== 'paid' && object.payment_status !== 'no_payment_required') return null;
+    return { estado: 'active', periodoFin: null, suscripcionId: object.subscription || null, plan: true };
+  }
+  if (tipo.startsWith('customer.subscription.')) {
+    const estado = tipo === 'customer.subscription.deleted' ? 'canceled' : ESTADO_POR_STATUS_STRIPE[object.status];
+    if (!estado) return null;
+    // Desde la API 2025-03 el fin de periodo vive en cada item, no en la
+    // suscripción; se aceptan ambos sitios.
+    const finPeriodo = object.current_period_end || object.items?.data?.[0]?.current_period_end;
+    return { estado, periodoFin: finPeriodo ? new Date(finPeriodo * 1000) : null, suscripcionId: object.id, plan: true };
+  }
+  // invoice.payment_failed se registra en suscripciones_eventos pero no
+  // cambia el estado: el customer.subscription.updated que lo acompaña ya
+  // trae el status correcto, y un past_due puesto a ciegas aquí podría
+  // pisar un canceled posterior (Stripe no garantiza el orden) o dar acceso
+  // a un primer pago que nunca llegó a completarse.
+  return null;
+}
+
 export async function stripeWebhookHandler(req, res) {
   if (!stripe || !process.env.STRIPE_WEBHOOK_SECRET) {
     return res.status(503).send('Stripe webhook no configurado.');
@@ -97,7 +133,10 @@ export async function stripeWebhookHandler(req, res) {
   }
 
   const object = event.data.object;
-  const tenantId = object.metadata?.tenantId;
+  // En las facturas (invoice.*) Stripe no copia los metadata de la
+  // suscripción al propio objeto, van en parent.subscription_details.
+  const metadata = object.metadata?.tenantId ? object.metadata : object.parent?.subscription_details?.metadata || {};
+  const tenantId = metadata.tenantId;
   if (!tenantId) return res.json({ received: true });
 
   try {
@@ -107,24 +146,16 @@ export async function stripeWebhookHandler(req, res) {
     );
     if (alreadyProcessed.rowCount > 0) return res.json({ received: true, duplicate: true });
 
-    const stateByEvent = {
-      'checkout.session.completed': 'active',
-      'customer.subscription.created': 'active',
-      'customer.subscription.updated': object.status === 'past_due' ? 'past_due' : 'active',
-      'customer.subscription.deleted': 'canceled',
-      'invoice.payment_failed': 'past_due'
-    };
-    const state = stateByEvent[event.type];
-    if (state) {
-      const plan = object.metadata?.plan;
+    const cambio = cambioDesdeEventoStripe(event.type, object);
+    if (cambio) {
       await query(
         `UPDATE tenants
          SET suscripcion_estado = $1,
-             suscripcion_periodo_fin = $2,
+             suscripcion_periodo_fin = COALESCE($2, suscripcion_periodo_fin),
              proveedor_suscripcion_id = COALESCE($3, proveedor_suscripcion_id),
              plan_suscripcion = COALESCE($4, plan_suscripcion)
          WHERE id = $5`,
-        [state, object.current_period_end ? new Date(object.current_period_end * 1000) : null, object.subscription || object.id, plan, tenantId]
+        [cambio.estado, cambio.periodoFin, cambio.suscripcionId, cambio.plan ? metadata.plan || null : null, tenantId]
       );
     }
 

@@ -408,6 +408,7 @@ export default function Asistencia() {
 
                 <HistorialVecino entityId={entityId} />
 
+                {sesion.transcripcion_voz !== false && (
                 <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-8 flex flex-col items-center justify-center gap-5 min-h-[260px]">
                   {enviando ? (
                     <>
@@ -433,6 +434,7 @@ export default function Asistencia() {
                     </>
                   )}
                 </div>
+                )}
 
                 {errorMic && (
                   <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-start gap-2 text-rose-400 text-4xs leading-relaxed font-bold">

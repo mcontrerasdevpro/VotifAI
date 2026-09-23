@@ -58,6 +58,8 @@ export default function ClientSelector() {
     ? Math.max(0, Math.ceil((new Date(suscripcion.trialFin) - new Date()) / 86400000))
     : null;
   const trialProximo = suscripcion?.estado === 'trialing' && diasTrial !== null && diasTrial <= 5;
+  const soloLectura = suscripcion?.accesoCompleto === false;
+  const textoEstado = { expired: 'Prueba finalizada', canceled: 'Suscripción cancelada', incomplete: 'Pago pendiente', past_due: 'Pago con incidencias', active: 'Activa' };
 
   const fincasFiltradas = fincas.filter(f =>
     f.nombre.toLowerCase().includes(busqueda.toLowerCase())
@@ -117,18 +119,22 @@ export default function ClientSelector() {
       <div className="flex-grow overflow-y-auto p-6">
         <div className="mx-auto mb-4 max-w-5xl">
           {suscripcion && (
-            <div className={`flex flex-col gap-3 rounded-2xl border px-4 py-3 sm:flex-row sm:items-center sm:justify-between ${trialProximo ? 'border-amber-400/30 bg-amber-400/[0.08]' : 'border-cyan-300/20 bg-cyan-300/[0.06]'}`}>
+            <div className={`flex flex-col gap-3 rounded-2xl border px-4 py-3 sm:flex-row sm:items-center sm:justify-between ${soloLectura ? 'border-rose-400/30 bg-rose-400/[0.08]' : trialProximo ? 'border-amber-400/30 bg-amber-400/[0.08]' : 'border-cyan-300/20 bg-cyan-300/[0.06]'}`}>
               <div className="flex items-center gap-3">
-                {trialProximo ? <AlertTriangle size={18} className="shrink-0 text-amber-300" /> : <CreditCard size={18} className="shrink-0 text-cyan-300" />}
+                {soloLectura ? <AlertTriangle size={18} className="shrink-0 text-rose-300" /> : trialProximo ? <AlertTriangle size={18} className="shrink-0 text-amber-300" /> : <CreditCard size={18} className="shrink-0 text-cyan-300" />}
                 <div>
                   <p className="text-xs font-bold text-white">Plan {suscripcion.nombrePlan}</p>
                   <p className="mt-0.5 text-4xs text-slate-400">
                     {suscripcion.uso.fincas} de {suscripcion.limites.fincas ?? '∞'} fincas utilizadas
-                    {suscripcion.estado === 'trialing' && diasTrial !== null ? ` · ${diasTrial} días de prueba restantes` : ` · Estado: ${suscripcion.estado}`}
+                    {suscripcion.estado === 'trialing' && diasTrial !== null ? ` · ${diasTrial} días de prueba restantes` : ` · ${textoEstado[suscripcion.estado] || suscripcion.estado}`}
                   </p>
                 </div>
               </div>
-              {trialProximo && <span className="text-4xs font-black uppercase tracking-wider text-amber-300">Revisa tu plan pronto</span>}
+              {soloLectura ? (
+                <button type="button" onClick={() => navigate('/billing')} className="rounded-xl bg-rose-500 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-rose-400">
+                  Modo consulta · Elegir plan
+                </button>
+              ) : trialProximo && <span className="text-4xs font-black uppercase tracking-wider text-amber-300">Revisa tu plan pronto</span>}
             </div>
           )}
         </div>

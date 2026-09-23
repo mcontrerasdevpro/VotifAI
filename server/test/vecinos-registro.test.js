@@ -41,6 +41,9 @@ mock.module('../db.js', {
       if (text.includes('UPDATE propietarios SET email')) {
         return { rows: [{ id: PROPIETARIO_ID, entity_id: ENTITY_ID, nombre_completo: 'Vecino Test', propiedad_detalle: '1oA' }] };
       }
+      if (text.includes('FROM entities e JOIN tenants t')) {
+        return { rows: [{ plan_suscripcion: 'profesional', suscripcion_estado: 'active', trial_fin: null }] };
+      }
       throw new Error(`Query no esperada en el test: ${text}`);
     }
   }

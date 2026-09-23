@@ -22,7 +22,8 @@ import vecinosRouter from './routes/vecinos.js';
 import meetingsRouter from './routes/meetings.js';
 import billingRouter, { stripeWebhookHandler } from './routes/billing.js';
 import { notificar } from './lib/notificaciones.js';
-import { exigirCapacidadFinca } from './lib/suscripciones.js';
+import { exigirCapacidadFinca, exigirCapacidadPropietarios } from './lib/suscripciones.js';
+import { exigirSuscripcionParaEscribir } from './middleware/suscripcion.js';
 
 dotenv.config();
 const app = express();
@@ -108,6 +109,7 @@ app.use('/api/vecinos', authLimiter);
 // la subida de PDF de fincas (/api/entities/upload-pdf).
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
+app.use('/api', exigirSuscripcionParaEscribir);
 app.use('/api', billingRouter);
 app.use('/api', documentosRouter);
 app.use('/api', cuotasRouter);
@@ -140,15 +142,37 @@ app.post('/api/demo-solicitudes', demoLimiter, async (req, res) => {
       [nombre, email, telefono || null, comunidades || null, mensaje || null]
     );
 
-    try {
-      await notificar({
+    // Dos avisos independientes: que falle uno no debe impedir el otro, y
+    // ninguno de los dos invalida la solicitud, que ya está guardada.
+    const emailEquipo = process.env.DEMO_NOTIFICATION_EMAIL || process.env.N8N_NOTIFICATION_EMAIL || 'contacto@nexuraia.com';
+    const detalle = [
+      `Nombre: ${nombre}`,
+      `Email: ${email}`,
+      `Teléfono: ${telefono || '—'}`,
+      `Comunidades que gestiona: ${comunidades || '—'}`,
+      `Mensaje: ${mensaje || '—'}`
+    ].join('\n');
+
+    const avisos = await Promise.allSettled([
+      notificar({
         tipo: 'solicitud_demo_votifai',
-        mensaje: { titulo: 'Nueva solicitud de demo VotifAI', cuerpo: `${nombre} (${email}) solicita una demo.` },
-        destinatarios: [{ nombre: 'Equipo VotifAI', email: process.env.DEMO_NOTIFICATION_EMAIL || process.env.N8N_NOTIFICATION_EMAIL }]
-      });
-    } catch (notificationError) {
-      console.error('Solicitud guardada, pero falló la notificación de demo:', notificationError.message);
-    }
+        mensaje: { titulo: `Nueva solicitud de demo VotifAI — ${nombre}`, cuerpo: `Se ha recibido una nueva solicitud de demo.\n\n${detalle}` },
+        destinatarios: [{ nombre: 'Equipo VotifAI', email: emailEquipo, canal_preferido: 'email' }]
+      }),
+      notificar({
+        tipo: 'confirmacion_demo_votifai',
+        mensaje: {
+          titulo: 'Hemos recibido tu solicitud de demo de VotifAI',
+          cuerpo: `Hola ${nombre},\n\nGracias por tu interés en VotifAI. Hemos recibido tu solicitud de demo y te contactaremos en un plazo máximo de 24-48 horas laborables para agendarla.\n\nSi quieres adelantarnos algo, puedes responder directamente a este correo.\n\nUn saludo,\nEl equipo de VotifAI`
+        },
+        destinatarios: [{ nombre, email, canal_preferido: 'email' }]
+      })
+    ]);
+    avisos.forEach((aviso, i) => {
+      if (aviso.status === 'rejected') {
+        console.error(`Solicitud guardada, pero falló el aviso de demo (${i === 0 ? 'equipo' : 'solicitante'}):`, aviso.reason?.message);
+      }
+    });
 
     res.status(201).json({ success: true, solicitud: resultado.rows[0] });
   } catch (err) {
@@ -541,6 +565,9 @@ app.post('/api/propietarios/create', requireAuth, async (req, res) => {
     if (!(await entityBelongsToTenant(entity_id, req.tenantId))) {
       return res.status(403).json({ error: 'No autorizado para añadir propietarios a esta entidad.' });
     }
+
+    const capacidad = await exigirCapacidadPropietarios(req.tenantId, entity_id);
+    if (!capacidad.ok) return res.status(capacidad.status).json({ error: capacidad.error });
 
     const resultado = await query(
       `INSERT INTO propietarios (entity_id, nombre_completo, propiedad_detalle, telefono, email, coeficiente)

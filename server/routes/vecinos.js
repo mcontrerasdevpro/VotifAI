@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { query } from '../db.js';
 import { issueVoterSessionCookie, clearVoterSessionCookie, requireVoterAuth } from '../middleware/auth.js';
+import { fincaPermiteTranscripcion } from '../lib/suscripciones.js';
 import { notificar } from '../lib/notificaciones.js';
 
 const router = Router();
@@ -100,7 +101,7 @@ router.post('/vecinos/registro', async (req, res) => {
     const vecino = actualizado.rows[0];
     issueVoterSessionCookie(res, vecino);
 
-    res.status(201).json({ success: true, mensaje: 'Cuenta creada correctamente.', vecino });
+    res.status(201).json({ success: true, mensaje: 'Cuenta creada correctamente.', vecino: { ...vecino, transcripcion_voz: await fincaPermiteTranscripcion(vecino.entity_id) } });
   } catch (err) {
     console.error('Error al registrar vecino:', err.message);
     res.status(500).json({ error: `Fallo al crear la cuenta: ${err.message}` });
@@ -133,7 +134,7 @@ router.post('/vecinos/login', async (req, res) => {
     res.status(200).json({
       success: true,
       mensaje: 'Sesión iniciada correctamente.',
-      vecino: { id: vecino.id, entity_id: vecino.entity_id, nombre_completo: vecino.nombre_completo, propiedad_detalle: vecino.propiedad_detalle, telefono: vecino.telefono, email: vecino.email, canal_notificacion: vecino.canal_notificacion }
+      vecino: { id: vecino.id, entity_id: vecino.entity_id, nombre_completo: vecino.nombre_completo, propiedad_detalle: vecino.propiedad_detalle, telefono: vecino.telefono, email: vecino.email, canal_notificacion: vecino.canal_notificacion, transcripcion_voz: await fincaPermiteTranscripcion(vecino.entity_id) }
     });
   } catch (err) {
     console.error('Error al iniciar sesión de vecino:', err.message);
@@ -222,7 +223,8 @@ router.get('/vecinos/sesion', requireVoterAuth, async (req, res) => {
     if (resultado.rows.length === 0) {
       return res.status(401).json({ error: 'La cuenta de este vecino ya no existe.' });
     }
-    res.status(200).json({ success: true, vecino: resultado.rows[0] });
+    const vecino = resultado.rows[0];
+    res.status(200).json({ success: true, vecino: { ...vecino, transcripcion_voz: await fincaPermiteTranscripcion(vecino.entity_id) } });
   } catch (err) {
     console.error('Error al recuperar la sesión de vecino:', err.message);
     res.status(500).json({ error: `Fallo al recuperar la sesión: ${err.message}` });
