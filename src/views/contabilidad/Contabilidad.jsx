@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import { Landmark, TrendingUp, TrendingDown, Scale, Target, FileCheck2, Plus, Trash2 } from 'lucide-react';
+import { Landmark, TrendingUp, TrendingDown, Scale, Target, FileCheck2, Plus, Trash2, PiggyBank, FileDown, BarChart3, X } from 'lucide-react';
 import Card from '../../components/ui/Card.jsx';
 import Modal from '../../components/ui/Modal.jsx';
 import Field from '../../components/ui/Field.jsx';
 import DataTable from '../../components/ui/DataTable.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
+import FondoReserva from '../../components/FondoReserva.jsx';
+import EjecucionPresupuesto from '../../components/EjecucionPresupuesto.jsx';
 
 const fmt = (n) => Number(n || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -34,6 +36,11 @@ export default function Contabilidad() {
   const [prAnio, setPrAnio] = useState(new Date().getFullYear());
   const [prImporte, setPrImporte] = useState('');
   const [prNotas, setPrNotas] = useState('');
+  const [prTipo, setPrTipo] = useState('ordinario');
+  // Partidas del presupuesto (limpieza, luz, ascensor…). Con partidas, el
+  // total es su suma; sin ellas, se indica un importe total.
+  const [prPartidas, setPrPartidas] = useState([{ nombre: '', importe: '' }]);
+  const [presupuestoEjecucion, setPresupuestoEjecucion] = useState(null);
 
   const [modalLiqAbierto, setModalLiqAbierto] = useState(false);
   const [guardandoLiq, setGuardandoLiq] = useState(false);
@@ -84,6 +91,11 @@ export default function Contabilidad() {
     return mapa;
   }, [movimientos]);
 
+  const categoriasSugeridas = useMemo(
+    () => [...new Set(presupuestos.flatMap((pr) => (pr.partidas || []).map((pa) => pa.nombre)))].sort(),
+    [presupuestos]
+  );
+
   const resetFormMov = () => {
     setMvTipo('gasto'); setMvConcepto(''); setMvCategoria(''); setMvImporte(''); setMvFecha(''); setMvNotas('');
   };
@@ -126,9 +138,12 @@ export default function Contabilidad() {
     }
   };
 
+  const partidasValidas = prPartidas.filter((p) => p.nombre.trim() && Number(p.importe) >= 0 && p.importe !== '');
+  const totalPartidas = partidasValidas.reduce((t, p) => t + Number(p.importe), 0);
+
   const handleCrearPresupuesto = async (e) => {
     e.preventDefault();
-    if (!prNombre || !prAnio || !prImporte) return;
+    if (!prNombre || !prAnio || (partidasValidas.length === 0 && !prImporte)) return;
 
     setGuardandoPres(true);
     try {
@@ -136,12 +151,17 @@ export default function Contabilidad() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ entity_id: entidadId, nombre: prNombre, anio: prAnio, importe_previsto: prImporte, notas: prNotas })
+        body: JSON.stringify({
+          entity_id: entidadId, nombre: prNombre, anio: prAnio, tipo: prTipo, notas: prNotas,
+          importe_previsto: partidasValidas.length ? totalPartidas : prImporte,
+          partidas: partidasValidas.map((p) => ({ nombre: p.nombre.trim(), importe_previsto: Number(p.importe) }))
+        })
       });
       const resultado = await respuesta.json();
       if (respuesta.ok && resultado.success) {
         setModalPresAbierto(false);
         setPrNombre(''); setPrAnio(new Date().getFullYear()); setPrImporte(''); setPrNotas('');
+        setPrTipo('ordinario'); setPrPartidas([{ nombre: '', importe: '' }]);
         await refrescar();
       } else {
         alert(`❌ Error: ${resultado.error || 'No se pudo crear el presupuesto.'}`);
@@ -238,7 +258,15 @@ export default function Contabilidad() {
   ];
 
   const columnasPresupuestos = [
-    { key: 'nombre', header: 'Presupuesto', render: (p) => <p className="font-bold text-slate-900">{p.nombre}</p> },
+    { key: 'nombre', header: 'Presupuesto', render: (p) => (
+      <div>
+        <p className="font-bold text-slate-900">{p.nombre}</p>
+        <p className="mt-0.5 text-[10px] text-slate-500">
+          {p.tipo === 'extraordinario' ? 'Extraordinario' : 'Ordinario'}
+          {p.partidas?.length ? ` · ${p.partidas.length} partidas` : ' · sin partidas'}
+        </p>
+      </div>
+    ) },
     { key: 'anio', header: 'Año' },
     { key: 'importe_previsto', header: 'Previsto', align: 'right', render: (p) => <span className="font-mono">{fmt(p.importe_previsto)} €</span> },
     { key: 'ejecutado', header: 'Gasto Ejecutado', align: 'right', render: (p) => <span className="font-mono">{fmt(gastoPorAnio[p.anio] || 0)} €</span> },
@@ -247,9 +275,14 @@ export default function Contabilidad() {
       return <StatusBadge light tone={desviacion >= 0 ? 'success' : 'danger'}>{desviacion >= 0 ? '+' : ''}{fmt(desviacion)} €</StatusBadge>;
     } },
     { key: 'acciones', header: 'Acciones', align: 'center', render: (p) => (
-      <button onClick={() => handleEliminarPresupuesto(p.id)} className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-rose-400 hover:text-rose-300" title="Eliminar">
-        <Trash2 size={12} />
-      </button>
+      <div className="flex items-center justify-center gap-2">
+        <button onClick={() => setPresupuestoEjecucion(p)} className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-blue-400 hover:text-blue-300" title="Ver ejecución por partidas">
+          <BarChart3 size={12} />
+        </button>
+        <button onClick={() => handleEliminarPresupuesto(p.id)} className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-rose-400 hover:text-rose-300" title="Eliminar">
+          <Trash2 size={12} />
+        </button>
+      </div>
     ) }
   ];
 
@@ -268,11 +301,16 @@ export default function Contabilidad() {
       <StatusBadge light tone={Number(l.saldo) >= 0 ? 'success' : 'danger'}>{fmt(l.saldo)} €</StatusBadge>
     ) },
     { key: 'acciones', header: 'Acciones', align: 'center', render: (l) => (
-      l.anulada_en ? <span className="text-[10px] text-slate-400">—</span> : (
-        <button onClick={() => handleAnularLiquidacion(l.id)} className="px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 text-[10px] font-bold uppercase tracking-wider text-amber-400 hover:text-amber-300" title="Anular y reabrir el periodo">
-          Anular
-        </button>
-      )
+      <div className="flex items-center justify-center gap-2">
+        <a href={`/api/liquidaciones/${l.id}/pdf`} target="_blank" rel="noreferrer" className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 text-[10px] font-bold uppercase tracking-wider text-blue-400 hover:text-blue-300" title="Liquidación con reparto por propietario, para la junta">
+          <FileDown size={11} /> PDF
+        </a>
+        {!l.anulada_en && (
+          <button onClick={() => handleAnularLiquidacion(l.id)} className="px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 text-[10px] font-bold uppercase tracking-wider text-amber-400 hover:text-amber-300" title="Anular y reabrir el periodo">
+            Anular
+          </button>
+        )}
+      </div>
     ) }
   ];
 
@@ -291,6 +329,9 @@ export default function Contabilidad() {
           </button>
           <button onClick={() => setTab('liquidaciones')} className={`flex-1 py-2 px-4 rounded-lg text-4xs font-black uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all whitespace-nowrap ${tab === 'liquidaciones' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-300'}`}>
             <FileCheck2 size={12} /> Liquidaciones
+          </button>
+          <button onClick={() => setTab('fondo')} className={`flex-1 py-2 px-4 rounded-lg text-4xs font-black uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all whitespace-nowrap ${tab === 'fondo' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-300'}`}>
+            <PiggyBank size={12} /> Fondo de reserva
           </button>
         </div>
       </div>
@@ -321,13 +362,16 @@ export default function Contabilidad() {
           <button onClick={() => setModalPresAbierto(true)} className="bg-blue-600 hover:bg-blue-500 text-white text-5xs font-black uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-md shadow-blue-600/10">
             <Plus size={12} /> Nuevo Presupuesto
           </button>
-        ) : (
+        ) : tab === 'liquidaciones' ? (
           <button onClick={() => setModalLiqAbierto(true)} className="bg-blue-600 hover:bg-blue-500 text-white text-5xs font-black uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-md shadow-blue-600/10">
             <Plus size={12} /> Nueva Liquidación
           </button>
-        )}
+        ) : null}
       </div>
 
+      {tab === 'fondo' ? (
+        <FondoReserva entidadId={entidadId} />
+      ) : (
       <Card className="flex-grow overflow-hidden" padding="p-0" light>
         <div className="h-full overflow-y-auto custom-scrollbar">
           {tab === 'movimientos' ? (
@@ -339,6 +383,9 @@ export default function Contabilidad() {
           )}
         </div>
       </Card>
+      )}
+
+      <EjecucionPresupuesto presupuesto={presupuestoEjecucion} onClose={() => setPresupuestoEjecucion(null)} />
 
       {/* MODAL: NUEVO MOVIMIENTO */}
       <Modal
@@ -363,9 +410,15 @@ export default function Contabilidad() {
           </Field>
           <Field label="Concepto" required value={mvConcepto} onChange={(e) => setMvConcepto(e.target.value)} placeholder="Ej: Reparación del ascensor" />
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Categoría (opcional)" value={mvCategoria} onChange={(e) => setMvCategoria(e.target.value)} placeholder="Ej: Mantenimiento" />
+            <Field label="Categoría / partida" value={mvCategoria} onChange={(e) => setMvCategoria(e.target.value)} placeholder="Ej: Limpieza" list="partidas-presupuesto" />
             <Field label="Importe (€)" type="number" step="0.01" min="0.01" required value={mvImporte} onChange={(e) => setMvImporte(e.target.value)} placeholder="150.00" />
           </div>
+          <datalist id="partidas-presupuesto">
+            {categoriasSugeridas.map((c) => <option key={c} value={c} />)}
+          </datalist>
+          {mvTipo === 'gasto' && categoriasSugeridas.length > 0 && (
+            <p className="text-4xs text-slate-500">Usa el nombre de una partida del presupuesto para que cuente en su ejecución.</p>
+          )}
           <Field label="Fecha" type="date" required value={mvFecha} onChange={(e) => setMvFecha(e.target.value)} />
           <Field label="Notas (opcional)" as="textarea" rows={2} value={mvNotas} onChange={(e) => setMvNotas(e.target.value)} placeholder="Detalles adicionales" />
         </form>
@@ -391,8 +444,44 @@ export default function Contabilidad() {
           <Field label="Nombre" required value={prNombre} onChange={(e) => setPrNombre(e.target.value)} placeholder="Ej: Presupuesto Ordinario 2026" />
           <div className="grid grid-cols-2 gap-3">
             <Field label="Año" type="number" required value={prAnio} onChange={(e) => setPrAnio(e.target.value)} />
-            <Field label="Importe Previsto (€)" type="number" step="0.01" min="0.01" required value={prImporte} onChange={(e) => setPrImporte(e.target.value)} placeholder="5000.00" />
+            <Field label="Tipo" as="select" value={prTipo} onChange={(e) => setPrTipo(e.target.value)}>
+              <option value="ordinario">Ordinario</option>
+              <option value="extraordinario">Extraordinario (obra, derrama…)</option>
+            </Field>
           </div>
+          {prTipo === 'ordinario' && (
+            <p className="text-4xs text-slate-500">El fondo de reserva se mide contra el último presupuesto ordinario: debe ser al menos el 10 % (art. 9.1.f LPH).</p>
+          )}
+
+          <div className="space-y-2">
+            <p className="text-5xs font-black uppercase tracking-widest text-slate-400">Partidas</p>
+            {prPartidas.map((pa, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <input
+                  value={pa.nombre} placeholder="Ej: Limpieza"
+                  onChange={(e) => setPrPartidas((l) => l.map((x, j) => (j === i ? { ...x, nombre: e.target.value } : x)))}
+                  className="flex-grow bg-slate-900 border border-slate-800 rounded-lg py-2 px-3 text-3xs text-slate-200 focus:outline-none focus:border-blue-500"
+                />
+                <input
+                  type="number" step="0.01" min="0" value={pa.importe} placeholder="€"
+                  onChange={(e) => setPrPartidas((l) => l.map((x, j) => (j === i ? { ...x, importe: e.target.value } : x)))}
+                  className="w-28 bg-slate-900 border border-slate-800 rounded-lg py-2 px-3 text-3xs text-slate-200 text-right focus:outline-none focus:border-blue-500"
+                />
+                <button type="button" onClick={() => setPrPartidas((l) => (l.length > 1 ? l.filter((_, j) => j !== i) : [{ nombre: '', importe: '' }]))} className="p-1.5 text-slate-500 hover:text-rose-400" title="Quitar partida">
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+            <button type="button" onClick={() => setPrPartidas((l) => [...l, { nombre: '', importe: '' }])} className="flex items-center gap-1 text-4xs font-black uppercase tracking-wider text-blue-400">
+              <Plus size={12} /> Añadir partida
+            </button>
+          </div>
+
+          {partidasValidas.length > 0 ? (
+            <p className="text-3xs text-slate-300">Total del presupuesto: <strong className="font-mono">{fmt(totalPartidas)} €</strong> (suma de las partidas)</p>
+          ) : (
+            <Field label="Importe total previsto (€) — si no lo desglosas en partidas" type="number" step="0.01" min="0.01" value={prImporte} onChange={(e) => setPrImporte(e.target.value)} placeholder="5000.00" />
+          )}
           <Field label="Notas (opcional)" as="textarea" rows={2} value={prNotas} onChange={(e) => setPrNotas(e.target.value)} placeholder="Detalles adicionales" />
         </form>
       </Modal>
