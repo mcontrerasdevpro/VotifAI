@@ -13,10 +13,11 @@ import { obtenerEstadoSuscripcion, MENSAJE_SIN_ACCESO } from '../lib/suscripcion
 // - lecturas (GET/HEAD/OPTIONS) y borrados (DELETE: quitarse datos propios
 //   no da ningún valor que haya que cobrar, y un despacho que se va tiene
 //   que poder limpiar lo suyo);
-// - auth y billing (sin ellos no podría ni entrar ni pagar);
+// - auth, billing y el perfil del despacho (sin ellos no podría ni entrar,
+//   ni pagar, ni corregir su email o cambiar la contraseña);
 // - todo el lado vecino: los propietarios no son clientes, y sin acciones
 //   del despacho ya no se pueden convocar ni abrir juntas nuevas.
-const RUTAS_LIBRES = [/^\/auth\//, /^\/billing\//, /^\/demo-solicitudes$/, /^\/vecinos\//, /^\/asistencia\//, /^\/meetings\/vecino\//];
+const RUTAS_LIBRES = [/^\/auth\//, /^\/billing\//, /^\/despacho\//, /^\/demo-solicitudes$/, /^\/vecinos\//, /^\/asistencia\//, /^\/meetings\/vecino\//];
 const METODOS_LIBRES = new Set(['GET', 'HEAD', 'OPTIONS', 'DELETE']);
 
 export async function exigirSuscripcionParaEscribir(req, res, next) {

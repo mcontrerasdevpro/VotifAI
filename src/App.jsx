@@ -26,6 +26,7 @@ import Privacidad from './views/legal/Privacidad.jsx';
 import Terminos from './views/legal/Terminos.jsx';
 import EncargoTratamiento from './views/legal/EncargoTratamiento.jsx';
 import Billing from './views/billing/Billing.jsx';
+import PerfilDespacho from './views/despacho/PerfilDespacho.jsx';
 
 function App() {
   return (
@@ -46,6 +47,7 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route path="/hub" element={<ClientSelector />} />
             <Route path="/billing" element={<Billing />} />
+            <Route path="/perfil" element={<PerfilDespacho />} />
             <Route path="/agenda" element={<Agenda />} />
             <Route path="/acta-ia" element={<MinutesAI />} />
             <Route path="/alta-finca" element={<AltaFinca />} />

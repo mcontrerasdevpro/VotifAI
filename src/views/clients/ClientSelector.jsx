@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVotifaiStore } from '../../store.jsx';
-import { Building2, Search, FolderOpen, LogOut, CalendarDays, CreditCard, AlertTriangle } from 'lucide-react';
+import { Building2, Search, FolderOpen, LogOut, CalendarDays, CreditCard, AlertTriangle, Settings } from 'lucide-react';
 import Card from '../../components/ui/Card.jsx';
 import Field from '../../components/ui/Field.jsx';
 
@@ -87,11 +87,13 @@ export default function ClientSelector() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          {adminGlobal?.nombre && (
-            <span className="text-4xs font-mono bg-slate-900 border border-slate-800 text-slate-400 px-3 py-1.5 rounded-lg">
-              👤 {adminGlobal.nombre}
-            </span>
-          )}
+          <button
+            onClick={() => navigate('/perfil')}
+            title="Datos del despacho, email y contraseña"
+            className="bg-slate-900 hover:bg-slate-800 border border-slate-800 transition-colors text-slate-300 hover:text-white text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-1.5"
+          >
+            <Settings size={14} /> {adminGlobal?.nombre ? `Mi despacho · ${adminGlobal.nombre}` : 'Mi despacho'}
+          </button>
           <button
             onClick={() => navigate('/agenda')}
             className="bg-slate-900 hover:bg-slate-800 border border-slate-800 transition-colors text-slate-300 hover:text-white text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-1.5"
@@ -106,9 +108,8 @@ export default function ClientSelector() {
           </button>
           <button
             onClick={() => navigate('/billing')}
-            aria-label="Abrir mi plan y facturación"
-            className="rounded-xl border border-cyan-300/20 bg-cyan-300/10 p-2.5 text-cyan-200 transition-colors hover:bg-cyan-300/20"
-          ><CreditCard size={15} /></button>
+            className="rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-2.5 text-xs font-bold text-cyan-200 transition-colors hover:bg-cyan-300/20 flex items-center gap-1.5"
+          ><CreditCard size={14} /> Mi plan</button>
           <button
             onClick={handleLogout}
             className="p-2.5 bg-slate-900 border border-slate-800 text-slate-400 rounded-xl hover:text-white transition-colors"
@@ -134,7 +135,14 @@ export default function ClientSelector() {
                 <button type="button" onClick={() => navigate('/billing')} className="rounded-xl bg-rose-500 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-rose-400">
                   Modo consulta · Elegir plan
                 </button>
-              ) : trialProximo && <span className="text-4xs font-black uppercase tracking-wider text-amber-300">Revisa tu plan pronto</span>}
+              ) : (
+                <div className="flex items-center gap-3">
+                  {trialProximo && <span className="text-4xs font-black uppercase tracking-wider text-amber-300">Revisa tu plan pronto</span>}
+                  <button type="button" onClick={() => navigate('/billing')} className="rounded-xl border border-cyan-300/30 px-4 py-2 text-xs font-bold text-cyan-200 transition-colors hover:bg-cyan-300/10">
+                    {suscripcion.suscripcionPagada ? 'Gestionar plan' : 'Ver planes y contratar'}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

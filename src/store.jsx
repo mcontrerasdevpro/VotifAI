@@ -25,6 +25,16 @@ function votifaiReducer(state, action) {
       return { ...state, tenant: nuevoTenant };
     }
 
+    // Datos editados en "Mi despacho": se mezclan con la sesión guardada sin
+    // perder las comunidades ya cargadas.
+    case 'ACTUALIZAR_PERFIL': {
+      if (!state.tenant) return state;
+      const perfil = normalizeTenant({ ...action.payload, comunidades: state.tenant.comunidades });
+      const tenantActualizado = { ...state.tenant, ...perfil, tenantId: state.tenant.tenantId };
+      localStorage.setItem('votifai_tenant', JSON.stringify(tenantActualizado));
+      return { ...state, tenant: tenantActualizado };
+    }
+
     case 'CERRAR_SESION':
       localStorage.removeItem('votifai_tenant');
       return { ...state, tenant: null, salaControl: initialState.salaControl };
