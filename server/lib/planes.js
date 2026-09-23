@@ -29,6 +29,9 @@ export const PLANES = Object.freeze({
   })
 });
 
+// Planes que se pueden probar 15 días al registrarse.
+export const PLANES_CON_PRUEBA = Object.freeze(['starter', 'profesional', 'premium']);
+
 export function obtenerPlan(plan) {
   return PLANES[plan] || PLANES.starter;
 }

@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useVotifaiStore } from '../../store.jsx';
 import { ShieldCheck, ArrowRight, ArrowLeft, Mail, Lock, Sparkles, AudioLines, FileJson, Scale, Phone, MapPin, User } from 'lucide-react';
 import Brand from '../../components/Brand.jsx';
 import Field from '../../components/ui/Field.jsx';
+import { PLANES_RESPALDO, PLANES_CON_PRUEBA } from '../../lib/planes.js';
 
 export default function Register() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const planDeLaWeb = searchParams.get('plan');
+  const [plan, setPlan] = useState(PLANES_CON_PRUEBA.includes(planDeLaWeb) ? planDeLaWeb : 'starter');
+  const planesPrueba = PLANES_RESPALDO.filter((p) => PLANES_CON_PRUEBA.includes(p.id));
   const { dispatch } = useVotifaiStore() || { dispatch: () => { } };
 
   const tipoOrganizacion = 'administrador';
@@ -40,7 +45,7 @@ export default function Register() {
       email,
       password,
       aceptaCondiciones,
-      plan: 'starter'
+      plan
     };
 
     try {
@@ -220,10 +225,24 @@ export default function Register() {
               </div>
           </div>
 
-          <div className="flex items-center justify-between rounded-xl border border-blue-500/20 bg-blue-500/5 p-4">
-            <div className="flex items-center gap-2"><Sparkles size={14} className="text-blue-400" /><span className="text-4xs uppercase tracking-wider text-slate-300 font-bold">Plan Starter · 15 días de prueba</span></div>
-            <span className="text-4xs font-bold text-emerald-400">Gratis</span>
-          </div>
+          <fieldset className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4">
+            <legend className="flex items-center gap-2 px-1 text-4xs font-bold uppercase tracking-wider text-slate-300">
+              <Sparkles size={14} className="text-blue-400" /> Plan que quieres probar · 15 días gratis
+            </legend>
+            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+              {planesPrueba.map((p) => (
+                <label
+                  key={p.id}
+                  className={`cursor-pointer rounded-xl border px-3 py-2.5 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-blue-400 ${plan === p.id ? 'border-blue-500 bg-blue-500/10' : 'border-slate-800 hover:border-slate-700'}`}
+                >
+                  <input type="radio" name="plan" value={p.id} checked={plan === p.id} onChange={() => setPlan(p.id)} className="sr-only" />
+                  <span className="block text-xs font-black text-white">{p.nombre}</span>
+                  <span className="block text-4xs text-slate-400">{p.precioDesde} €/mes + IVA tras la prueba</span>
+                </label>
+              ))}
+            </div>
+            <p className="mt-2 text-4xs text-slate-500">Sin tarjeta. Al terminar la prueba eliges el plan que quieras contratar.</p>
+          </fieldset>
 
           <label className="flex items-start gap-3 text-3xs leading-relaxed text-slate-400">
             <input

@@ -24,6 +24,7 @@ import billingRouter, { stripeWebhookHandler } from './routes/billing.js';
 import despachoRouter from './routes/despacho.js';
 import { notificar } from './lib/notificaciones.js';
 import { exigirCapacidadFinca, exigirCapacidadPropietarios } from './lib/suscripciones.js';
+import { PLANES_CON_PRUEBA } from './lib/planes.js';
 import { exigirSuscripcionParaEscribir } from './middleware/suscripcion.js';
 
 dotenv.config();
@@ -197,7 +198,10 @@ app.post('/api/auth/register', async (req, res) => {
   // compara siempre normalizado, o un "Correo@..." pasaría la comprobación
   // de duplicado y reventaría en el INSERT con un 500.
   const email = String(req.body.email || '').trim().toLowerCase();
-  const planInicial = 'starter';
+  // Los 15 días de prueba son del plan que el despacho elige al registrarse
+  // (Enterprise no: es a medida). Cualquier otro valor vuelve a Starter.
+  const planPedido = String(req.body.plan || '').trim().toLowerCase();
+  const planInicial = PLANES_CON_PRUEBA.includes(planPedido) ? planPedido : 'starter';
 
   if (!email || !password || password.length < 8) {
     return res.status(400).json({ error: 'Se requiere un email y una contraseña de al menos 8 caracteres.' });

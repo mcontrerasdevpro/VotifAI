@@ -12,6 +12,10 @@ export const PLANES_RESPALDO = [
   { id: 'enterprise', nombre: 'Enterprise', precioDesde: null, maxFincas: null, maxPropietariosPorFinca: null, transcripcionVoz: true }
 ];
 
+// Planes que se pueden probar 15 días al registrarse (mismo criterio que
+// PLANES_CON_PRUEBA en server/lib/planes.js).
+export const PLANES_CON_PRUEBA = ['starter', 'profesional', 'premium'];
+
 export const LEMA_PLAN = {
   starter: 'Para empezar',
   profesional: 'Para crecer',

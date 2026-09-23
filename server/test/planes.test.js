@@ -31,3 +31,7 @@ test('publica precios orientativos desde y deja Enterprise a medida', () => {
   assert.equal(PLANES.premium.precioDesde, 199);
   assert.equal(PLANES.enterprise.precioDesde, null);
 });
+test('se pueden probar todos los planes salvo Enterprise', async () => {
+  const { PLANES_CON_PRUEBA } = await import('../lib/planes.js');
+  assert.deepEqual([...PLANES_CON_PRUEBA], ['starter', 'profesional', 'premium']);
+});

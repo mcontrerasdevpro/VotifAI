@@ -97,6 +97,17 @@ test('sin suscripción viva abre checkout con IVA 21 % y datos fiscales', async 
   assert.deepEqual(datos.managed_payments, { enabled: false });
 });
 
+test('tras una prueba de Premium con muchas fincas no deja contratar Starter', async () => {
+  statusSuscripcion = 'canceled';
+  tenant.proveedor_suscripcion_id = null;
+  tenant.plan_suscripcion = 'premium';
+  tenant.suscripcion_estado = 'trialing';
+  fincas = 12;
+  const respuesta = await post('/api/billing/checkout', { plan: 'starter' });
+  assert.equal(respuesta.status, 409);
+  assert.equal(llamadas.some(([tipo]) => tipo === 'checkout.create'), false);
+});
+
 test('el portal se abre con el customer del despacho', async () => {
   const respuesta = await post('/api/billing/portal');
   assert.equal(respuesta.status, 201);

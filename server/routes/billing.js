@@ -67,19 +67,22 @@ router.post('/billing/checkout', requireAuth, async (req, res) => {
     const tenant = tenantResult.rows[0];
     if (!tenant) return res.status(404).json({ error: 'Despacho no encontrado.' });
 
+    // Vale tanto para cambiar de plan como para contratar el primero: la
+    // prueba puede ser de un plan mayor (p. ej. Premium) y el despacho haber
+    // dado de alta más fincas de las que admite el que ahora quiere pagar.
+    const fincas = await query('SELECT COUNT(*)::int AS total FROM entities WHERE tenant_id = $1', [tenant.id]);
+    const limite = PLANES[plan].maxFincas;
+    if (limite !== null && fincas.rows[0].total > limite) {
+      return res.status(409).json({
+        error: `Tienes ${fincas.rows[0].total} fincas y el plan ${PLANES[plan].nombre} admite ${limite}. Elige un plan mayor o da de baja fincas antes de contratar este.`
+      });
+    }
+
     if (tenant.proveedor_suscripcion_id) {
       const suscripcion = await stripe.subscriptions.retrieve(tenant.proveedor_suscripcion_id).catch(() => null);
       if (suscripcion && ESTADOS_CON_SUSCRIPCION_VIVA.has(suscripcion.status)) {
         if (tenant.plan_suscripcion === plan) {
           return res.status(409).json({ error: 'Ya tienes contratado este plan.' });
-        }
-
-        const fincas = await query('SELECT COUNT(*)::int AS total FROM entities WHERE tenant_id = $1', [tenant.id]);
-        const limite = PLANES[plan].maxFincas;
-        if (limite !== null && fincas.rows[0].total > limite) {
-          return res.status(409).json({
-            error: `Tienes ${fincas.rows[0].total} fincas y el plan ${PLANES[plan].nombre} admite ${limite}. Da de baja fincas antes de cambiar a este plan.`
-          });
         }
 
         await stripe.subscriptions.update(suscripcion.id, {
