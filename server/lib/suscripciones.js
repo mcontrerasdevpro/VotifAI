@@ -20,7 +20,7 @@ export function calcularAcceso({ suscripcion_estado: estado, trial_fin: trialFin
 export async function obtenerEstadoSuscripcion(tenantId) {
   const [tenantResult, entidadesResult] = await Promise.all([
     query(
-      `SELECT plan_suscripcion, suscripcion_estado, trial_inicio, trial_fin, suscripcion_periodo_fin
+      `SELECT plan_suscripcion, suscripcion_estado, trial_inicio, trial_fin, suscripcion_periodo_fin, proveedor_cliente_id
        FROM tenants WHERE id = $1`,
       [tenantId]
     ),
@@ -45,6 +45,10 @@ export async function obtenerEstadoSuscripcion(tenantId) {
     uso: { fincas: fincasUsadas },
     limites: { fincas: plan.maxFincas, propietariosPorFinca: plan.maxPropietariosPorFinca },
     transcripcionVoz: plan.transcripcionVoz,
+    // Pagado de verdad (no prueba): decide si el plan cuenta como "actual"
+    // en la pantalla de planes y si se ofrece el portal de Stripe.
+    suscripcionPagada: estado === 'active' || estado === 'past_due',
+    tieneClienteStripe: Boolean(tenant.proveedor_cliente_id),
     puedeCrearFinca: accesoCompleto && (plan.maxFincas === null || fincasUsadas < plan.maxFincas)
   };
 }

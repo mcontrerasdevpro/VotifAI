@@ -31,6 +31,28 @@ export default function Terminos() {
         Despacho complete su configuración correspondiente.
       </p>
 
+      <h2>Planes, precios y pago</h2>
+      <p>
+        El Despacho dispone de 15 días de prueba gratuita. Después, el servicio requiere una suscripción mensual
+        a uno de los planes publicados. Los precios se muestran sin IVA; se añade el 21 % de IVA en cada factura.
+        La suscripción se renueva automáticamente cada mes y el cobro se realiza con tarjeta a través de Stripe.
+        Los cambios de plan se prorratean en la siguiente factura. El Despacho puede cancelar en cualquier momento
+        desde la gestión de su suscripción; la cancelación surte efecto al final del periodo ya pagado.
+      </p>
+      <p>
+        Si la prueba termina sin contratar un plan, o la suscripción se cancela o queda impagada tras los
+        reintentos de cobro, la cuenta pasa a modo consulta: el Despacho puede seguir accediendo a sus datos y
+        descargarlos, pero no crear ni modificar información hasta reactivar la suscripción.
+      </p>
+
+      <h2>Protección de datos</h2>
+      <p>
+        Respecto de los datos de los propietarios, el Despacho es responsable del tratamiento y NexuraIA actúa como
+        encargado, en los términos del{' '}
+        <a href="/legal/encargo-tratamiento" className="font-bold text-blue-400 hover:underline">Contrato de Encargo del Tratamiento</a>,
+        que forma parte de estos términos.
+      </p>
+
       <h2>Responsabilidad sobre el contenido</h2>
       <p>
         El Despacho es responsable de la exactitud de los datos del censo de propietarios y del contenido de las

@@ -9,11 +9,20 @@ export default function Privacidad() {
         propietarios de comunidades, conforme al Reglamento (UE) 2016/679 (RGPD) y la Ley Orgánica 3/2018 (LOPDGDD).
       </p>
 
-      <h2>Responsable del tratamiento</h2>
+      <h2>Quién es responsable de cada dato</h2>
       <p>
+        <strong>Datos de los despachos</strong> (cuenta, facturación y uso del servicio): el responsable es{' '}
         <strong>Miguel Contreras Gallardo</strong> (nombre comercial <strong>NexuraIA</strong>), con NIF{' '}
         <strong>26035618D</strong> y domicilio en <strong>Calle Guanabacoa 2A Bajo, 28907 Getafe, Madrid</strong>,
         contacto: <strong>contacto@nexuraia.com</strong>.
+      </p>
+      <p>
+        <strong>Datos de los propietarios</strong> de las comunidades: el responsable es el despacho de
+        administración de fincas que gestiona su comunidad. NexuraIA los trata solo por cuenta de ese despacho, como
+        encargado del tratamiento, según el{' '}
+        <a href="/legal/encargo-tratamiento" className="font-bold text-blue-400 hover:underline">Contrato de Encargo del Tratamiento</a>.
+        Si eres propietario, puedes ejercer tus derechos ante tu administrador de fincas o escribirnos y le
+        trasladaremos la solicitud.
       </p>
 
       <h2>Datos que tratamos</h2>
@@ -39,11 +48,13 @@ export default function Privacidad() {
 
       <h2>Encargados de tratamiento y transferencias</h2>
       <p>
-        Para la transcripción de voz utilizamos la API de OpenAI como encargado de tratamiento. Para el envío de
-        notificaciones por WhatsApp y correo electrónico, los datos de contacto necesarios (nombre, teléfono y/o
-        email) se transmiten a través de un flujo de automatización (n8n) hacia el proveedor de mensajería y el
-        proveedor de email elegidos por el despacho o por el operador de VotifAI, únicamente para el envío de esa
-        comunicación concreta.
+        Recurrimos a estos proveedores, que tratan los datos solo para prestar su servicio: Hostinger (alojamiento
+        del servidor y la base de datos), Backblaze (copias de seguridad, en la UE), OpenAI (transcripción de voz,
+        EE. UU., con garantías del Marco de Privacidad de Datos UE-EE. UU. o cláusulas contractuales tipo), Brevo
+        (envío de emails, Francia), WhatsApp/Meta (notificaciones por WhatsApp, cuando el propietario elige ese
+        canal) y Stripe (solo para el cobro de la suscripción del despacho). Las notificaciones pasan por un flujo
+        de automatización (n8n) alojado en nuestro propio servidor. El audio de las intervenciones no se conserva:
+        se descarta en cuanto se transcribe.
       </p>
 
       <h2>Derechos de las personas interesadas</h2>

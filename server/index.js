@@ -184,8 +184,13 @@ app.post('/api/demo-solicitudes', demoLimiter, async (req, res) => {
 // =========================================================================
 // 🔐 1. ENDPOINT POST: /api/auth/register (Alta Multi-tenant Comercial)
 // =========================================================================
+// Fecha de la versión vigente de Términos + Privacidad + Contrato de
+// Encargo. Se guarda con cada alta para saber qué texto aceptó cada despacho;
+// si los textos cambian de forma sustancial, se sube esta fecha.
+const VERSION_CONDICIONES = '2026-09-23';
+
 app.post('/api/auth/register', async (req, res) => {
-  const { tipoOrganizacion, nombreEntidad, nombreResponsable, cif, telefono, direccion, email, password } = req.body;
+  const { tipoOrganizacion, nombreEntidad, nombreResponsable, cif, telefono, direccion, email, password, aceptaCondiciones } = req.body;
   const planInicial = 'starter';
 
   if (!email || !password || password.length < 8) {
@@ -194,6 +199,12 @@ app.post('/api/auth/register', async (req, res) => {
 
   if (!nombreEntidad) {
     return res.status(400).json({ error: 'El nombre del despacho profesional es obligatorio.' });
+  }
+
+  // Sin aceptar el contrato de encargo (art. 28 RGPD) no se puede tratar
+  // ningún dato de propietarios por cuenta del despacho.
+  if (aceptaCondiciones !== true) {
+    return res.status(400).json({ error: 'Debes aceptar los Términos, la Política de Privacidad y el Contrato de Encargo del Tratamiento.' });
   }
 
   try {
@@ -205,13 +216,14 @@ app.post('/api/auth/register', async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 10);
 
     const nuevoTenant = await query(
-      `INSERT INTO tenants (nombre_entidad, email_maestro, password_hash, tipo_organizacion, plan_suscripcion, iban_facturacion, titular_cuenta, cif, telefono, direccion, nombre_responsable)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      `INSERT INTO tenants (nombre_entidad, email_maestro, password_hash, tipo_organizacion, plan_suscripcion, iban_facturacion, titular_cuenta, cif, telefono, direccion, nombre_responsable, condiciones_aceptadas_en, condiciones_version)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now(), $12)
        RETURNING id, nombre_entidad, email_maestro, tipo_organizacion, plan_suscripcion, cif, telefono, direccion, nombre_responsable`,
       [
         nombreEntidad, email, passwordHash, tipoOrganizacion, planInicial,
         null, null,
-        cif || null, telefono || null, direccion || null, nombreResponsable || null
+        cif || null, telefono || null, direccion || null, nombreResponsable || null,
+        VERSION_CONDICIONES
       ]
     );
 

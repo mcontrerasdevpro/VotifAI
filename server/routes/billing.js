@@ -23,7 +23,7 @@ router.get('/billing/planes', (req, res) => {
       maxFincas: plan.maxFincas,
       maxPropietariosPorFinca: plan.maxPropietariosPorFinca,
       transcripcionVoz: plan.transcripcionVoz,
-      disponibleParaCheckout: Boolean(PRICE_ENV_BY_PLAN[id] && process.env[PRICE_ENV_BY_PLAN[id]])
+      disponibleParaCheckout: Boolean(PRICE_ENV_BY_PLAN[id] && process.env[PRICE_ENV_BY_PLAN[id]] && process.env.STRIPE_TAX_RATE_IVA)
     }))
   });
 });
@@ -39,22 +39,60 @@ router.get('/billing/estado', requireAuth, async (req, res) => {
   }
 });
 
+const ESTADOS_CON_SUSCRIPCION_VIVA = new Set(['active', 'past_due', 'trialing']);
+const urlBase = (req) => `${req.protocol}://${req.get('host')}`;
+
+// Un despacho con suscripción ya en marcha NO pasa por un checkout nuevo:
+// eso crearía una segunda suscripción y Stripe le cobraría los dos planes
+// cada mes. Se cambia el precio de la suscripción existente (prorrateando
+// lo ya pagado) y, si no tiene ninguna viva, se abre un checkout normal.
 router.post('/billing/checkout', requireAuth, async (req, res) => {
   const plan = String(req.body.plan || '').trim().toLowerCase();
   const priceEnv = PRICE_ENV_BY_PLAN[plan];
   const priceId = priceEnv && process.env[priceEnv];
+  // Precios publicados sin IVA: el 21 % se añade como tax rate de Stripe
+  // (exclusivo). Sin él no se cobra, para no emitir facturas sin IVA.
+  const taxRateIva = process.env.STRIPE_TAX_RATE_IVA;
 
-  if (!priceId || !stripe) {
+  if (!priceId || !stripe || !taxRateIva) {
     return res.status(503).json({ error: 'El checkout todavía no está configurado para este plan.' });
   }
 
   try {
     const tenantResult = await query(
-      'SELECT id, nombre_entidad, email_maestro, proveedor_cliente_id FROM tenants WHERE id = $1',
+      `SELECT id, nombre_entidad, email_maestro, proveedor_cliente_id, proveedor_suscripcion_id, plan_suscripcion, suscripcion_estado
+       FROM tenants WHERE id = $1`,
       [req.tenantId]
     );
     const tenant = tenantResult.rows[0];
     if (!tenant) return res.status(404).json({ error: 'Despacho no encontrado.' });
+
+    if (tenant.proveedor_suscripcion_id) {
+      const suscripcion = await stripe.subscriptions.retrieve(tenant.proveedor_suscripcion_id).catch(() => null);
+      if (suscripcion && ESTADOS_CON_SUSCRIPCION_VIVA.has(suscripcion.status)) {
+        if (tenant.plan_suscripcion === plan) {
+          return res.status(409).json({ error: 'Ya tienes contratado este plan.' });
+        }
+
+        const fincas = await query('SELECT COUNT(*)::int AS total FROM entities WHERE tenant_id = $1', [tenant.id]);
+        const limite = PLANES[plan].maxFincas;
+        if (limite !== null && fincas.rows[0].total > limite) {
+          return res.status(409).json({
+            error: `Tienes ${fincas.rows[0].total} fincas y el plan ${PLANES[plan].nombre} admite ${limite}. Da de baja fincas antes de cambiar a este plan.`
+          });
+        }
+
+        await stripe.subscriptions.update(suscripcion.id, {
+          items: [{ id: suscripcion.items.data[0].id, price: priceId }],
+          proration_behavior: 'create_prorations',
+          metadata: { tenantId: tenant.id, plan }
+        });
+        // El webhook customer.subscription.updated lo confirmará igualmente;
+        // se actualiza ya para que el cambio se vea al volver a la pantalla.
+        await query('UPDATE tenants SET plan_suscripcion = $1 WHERE id = $2', [plan, tenant.id]);
+        return res.json({ cambiado: true, plan });
+      }
+    }
 
     let customerId = tenant.proveedor_cliente_id;
     if (!customerId) {
@@ -71,9 +109,14 @@ router.post('/billing/checkout', requireAuth, async (req, res) => {
       mode: 'subscription',
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: process.env.BILLING_SUCCESS_URL || `${req.protocol}://${req.get('host')}/hub?billing=success`,
-      cancel_url: process.env.BILLING_CANCEL_URL || `${req.protocol}://${req.get('host')}/hub?billing=cancelled`,
-      subscription_data: { metadata: { tenantId: tenant.id, plan } },
+      // Datos fiscales del despacho para que la factura sea válida: razón
+      // social, dirección y NIF/CIF quedan guardados en el customer.
+      billing_address_collection: 'required',
+      tax_id_collection: { enabled: true },
+      customer_update: { name: 'auto', address: 'auto' },
+      success_url: process.env.BILLING_SUCCESS_URL || `${urlBase(req)}/hub?billing=success`,
+      cancel_url: process.env.BILLING_CANCEL_URL || `${urlBase(req)}/hub?billing=cancelled`,
+      subscription_data: { metadata: { tenantId: tenant.id, plan }, default_tax_rates: [taxRateIva] },
       metadata: { tenantId: tenant.id, plan }
     });
 
@@ -81,6 +124,28 @@ router.post('/billing/checkout', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Error al crear checkout de Stripe:', error.message);
     res.status(502).json({ error: 'No se pudo iniciar el checkout.' });
+  }
+});
+
+// Portal de cliente alojado por Stripe: cambiar tarjeta, descargar
+// facturas y cancelar. Requiere haber guardado una configuración del portal
+// en el dashboard de Stripe (una vez por modo, test y live).
+router.post('/billing/portal', requireAuth, async (req, res) => {
+  if (!stripe) return res.status(503).json({ error: 'La facturación todavía no está configurada.' });
+
+  try {
+    const tenantResult = await query('SELECT proveedor_cliente_id FROM tenants WHERE id = $1', [req.tenantId]);
+    const customerId = tenantResult.rows[0]?.proveedor_cliente_id;
+    if (!customerId) return res.status(409).json({ error: 'Todavía no tienes ninguna suscripción que gestionar.' });
+
+    const session = await stripe.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: `${urlBase(req)}/billing`
+    });
+    res.status(201).json({ url: session.url });
+  } catch (error) {
+    console.error('Error al abrir el portal de Stripe:', error.message);
+    res.status(502).json({ error: 'No se pudo abrir la gestión de la suscripción.' });
   }
 });
 

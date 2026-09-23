@@ -20,6 +20,8 @@ export default function Register() {
   const [telefono, setTelefono] = useState('');
   const [direccion, setDireccion] = useState('');
 
+  const [aceptaCondiciones, setAceptaCondiciones] = useState(false);
+
   const [enviando, setEnviando] = useState(false);
   const [errorEnvio, setErrorEnvio] = useState('');
 
@@ -37,6 +39,7 @@ export default function Register() {
       direccion,
       email,
       password,
+      aceptaCondiciones,
       plan: 'starter'
     };
 
@@ -222,6 +225,23 @@ export default function Register() {
             <span className="text-4xs font-bold text-emerald-400">Gratis</span>
           </div>
 
+          <label className="flex items-start gap-3 text-3xs leading-relaxed text-slate-400">
+            <input
+              type="checkbox" required checked={aceptaCondiciones}
+              onChange={(e) => setAceptaCondiciones(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-blue-600"
+            />
+            <span>
+              Acepto los{' '}
+              <a href="/legal/terminos" target="_blank" rel="noreferrer" className="font-bold text-blue-400 hover:underline">Términos y Condiciones</a>,
+              la{' '}
+              <a href="/legal/privacidad" target="_blank" rel="noreferrer" className="font-bold text-blue-400 hover:underline">Política de Privacidad</a>{' '}
+              y el{' '}
+              <a href="/legal/encargo-tratamiento" target="_blank" rel="noreferrer" className="font-bold text-blue-400 hover:underline">Contrato de Encargo del Tratamiento (art. 28 RGPD)</a>,
+              por el que NexuraIA trata por cuenta de mi despacho los datos de los propietarios de las comunidades que gestiono.
+            </span>
+          </label>
+
           {/* BOTÓN MAESTRO DE ACCIÓN */}
           <button
             type="submit"
@@ -235,7 +255,7 @@ export default function Register() {
 
         {/* PIE DE PÁGINA COLUMNA DERECHA */}
         <footer className="text-center text-4xs text-slate-600 font-bold tracking-widest uppercase shrink-0 pt-4">
-          VotifAI Inc. © {new Date().getFullYear()} — Licencia de Software Homologada
+          VotifAI · NexuraIA © {new Date().getFullYear()}
         </footer>
       </div>
 

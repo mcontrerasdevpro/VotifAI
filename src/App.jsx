@@ -24,6 +24,7 @@ import RestablecerPassword from './views/auth/RestablecerPassword.jsx';
 import AvisoLegal from './views/legal/AvisoLegal.jsx';
 import Privacidad from './views/legal/Privacidad.jsx';
 import Terminos from './views/legal/Terminos.jsx';
+import EncargoTratamiento from './views/legal/EncargoTratamiento.jsx';
 import Billing from './views/billing/Billing.jsx';
 
 function App() {
@@ -40,6 +41,7 @@ function App() {
           <Route path="/legal/aviso-legal" element={<AvisoLegal />} />
           <Route path="/legal/privacidad" element={<Privacidad />} />
           <Route path="/legal/terminos" element={<Terminos />} />
+          <Route path="/legal/encargo-tratamiento" element={<EncargoTratamiento />} />
 
           <Route element={<ProtectedRoute />}>
             <Route path="/hub" element={<ClientSelector />} />

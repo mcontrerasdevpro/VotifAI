@@ -36,3 +36,5 @@ services:
         sync: false
       - key: STRIPE_PRICE_PREMIUM
         sync: false
+      - key: STRIPE_TAX_RATE_IVA
+        sync: false
