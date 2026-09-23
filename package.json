@@ -23,6 +23,7 @@
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^1.16.0",
     "multer": "^2.4.0",
+    "pdfkit": "^0.20.2",
     "pg": "^8.11.5",
     "react": "^19.2.6",
     "react-apexcharts": "^2.1.0",
