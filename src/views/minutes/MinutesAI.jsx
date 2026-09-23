@@ -56,6 +56,30 @@ function seccionPrivados(privados) {
   return texto;
 }
 
+// Art. 19 LPH: el acta relaciona los asistentes y los representados con
+// sus cuotas. Asistentes = presentes en sala + quienes participan por la
+// app (han votado algún punto desde su móvil).
+function seccionAsistencia(asistencia, votos) {
+  const nombre = (p) => `${p.nombre_completo}${p.propiedad_detalle ? ` (${p.propiedad_detalle})` : ''}`;
+  const cuota = (p) => `${Number(p.coeficiente || 0).toFixed(2)}%`;
+  const enSala = new Set(asistencia.map((a) => a.propietario_id));
+  const porApp = [...new Map(votos.filter((v) => v.origen === 'app' && !enSala.has(v.propietario_id)).map((v) => [v.propietario_id, v])).values()];
+  const presentes = asistencia.filter((a) => a.modo === 'presencial');
+  const representados = asistencia.filter((a) => a.modo === 'representado');
+
+  const bloques = [];
+  if (presentes.length) bloques.push(`Presentes en la sala:\n${presentes.map((p) => `* ${nombre(p)} — ${cuota(p)}`).join('\n')}`);
+  if (porApp.length) bloques.push(`Participan a distancia a través de VotifAI:\n${porApp.map((p) => `* ${nombre(p)} — ${cuota(p)}`).join('\n')}`);
+  if (representados.length) {
+    bloques.push(`Representados (art. 15.1 LPH):\n${representados.map((p) => `* ${nombre(p)} — ${cuota(p)}, representado por ${p.representante_nombre}${p.representacion_escrita ? ' (representación acreditada por escrito)' : ' (sin escrito de representación)'}`).join('\n')}`);
+  }
+  const total = presentes.length + porApp.length + representados.length;
+  const coefTotal = [...presentes, ...porApp, ...representados].reduce((t, p) => t + Number(p.coeficiente || 0), 0);
+  return bloques.length
+    ? `${bloques.join('\n\n')}\n\nTotal: ${total} propietarios, que representan el ${coefTotal.toFixed(2)}% de las cuotas.`
+    : 'No consta ningún asistente registrado.';
+}
+
 function lineaPunto(p) {
   if (p.tipo !== 'votacion') return `* **PUNTO ${p.orden}:** ${p.texto} (informativo, sin votación)`;
   const r = p.resultado;
@@ -67,7 +91,8 @@ function lineaPunto(p) {
     `* **PUNTO ${p.orden}:** ${p.texto}\n` +
     `  Mayoría exigida: ${ETIQUETA_MAYORIA[r.mayoria]} (${r.articulo}). ${r.requisito}\n` +
     `  Votos: ${p.votos_si || 0} a favor (${pct(Number(p.coeficiente_si), baseC)}% de cuotas), ${p.votos_no || 0} en contra (${pct(Number(p.coeficiente_no), baseC)}%), ${p.votos_abstencion || 0} abstenciones (${pct(Number(p.coeficiente_abstencion), baseC)}%). ` +
-    `Base de cómputo: ${r.baseComputo.propietarios} propietarios y ${baseC.toFixed(2)}% de cuotas.\n` +
+    `Base de cómputo: ${r.baseComputo.propietarios} propietarios y ${baseC.toFixed(2)}% de cuotas. ` +
+    `Emitidos: ${p.votos_app || 0} por la app, ${p.votos_sala || 0} en sala y ${p.votos_representacion || 0} por representación.\n` +
     `  **Resultado: ${estado}**`;
   if (p.estado === 'cerrado' && r.estado === 'pendiente_ausentes') {
     linea += `\n  El acuerdo no alcanza la mayoría con los votos de los presentes. Se comunicará a los ${r.ausentes} propietarios ausentes, y se computarán como favorables los de quienes, en el plazo de 30 días naturales desde la notificación, no manifiesten su discrepancia (art. 17.8 LPH).`;
@@ -75,7 +100,7 @@ function lineaPunto(p) {
   return linea;
 }
 
-function generarActa(meeting, puntos, intervenciones = [], privados = []) {
+function generarActa(meeting, puntos, intervenciones = [], privados = [], asistencia = [], votos = []) {
   if (!meeting) return '';
   const fecha = meeting.fecha_hora_prevista
     ? new Date(meeting.fecha_hora_prevista).toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' })
@@ -89,8 +114,9 @@ function generarActa(meeting, puntos, intervenciones = [], privados = []) {
     `**CONVOCATORIA:** ${meeting.titulo}\n` +
     `**FECHA Y HORA:** ${fecha}\n` +
     `**CELEBRADA EN:** ${convocatoria} convocatoria\n\n` +
-    `## 1. CENSO\n` +
+    `## 1. CENSO Y ASISTENTES\n` +
     `Censo de la finca a fecha de convocatoria: ${meeting.censo_total_propietarios || 0} propietarios (${totalCenso.toFixed(2)}% de coeficiente).\n\n` +
+    `${seccionAsistencia(asistencia, votos)}\n\n` +
     `## 2. PROPIETARIOS PRIVADOS DEL DERECHO DE VOTO (art. 15.2 LPH)\n${seccionPrivados(privados)}\n\n` +
     `## 3. PUNTOS DEL ORDEN DEL DÍA Y ACUERDOS\n${puntos.map(lineaPunto).join('\n\n') || 'Sin puntos registrados.'}` +
     seccionIntervenciones(puntos, intervenciones)
@@ -123,7 +149,7 @@ export default function MinutesAI() {
         if (respuesta.ok) {
           setMeeting(resultado.meeting);
           setPuntos(resultado.puntos || []);
-          setActaTexto(generarActa(resultado.meeting, resultado.puntos || [], resultado.intervenciones || [], resultado.privadosVoto || []));
+          setActaTexto(generarActa(resultado.meeting, resultado.puntos || [], resultado.intervenciones || [], resultado.privadosVoto || [], resultado.asistencia || [], resultado.votos || []));
         }
       } catch (err) {
         console.error('Fallo al cargar la junta:', err);

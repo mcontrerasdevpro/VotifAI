@@ -7,6 +7,7 @@ import SubNavContexto from '../../components/SubNavContexto.jsx';
 import ColumnaOrdenDia from '../../components/ColumnaOrdenDia.jsx';
 import ColumnaMonitorCentral from '../../components/ColumnaMonitorCentral.jsx';
 import PanelEscrutinio from '../../components/PanelEscrutinio.jsx';
+import PanelSala from '../../components/PanelSala.jsx';
 import ModalConvocatoria from '../../components/ModalConvocatoria.jsx';
 import Card from '../../components/ui/Card.jsx';
 
@@ -22,6 +23,8 @@ export default function Dashboard() {
   const [meeting, setMeeting] = useState(null);
   const [puntos, setPuntos] = useState([]);
   const [privadosVoto, setPrivadosVoto] = useState([]);
+  const [asistencia, setAsistencia] = useState([]);
+  const [votos, setVotos] = useState([]);
   const [puntoActivoId, setPuntoActivoId] = useState(null);
   const [censoPersonas, setCensoPersonas] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -39,6 +42,8 @@ export default function Dashboard() {
         setMeeting(data.meeting);
         setPuntos(data.puntos || []);
         setPrivadosVoto(data.privadosVoto || []);
+        setAsistencia(data.asistencia || []);
+        setVotos(data.votos || []);
         setPuntoActivoId((actual) =>
           actual && data.puntos.some((p) => p.id === actual) ? actual : (data.puntos[0]?.id ?? null)
         );
@@ -267,7 +272,19 @@ export default function Dashboard() {
           onAbrirVotacion={handleAbrirVotacion}
           onCerrarVotacion={handleCerrarVotacion}
           onClausurarAsamblea={handleClausurarAsamblea}
-        />
+        >
+          {meeting.estado === 'en_curso' && (
+            <PanelSala
+              meetingId={meetingId}
+              censo={censoPersonas}
+              asistencia={asistencia}
+              votos={votos}
+              privadosVoto={privadosVoto}
+              puntoAbierto={puntos.find((p) => p.estado === 'votando')}
+              onCambio={cargarDetalle}
+            />
+          )}
+        </ColumnaMonitorCentral>
 
         <PanelEscrutinio entidadId={fincaId} meetingId={meetingId} />
       </div>

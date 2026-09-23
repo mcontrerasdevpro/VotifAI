@@ -161,7 +161,10 @@ router.get('/meetings/detalle/:meetingId', requireAuth, async (req, res) => {
         COUNT(v.id) FILTER (WHERE v.voto = 'si') AS votos_si,
         COUNT(v.id) FILTER (WHERE v.voto = 'no') AS votos_no,
         COUNT(v.id) FILTER (WHERE v.voto = 'abstencion') AS votos_abstencion,
-        COUNT(v.id) AS total_votantes
+        COUNT(v.id) AS total_votantes,
+        COUNT(v.id) FILTER (WHERE v.origen = 'app') AS votos_app,
+        COUNT(v.id) FILTER (WHERE v.origen = 'sala') AS votos_sala,
+        COUNT(v.id) FILTER (WHERE v.origen = 'representacion') AS votos_representacion
        FROM meeting_puntos p
        LEFT JOIN meeting_votos v ON v.punto_id = p.id
        WHERE p.meeting_id = $1::uuid
@@ -208,11 +211,33 @@ router.get('/meetings/detalle/:meetingId', requireAuth, async (req, res) => {
       })
     }));
 
+    // Sala: quién asiste en persona o representado, y el voto de cada
+    // propietario en cada punto (de cualquier origen), para que el
+    // despacho vea en el panel de sala quién falta por votar.
+    const [asistencia, votos] = await Promise.all([
+      query(
+        `SELECT a.propietario_id, a.modo, a.representante_nombre, a.representacion_escrita, p.nombre_completo, p.propiedad_detalle, p.coeficiente
+         FROM meeting_asistencia a JOIN propietarios p ON p.id = a.propietario_id
+         WHERE a.meeting_id = $1::uuid ORDER BY p.propiedad_detalle ASC NULLS LAST, p.nombre_completo ASC`,
+        [meetingId]
+      ),
+      query(
+        `SELECT v.punto_id, v.propietario_id, v.voto, v.origen, pr.nombre_completo, pr.propiedad_detalle, pr.coeficiente
+         FROM meeting_votos v
+         JOIN meeting_puntos p ON p.id = v.punto_id
+         JOIN propietarios pr ON pr.id = v.propietario_id
+         WHERE p.meeting_id = $1::uuid`,
+        [meetingId]
+      )
+    ]);
+
     res.status(200).json({
       success: true,
       meeting: junta,
       puntos,
       privadosVoto: privados.rows,
+      asistencia: asistencia.rows,
+      votos: votos.rows,
       intervenciones: intervencionesResultado.rows
     });
   } catch (err) {
@@ -722,7 +747,7 @@ router.post('/meetings/vecino/puntos/:puntoId/votar', requireVoterAuth, async (r
       `INSERT INTO meeting_votos (punto_id, propietario_id, voto, coeficiente_snapshot)
        VALUES ($1, $2, $3, $4)
        ON CONFLICT (punto_id, propietario_id)
-       DO UPDATE SET voto = EXCLUDED.voto, coeficiente_snapshot = EXCLUDED.coeficiente_snapshot, votado_en = now()`,
+       DO UPDATE SET voto = EXCLUDED.voto, coeficiente_snapshot = EXCLUDED.coeficiente_snapshot, origen = 'app', votado_en = now()`,
       [puntoId, req.propietarioId, voto, coeficiente]
     );
 

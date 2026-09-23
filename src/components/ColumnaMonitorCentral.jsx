@@ -11,7 +11,7 @@ import { ETIQUETA_MAYORIA, ESTADO_RESULTADO } from '../lib/mayorias.js';
  * se genera aquí, este componente solo dispara las acciones del despacho
  * (iniciar junta, abrir/cerrar votación de un punto, clausurar asamblea).
  */
-export default function ColumnaMonitorCentral({ meeting, puntos, puntoActivoId, privadosVoto = [], onIniciarJunta, onHabilitarPrivado, onAbrirVotacion, onCerrarVotacion, onClausurarAsamblea }) {
+export default function ColumnaMonitorCentral({ meeting, puntos, puntoActivoId, privadosVoto = [], onIniciarJunta, onHabilitarPrivado, onAbrirVotacion, onCerrarVotacion, onClausurarAsamblea, children }) {
   const navigate = useNavigate();
   const puntoActual = puntos.find((p) => p.id === puntoActivoId);
 
@@ -122,6 +122,9 @@ export default function ColumnaMonitorCentral({ meeting, puntos, puntoActivoId, 
             )}
           </div>
         )}
+
+        {/* Panel de sala (asistencia, representaciones y votos presenciales) */}
+        {children}
 
         {meeting?.estado === 'en_curso' && privadosVoto.length > 0 && (
           <div className="bg-slate-950 p-4 rounded-xl border border-rose-500/20 space-y-3">
