@@ -117,6 +117,12 @@ router.post('/billing/checkout', requireAuth, async (req, res) => {
       success_url: process.env.BILLING_SUCCESS_URL || `${urlBase(req)}/hub?billing=success`,
       cancel_url: process.env.BILLING_CANCEL_URL || `${urlBase(req)}/hub?billing=cancelled`,
       subscription_data: { metadata: { tenantId: tenant.id, plan }, default_tax_rates: [taxRateIva] },
+      // La cuenta de Stripe (compartida por todos los proyectos de NexuraIA)
+      // trae Managed Payments activado por defecto: Stripe haría de
+      // vendedor y calcularía él el IVA, lo que rechaza default_tax_rates.
+      // VotifAI factura como NexuraIA con el 21 % fijo, así que se desactiva
+      // aquí, por petición, sin depender del ajuste de la cuenta.
+      managed_payments: { enabled: false },
       metadata: { tenantId: tenant.id, plan }
     });
 

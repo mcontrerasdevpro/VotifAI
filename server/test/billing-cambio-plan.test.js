@@ -94,6 +94,7 @@ test('sin suscripción viva abre checkout con IVA 21 % y datos fiscales', async 
   assert.deepEqual(datos.subscription_data.default_tax_rates, ['txr_iva21']);
   assert.equal(datos.tax_id_collection.enabled, true);
   assert.equal(datos.billing_address_collection, 'required');
+  assert.deepEqual(datos.managed_payments, { enabled: false });
 });
 
 test('el portal se abre con el customer del despacho', async () => {
