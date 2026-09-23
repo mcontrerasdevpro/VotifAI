@@ -31,7 +31,7 @@ mock.module('../db.js', {
         // por el despacho pero SIN cuenta todavía (password_hash null).
         return { rows: [{ id: PROPIETARIO_ID, entity_id: ENTITY_ID, nombre_completo: 'Vecino Test', password_hash: null }] };
       }
-      if (text.includes('SELECT id FROM propietarios WHERE email = $1')) {
+      if (text.includes('SELECT id FROM propietarios WHERE LOWER(email) = $1')) {
         // Esta es la comprobación de "email ya en uso" que causaba el bug:
         // el email precargado ya está en la fila del propio propietario_id.
         const excluyeAsiMismo = text.includes('id != $2');

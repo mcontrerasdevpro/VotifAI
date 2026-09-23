@@ -190,7 +190,11 @@ app.post('/api/demo-solicitudes', demoLimiter, async (req, res) => {
 const VERSION_CONDICIONES = '2026-09-23';
 
 app.post('/api/auth/register', async (req, res) => {
-  const { tipoOrganizacion, nombreEntidad, nombreResponsable, cif, telefono, direccion, email, password, aceptaCondiciones } = req.body;
+  const { tipoOrganizacion, nombreEntidad, nombreResponsable, cif, telefono, direccion, password, aceptaCondiciones } = req.body;
+  // El índice único de tenants es sobre LOWER(email_maestro): se guarda y se
+  // compara siempre normalizado, o un "Correo@..." pasaría la comprobación
+  // de duplicado y reventaría en el INSERT con un 500.
+  const email = String(req.body.email || '').trim().toLowerCase();
   const planInicial = 'starter';
 
   if (!email || !password || password.length < 8) {
@@ -208,7 +212,7 @@ app.post('/api/auth/register', async (req, res) => {
   }
 
   try {
-    const existeUser = await query('SELECT * FROM tenants WHERE email_maestro = $1', [email]);
+    const existeUser = await query('SELECT id FROM tenants WHERE LOWER(email_maestro) = $1', [email]);
     if (existeUser.rows.length > 0) {
       return res.status(400).json({ error: 'El correo electrónico ya está registrado.' });
     }
@@ -235,6 +239,9 @@ app.post('/api/auth/register', async (req, res) => {
     });
 
    } catch (err) {
+    if (err.code === '23505') {
+      return res.status(400).json({ error: 'El correo electrónico ya está registrado.' });
+    }
     console.error('Error en el Onboarding:', err.message);
     res.status(500).json({ error: 'Fallo interno al procesar el registro.' });
   }
@@ -244,11 +251,12 @@ app.post('/api/auth/register', async (req, res) => {
 // 🔑 2. ENDPOINT POST: /api/auth/login (Corregido: Busca Fincas de Neon al entrar)
 // =========================================================================
 app.post('/api/auth/login', async (req, res) => {
-  const { email, password } = req.body;
+  const email = String(req.body.email || '').trim();
+  const { password } = req.body;
 
   try {
     const resultado = await query(
-      'SELECT id, nombre_entidad, email_maestro, password_hash, tipo_organizacion, plan_suscripcion, cif, telefono, direccion, nombre_responsable FROM tenants WHERE email_maestro = $1',
+      'SELECT id, nombre_entidad, email_maestro, password_hash, tipo_organizacion, plan_suscripcion, cif, telefono, direccion, nombre_responsable FROM tenants WHERE LOWER(email_maestro) = LOWER($1)',
       [email]
     );
 
@@ -339,7 +347,7 @@ app.post('/api/auth/olvide-password', async (req, res) => {
   if (!email) return res.status(200).json(respuestaGenerica);
 
   try {
-    const resultado = await query('SELECT id, nombre_entidad FROM tenants WHERE email_maestro = $1', [email]);
+    const resultado = await query('SELECT id, nombre_entidad FROM tenants WHERE LOWER(email_maestro) = LOWER($1)', [email]);
     if (resultado.rows.length === 0) return res.status(200).json(respuestaGenerica);
 
     const tenant = resultado.rows[0];

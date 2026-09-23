@@ -57,7 +57,11 @@ router.get('/vecinos/censo/:entityId', async (req, res) => {
 });
 
 router.post('/vecinos/registro', async (req, res) => {
-  const { entity_id, propietario_id, codigo_acceso, email, password } = req.body;
+  const { entity_id, propietario_id, codigo_acceso, password } = req.body;
+  // Emails siempre en minúsculas: la restricción única de propietarios.email
+  // distingue mayúsculas, y un "Juan@..." registrado no podría entrar luego
+  // como "juan@...". Las búsquedas usan LOWER() por las filas ya existentes.
+  const email = String(req.body.email || '').trim().toLowerCase();
 
   if (!entity_id || !propietario_id || !codigo_acceso || !email || !password) {
     return res.status(400).json({ error: 'Faltan campos obligatorios para completar el registro.' });
@@ -87,7 +91,7 @@ router.post('/vecinos/registro', async (req, res) => {
     // propietario al darlo de alta en el censo (para notificaciones), así
     // que esa misma fila ya tiene ese email antes de que exista ninguna
     // cuenta — sin el filtro, el propietario nunca podría auto-registrarse.
-    const emailExistente = await query(`SELECT id FROM propietarios WHERE email = $1 AND id != $2::uuid`, [email, propietario_id]);
+    const emailExistente = await query(`SELECT id FROM propietarios WHERE LOWER(email) = $1 AND id != $2::uuid`, [email, propietario_id]);
     if (emailExistente.rows.length > 0) {
       return res.status(409).json({ error: 'Ya existe una cuenta con ese correo electrónico.' });
     }
@@ -109,7 +113,8 @@ router.post('/vecinos/registro', async (req, res) => {
 });
 
 router.post('/vecinos/login', async (req, res) => {
-  const { email, password } = req.body;
+  const email = String(req.body.email || '').trim().toLowerCase();
+  const { password } = req.body;
 
   if (!email || !password) {
     return res.status(400).json({ error: 'Introduce tu correo y contraseña.' });
@@ -117,7 +122,7 @@ router.post('/vecinos/login', async (req, res) => {
 
   try {
     const resultado = await query(
-      `SELECT id, entity_id, nombre_completo, propiedad_detalle, telefono, email, canal_notificacion, password_hash FROM propietarios WHERE email = $1`,
+      `SELECT id, entity_id, nombre_completo, propiedad_detalle, telefono, email, canal_notificacion, password_hash FROM propietarios WHERE LOWER(email) = $1`,
       [email]
     );
     if (resultado.rows.length === 0 || !resultado.rows[0].password_hash) {
@@ -143,14 +148,14 @@ router.post('/vecinos/login', async (req, res) => {
 });
 
 router.post('/vecinos/olvide-password', async (req, res) => {
-  const email = String(req.body.email || '').trim();
+  const email = String(req.body.email || '').trim().toLowerCase();
 
   const respuestaGenerica = { success: true, mensaje: 'Si ese correo está registrado, recibirás un enlace para restablecer tu contraseña.' };
   if (!email) return res.status(200).json(respuestaGenerica);
 
   try {
     const resultado = await query(
-      `SELECT id, nombre_completo, propiedad_detalle FROM propietarios WHERE email = $1 AND password_hash IS NOT NULL`,
+      `SELECT id, nombre_completo, propiedad_detalle FROM propietarios WHERE LOWER(email) = $1 AND password_hash IS NOT NULL`,
       [email]
     );
     if (resultado.rows.length === 0) return res.status(200).json(respuestaGenerica);
