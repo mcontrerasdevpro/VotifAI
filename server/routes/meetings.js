@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { query, withTransaction } from '../db.js';
 import { notificar } from '../lib/notificaciones.js';
 import { generarActaPdf } from '../lib/pdfActa.js';
-import { exigirJuntaDisponibleEnPrueba } from '../lib/suscripciones.js';
+import { reservarJuntaIniciada } from '../lib/suscripciones.js';
 import {
   requireAuth,
   requireVoterAuth,
@@ -244,19 +244,26 @@ router.post('/meetings/:meetingId/iniciar', requireAuth, async (req, res) => {
   }
 
   try {
-    const disponible = await exigirJuntaDisponibleEnPrueba(req.tenantId);
-    if (!disponible.ok) return res.status(disponible.status).json({ error: disponible.error, codigo: 'LIMITE_JUNTAS_PRUEBA' });
+    // Todo o nada: si la junta no se puede iniciar, no se consume ninguna de
+    // las juntas de la prueba.
+    const inicio = await withTransaction(async (tx) => {
+      const resultado = await tx(
+        `UPDATE meetings SET estado = 'en_curso', iniciada_en = now()
+         WHERE id = $1::uuid AND estado = 'programada'
+         RETURNING id, estado, iniciada_en`,
+        [meetingId]
+      );
+      if (resultado.rowCount === 0) {
+        return { rollback: true, status: 409, body: { error: 'Solo se puede iniciar una junta que esté programada.' } };
+      }
 
-    const resultado = await query(
-      `UPDATE meetings SET estado = 'en_curso', iniciada_en = now()
-       WHERE id = $1::uuid AND estado = 'programada'
-       RETURNING id, estado, iniciada_en`,
-      [meetingId]
-    );
-    if (resultado.rowCount === 0) {
-      return res.status(409).json({ error: 'Solo se puede iniciar una junta que esté programada.' });
-    }
-    res.status(200).json({ success: true, meeting: resultado.rows[0] });
+      const reserva = await reservarJuntaIniciada(req.tenantId, tx);
+      if (!reserva.ok) {
+        return { rollback: true, status: reserva.status, body: { error: reserva.error, codigo: 'LIMITE_JUNTAS_PRUEBA' } };
+      }
+      return { status: 200, body: { success: true, meeting: resultado.rows[0] } };
+    });
+    res.status(inicio.status).json(inicio.body);
   } catch (err) {
     console.error('Error al iniciar junta:', err.message);
     res.status(500).json({ error: `Fallo al iniciar la junta: ${err.message}` });

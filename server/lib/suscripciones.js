@@ -24,15 +24,12 @@ export const LIMITES_PRUEBA = Object.freeze({ juntas: 2, horasVozPorJunta: 3 });
 
 const esPrueba = (estado) => estado !== 'active' && estado !== 'past_due';
 
-// Juntas "celebradas" = las que se llegaron a iniciar (en curso, cerradas o
-// canceladas después de empezar). Convocar o programar no cuenta.
+// Juntas "celebradas" = las que se llegaron a iniciar. Convocar o programar
+// no cuenta. Sale del contador de la cuenta (tenants.juntas_iniciadas), que
+// solo sube: contar las juntas existentes se reiniciaba borrando la finca.
 async function contarJuntasIniciadas(tenantId) {
-  const resultado = await query(
-    `SELECT COUNT(*)::int AS total FROM meetings m JOIN entities e ON e.id = m.entity_id
-     WHERE e.tenant_id = $1 AND m.iniciada_en IS NOT NULL`,
-    [tenantId]
-  );
-  return resultado.rows[0].total;
+  const resultado = await query('SELECT juntas_iniciadas FROM tenants WHERE id = $1', [tenantId]);
+  return resultado.rows[0]?.juntas_iniciadas ?? 0;
 }
 
 // `conPrueba`: añade el uso de la prueba (juntas celebradas). Solo lo pide
@@ -130,18 +127,23 @@ export async function fincaPermiteTranscripcion(entityId) {
   return obtenerPlan(tenant.plan_suscripcion).transcripcionVoz && calcularAcceso(tenant).accesoCompleto;
 }
 
-export async function exigirJuntaDisponibleEnPrueba(tenantId) {
-  const resultado = await query('SELECT suscripcion_estado FROM tenants WHERE id = $1', [tenantId]);
+// Se llama dentro de la transacción que inicia la junta (`tx`): bloquea la
+// fila del despacho (FOR UPDATE) para que dos juntas iniciadas a la vez no
+// puedan pasar las dos el límite, y suma la junta al contador.
+export async function reservarJuntaIniciada(tenantId, tx) {
+  const resultado = await tx('SELECT suscripcion_estado, juntas_iniciadas FROM tenants WHERE id = $1 FOR UPDATE', [tenantId]);
   const tenant = resultado.rows[0];
-  if (!tenant || !esPrueba(tenant.suscripcion_estado)) return { ok: true };
+  if (!tenant) return { ok: false, status: 404, error: 'Despacho no encontrado.' };
 
-  if ((await contarJuntasIniciadas(tenantId)) >= LIMITES_PRUEBA.juntas) {
+  if (esPrueba(tenant.suscripcion_estado) && tenant.juntas_iniciadas >= LIMITES_PRUEBA.juntas) {
     return {
       ok: false,
       status: 402,
       error: `La prueba gratuita incluye ${LIMITES_PRUEBA.juntas} juntas y ya las has celebrado. Contrata un plan para seguir celebrando juntas.`
     };
   }
+
+  await tx('UPDATE tenants SET juntas_iniciadas = juntas_iniciadas + 1 WHERE id = $1', [tenantId]);
   return { ok: true };
 }
 

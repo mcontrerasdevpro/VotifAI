@@ -14,32 +14,36 @@ let puntoAbierto;
 mock.module('../db.js', {
   namedExports: {
     query: async (text) => {
-      if (text.startsWith('SELECT suscripcion_estado FROM tenants')) return { rows: [{ suscripcion_estado: estadoTenant }] };
+      if (text.startsWith('SELECT suscripcion_estado, juntas_iniciadas FROM tenants')) return { rows: [{ suscripcion_estado: estadoTenant, juntas_iniciadas: juntasIniciadas }] };
+      if (text.startsWith('UPDATE tenants SET juntas_iniciadas = juntas_iniciadas + 1')) { juntasIniciadas += 1; return { rows: [], rowCount: 1 }; }
       if (text.includes('SELECT t.suscripcion_estado FROM entities e JOIN tenants t')) return { rows: [{ suscripcion_estado: estadoTenant }] };
-      if (text.includes('m.iniciada_en IS NOT NULL')) return { rows: [{ total: juntasIniciadas }] };
       if (text.includes("m.estado = 'en_curso'")) return { rows: iniciadaEn ? [{ id: 'junta-1', iniciada_en: iniciadaEn, punto_id: puntoAbierto }] : [] };
       throw new Error(`Query no esperada en el test: ${text}`);
     }
   }
 });
 
-const { exigirJuntaDisponibleEnPrueba, juntaParaVoz } = await import('../lib/suscripciones.js');
+const { query } = await import('../db.js');
+const { reservarJuntaIniciada, juntaParaVoz } = await import('../lib/suscripciones.js');
 const haceHoras = (h) => new Date(Date.now() - h * 3600 * 1000);
 
-test('en prueba se pueden iniciar 2 juntas y la tercera da 402', async () => {
+test('en prueba se pueden iniciar 2 juntas y la tercera da 402 sin sumar', async () => {
   estadoTenant = 'trialing';
-  juntasIniciadas = 1;
-  assert.equal((await exigirJuntaDisponibleEnPrueba('t')).ok, true);
-  juntasIniciadas = 2;
-  const tercera = await exigirJuntaDisponibleEnPrueba('t');
+  juntasIniciadas = 0;
+  assert.equal((await reservarJuntaIniciada('t', query)).ok, true);
+  assert.equal((await reservarJuntaIniciada('t', query)).ok, true);
+  assert.equal(juntasIniciadas, 2);
+  const tercera = await reservarJuntaIniciada('t', query);
   assert.equal(tercera.ok, false);
   assert.equal(tercera.status, 402);
+  assert.equal(juntasIniciadas, 2);
 });
 
-test('con suscripción pagada no hay límite de juntas', async () => {
+test('con suscripción pagada no hay límite de juntas, pero se siguen contando', async () => {
   estadoTenant = 'active';
   juntasIniciadas = 50;
-  assert.equal((await exigirJuntaDisponibleEnPrueba('t')).ok, true);
+  assert.equal((await reservarJuntaIniciada('t', query)).ok, true);
+  assert.equal(juntasIniciadas, 51);
 });
 
 test('sin junta en curso no se graba, en ningún plan', async () => {
