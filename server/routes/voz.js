@@ -2,7 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import { query } from '../db.js';
 import { requireAuth, requireVoterAuth, entityBelongsToTenant } from '../middleware/auth.js';
-import { fincaPermiteTranscripcion } from '../lib/suscripciones.js';
+import { fincaPermiteTranscripcion, motivoSinVozEnPrueba } from '../lib/suscripciones.js';
 
 const router = Router();
 
@@ -35,6 +35,9 @@ router.post('/asistencia/:entityId/voz', requireVoterAuth, upload.single('audio'
     if (!(await fincaPermiteTranscripcion(entityId))) {
       return res.status(402).json({ error: 'La transcripción por voz no está incluida en el plan de tu administrador de fincas.', codigo: 'VOZ_NO_INCLUIDA' });
     }
+
+    const motivoPrueba = await motivoSinVozEnPrueba(entityId);
+    if (motivoPrueba) return res.status(402).json({ error: motivoPrueba, codigo: 'VOZ_LIMITE_PRUEBA' });
 
     if (!process.env.OPENAI_API_KEY) {
       return res.status(500).json({ error: 'El servidor no tiene configurada la transcripción por voz (falta OPENAI_API_KEY).' });

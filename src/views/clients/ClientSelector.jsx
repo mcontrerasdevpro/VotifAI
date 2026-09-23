@@ -128,6 +128,7 @@ export default function ClientSelector() {
                   <p className="mt-0.5 text-4xs text-slate-400">
                     {suscripcion.uso.fincas} de {suscripcion.limites.fincas ?? '∞'} fincas utilizadas
                     {suscripcion.estado === 'trialing' && diasTrial !== null ? ` · ${diasTrial} días de prueba restantes` : ` · ${textoEstado[suscripcion.estado] || suscripcion.estado}`}
+                    {suscripcion.prueba && ` · ${suscripcion.prueba.juntasCelebradas} de ${suscripcion.prueba.maxJuntas} juntas de prueba (voz ${suscripcion.prueba.horasVozPorJunta} h por junta)`}
                   </p>
                 </div>
               </div>

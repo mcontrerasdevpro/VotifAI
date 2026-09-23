@@ -30,7 +30,7 @@ router.get('/billing/planes', (req, res) => {
 
 router.get('/billing/estado', requireAuth, async (req, res) => {
   try {
-    const estado = await obtenerEstadoSuscripcion(req.tenantId);
+    const estado = await obtenerEstadoSuscripcion(req.tenantId, { conPrueba: true });
     if (!estado) return res.status(404).json({ error: 'Despacho no encontrado.' });
     res.json({ estado });
   } catch (error) {

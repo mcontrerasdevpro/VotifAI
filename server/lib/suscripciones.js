@@ -17,7 +17,28 @@ export function calcularAcceso({ suscripcion_estado: estado, trial_fin: trialFin
   return { estado, accesoCompleto: false };
 }
 
-export async function obtenerEstadoSuscripcion(tenantId) {
+// Límites de la prueba gratuita: suficiente para celebrar dos juntas reales
+// completas, sin que una prueba pueda generar un gasto de transcripción
+// (OpenAI) sin techo. Solo aplican mientras no hay suscripción pagada.
+export const LIMITES_PRUEBA = Object.freeze({ juntas: 2, horasVozPorJunta: 3 });
+
+const esPrueba = (estado) => estado !== 'active' && estado !== 'past_due';
+
+// Juntas "celebradas" = las que se llegaron a iniciar (en curso, cerradas o
+// canceladas después de empezar). Convocar o programar no cuenta.
+async function contarJuntasIniciadas(tenantId) {
+  const resultado = await query(
+    `SELECT COUNT(*)::int AS total FROM meetings m JOIN entities e ON e.id = m.entity_id
+     WHERE e.tenant_id = $1 AND m.iniciada_en IS NOT NULL`,
+    [tenantId]
+  );
+  return resultado.rows[0].total;
+}
+
+// `conPrueba`: añade el uso de la prueba (juntas celebradas). Solo lo pide
+// la pantalla de plan; el middleware de solo lectura no lo necesita y se
+// ahorra la consulta en cada escritura.
+export async function obtenerEstadoSuscripcion(tenantId, { conPrueba = false } = {}) {
   const [tenantResult, entidadesResult] = await Promise.all([
     query(
       `SELECT plan_suscripcion, suscripcion_estado, trial_inicio, trial_fin, suscripcion_periodo_fin, proveedor_cliente_id
@@ -33,6 +54,9 @@ export async function obtenerEstadoSuscripcion(tenantId) {
   const plan = obtenerPlan(tenant.plan_suscripcion);
   const { estado, accesoCompleto } = calcularAcceso(tenant);
   const fincasUsadas = entidadesResult.rows[0].total;
+  const prueba = conPrueba && esPrueba(tenant.suscripcion_estado)
+    ? { juntasCelebradas: await contarJuntasIniciadas(tenantId), maxJuntas: LIMITES_PRUEBA.juntas, horasVozPorJunta: LIMITES_PRUEBA.horasVozPorJunta }
+    : null;
 
   return {
     plan: tenant.plan_suscripcion,
@@ -49,6 +73,7 @@ export async function obtenerEstadoSuscripcion(tenantId) {
     // en la pantalla de planes y si se ofrece el portal de Stripe.
     suscripcionPagada: estado === 'active' || estado === 'past_due',
     tieneClienteStripe: Boolean(tenant.proveedor_cliente_id),
+    prueba,
     puedeCrearFinca: accesoCompleto && (plan.maxFincas === null || fincasUsadas < plan.maxFincas)
   };
 }
@@ -103,4 +128,42 @@ export async function fincaPermiteTranscripcion(entityId) {
   const tenant = resultado.rows[0];
   if (!tenant) return false;
   return obtenerPlan(tenant.plan_suscripcion).transcripcionVoz && calcularAcceso(tenant).accesoCompleto;
+}
+
+export async function exigirJuntaDisponibleEnPrueba(tenantId) {
+  const resultado = await query('SELECT suscripcion_estado FROM tenants WHERE id = $1', [tenantId]);
+  const tenant = resultado.rows[0];
+  if (!tenant || !esPrueba(tenant.suscripcion_estado)) return { ok: true };
+
+  if ((await contarJuntasIniciadas(tenantId)) >= LIMITES_PRUEBA.juntas) {
+    return {
+      ok: false,
+      status: 402,
+      error: `La prueba gratuita incluye ${LIMITES_PRUEBA.juntas} juntas y ya las has celebrado. Contrata un plan para seguir celebrando juntas.`
+    };
+  }
+  return { ok: true };
+}
+
+// Lado vecino, en prueba: la voz solo funciona dentro de una junta en curso
+// y durante sus primeras horas. La junta sigue (votos, cierre, acta); solo
+// se corta la transcripción, que es lo que tiene coste por minuto.
+export async function motivoSinVozEnPrueba(entityId) {
+  const tenantResult = await query(
+    `SELECT t.suscripcion_estado FROM entities e JOIN tenants t ON t.id = e.tenant_id WHERE e.id = $1::uuid`,
+    [String(entityId).trim()]
+  );
+  const tenant = tenantResult.rows[0];
+  if (!tenant || !esPrueba(tenant.suscripcion_estado)) return null;
+
+  const junta = await query(
+    `SELECT iniciada_en FROM meetings WHERE entity_id = $1::uuid AND estado = 'en_curso' ORDER BY iniciada_en DESC LIMIT 1`,
+    [String(entityId).trim()]
+  );
+  const iniciada = junta.rows[0]?.iniciada_en;
+  if (!iniciada) return 'Durante la prueba gratuita, la transcripción de voz solo está disponible con una junta en curso.';
+  if (Date.now() - new Date(iniciada).getTime() > LIMITES_PRUEBA.horasVozPorJunta * 3600 * 1000) {
+    return `Durante la prueba gratuita, la transcripción de voz está disponible en las ${LIMITES_PRUEBA.horasVozPorJunta} primeras horas de cada junta. La junta puede continuar con normalidad.`;
+  }
+  return null;
 }

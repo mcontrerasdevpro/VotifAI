@@ -33,8 +33,9 @@ export default function Terminos() {
 
       <h2>Planes, precios y pago</h2>
       <p>
-        El Despacho dispone de 15 días de prueba gratuita. Después, el servicio requiere una suscripción mensual
-        a uno de los planes publicados. Los precios se muestran sin IVA; se añade el 21 % de IVA en cada factura.
+        El Despacho dispone de 15 días de prueba gratuita del plan que elija al registrarse, que incluye la
+        celebración de hasta 2 juntas y, en los planes con transcripción de voz, hasta 3 horas de transcripción por
+        junta. Después, el servicio requiere una suscripción mensual a uno de los planes publicados. Los precios se muestran sin IVA; se añade el 21 % de IVA en cada factura.
         La suscripción se renueva automáticamente cada mes y el cobro se realiza con tarjeta a través de Stripe.
         Los cambios de plan se prorratean en la siguiente factura. El Despacho puede cancelar en cualquier momento
         desde la gestión de su suscripción; la cancelación surte efecto al final del periodo ya pagado.

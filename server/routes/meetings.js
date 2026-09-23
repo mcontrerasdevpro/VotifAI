@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { query, withTransaction } from '../db.js';
 import { notificar } from '../lib/notificaciones.js';
 import { generarActaPdf } from '../lib/pdfActa.js';
+import { exigirJuntaDisponibleEnPrueba } from '../lib/suscripciones.js';
 import {
   requireAuth,
   requireVoterAuth,
@@ -232,6 +233,9 @@ router.post('/meetings/:meetingId/iniciar', requireAuth, async (req, res) => {
   }
 
   try {
+    const disponible = await exigirJuntaDisponibleEnPrueba(req.tenantId);
+    if (!disponible.ok) return res.status(disponible.status).json({ error: disponible.error, codigo: 'LIMITE_JUNTAS_PRUEBA' });
+
     const resultado = await query(
       `UPDATE meetings SET estado = 'en_curso', iniciada_en = now()
        WHERE id = $1::uuid AND estado = 'programada'
