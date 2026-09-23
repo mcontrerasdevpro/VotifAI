@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Check, CreditCard, LoaderCircle } from 'lucide-react';
+import { LEMA_PLAN, caracteristicasPlan } from '../../lib/planes.js';
 
 export default function Billing() {
   const navigate = useNavigate();
@@ -104,13 +105,12 @@ export default function Billing() {
           // Durante la prueba el plan asignado es Starter pero sin pagar: se
           // tiene que poder contratar igualmente.
           const actual = estado?.plan === plan.id && estado?.suscripcionPagada;
-          const esStarter = plan.id === 'starter';
           return <article key={plan.id} className={`flex flex-col rounded-2xl border p-5 ${actual ? 'border-cyan-300/40 bg-cyan-300/[0.08]' : 'border-white/10 bg-white/[0.03]'}`}>
             <div className="flex items-center justify-between"><p className="text-xs font-black uppercase tracking-wider text-cyan-300">{plan.nombre}</p>{actual && <span className="rounded-full bg-cyan-300/15 px-2 py-1 text-[10px] font-bold text-cyan-200">Actual</span>}</div>
             <p className="mt-4 text-2xl font-black text-white">{plan.precioDesde === null ? 'A medida' : <>{plan.precioDesde} €/mes <span className="text-sm font-bold text-slate-400">+ IVA</span></>}</p>
-            <p className="mt-5 text-xl font-black text-white">{esStarter ? 'Para comenzar' : plan.id === 'enterprise' ? 'A medida' : 'Para crecer'}</p>
-            <ul className="mt-5 flex-grow space-y-3 text-sm text-slate-400"><li className="flex gap-2"><Check size={15} className="mt-0.5 shrink-0 text-emerald-300" />{plan.maxFincas ?? 'Sin límite'} fincas</li><li className="flex gap-2"><Check size={15} className="mt-0.5 shrink-0 text-emerald-300" />Hasta {plan.maxPropietariosPorFinca ?? 'sin límite'} propietarios por finca</li><li className="flex gap-2"><Check size={15} className="mt-0.5 shrink-0 text-emerald-300" />{plan.transcripcionVoz ? 'Transcripción de voz incluida' : 'Gestión esencial'}</li></ul>
-            <button type="button" disabled={actual || !plan.disponibleParaCheckout || procesando === plan.id} onClick={() => iniciarCheckout(plan.id)} className="mt-7 flex items-center justify-center gap-2 rounded-xl border border-cyan-300/30 px-4 py-3 text-sm font-bold text-cyan-200 transition hover:bg-cyan-300/10 disabled:cursor-not-allowed disabled:opacity-50">{procesando === plan.id && <LoaderCircle size={15} className="animate-spin" />}{actual ? 'Plan actual' : plan.disponibleParaCheckout ? (estado?.suscripcionPagada ? 'Cambiar a este plan' : 'Elegir plan') : plan.id === 'enterprise' ? 'Contactar' : 'Próximamente'}</button>
+            <p className="mt-5 text-xl font-black text-white">{LEMA_PLAN[plan.id]}</p>
+            <ul className="mt-5 flex-grow space-y-3 text-sm text-slate-400">{caracteristicasPlan(plan).map((linea) => <li key={linea} className="flex gap-2"><Check size={15} className="mt-0.5 shrink-0 text-emerald-300" />{linea}</li>)}</ul>
+            {plan.id === 'enterprise' ? <a href="mailto:contacto@nexuraia.com?subject=VotifAI%20Enterprise" className="mt-7 flex items-center justify-center gap-2 rounded-xl border border-cyan-300/30 px-4 py-3 text-sm font-bold text-cyan-200 transition hover:bg-cyan-300/10">Contactar</a> : <button type="button" disabled={actual || !plan.disponibleParaCheckout || procesando === plan.id} onClick={() => iniciarCheckout(plan.id)} className="mt-7 flex items-center justify-center gap-2 rounded-xl border border-cyan-300/30 px-4 py-3 text-sm font-bold text-cyan-200 transition hover:bg-cyan-300/10 disabled:cursor-not-allowed disabled:opacity-50">{procesando === plan.id && <LoaderCircle size={15} className="animate-spin" />}{actual ? 'Plan actual' : plan.disponibleParaCheckout ? (estado?.suscripcionPagada ? 'Cambiar a este plan' : 'Elegir plan') : 'Próximamente'}</button>}
           </article>;
         })}</div>}
       </main>

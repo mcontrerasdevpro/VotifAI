@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Brand from '../../components/Brand.jsx';
+import { PLANES_RESPALDO, LEMA_PLAN, caracteristicasPlan } from '../../lib/planes.js';
 import {
   ArrowRight,
   BarChart3,
@@ -153,6 +154,13 @@ export default function Welcome() {
   const [activeModule, setActiveModule] = useState('juntas');
   const [openFaq, setOpenFaq] = useState(null);
   const [demoOpen, setDemoOpen] = useState(false);
+  const [planes, setPlanes] = useState(PLANES_RESPALDO);
+  useEffect(() => {
+    fetch('/api/billing/planes')
+      .then((respuesta) => (respuesta.ok ? respuesta.json() : null))
+      .then((datos) => { if (datos?.planes?.length) setPlanes(datos.planes); })
+      .catch(() => {});
+  }, []);
   const goTo = (path) => {
     setMenuOpen(false);
     if (path === '/demo') {
@@ -180,7 +188,15 @@ export default function Welcome() {
 
         <section className="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-28"><div className="mx-auto max-w-2xl text-center"><p className="mb-3 text-xs font-black uppercase tracking-[0.2em] text-cyan-300">Una plataforma, varios flujos</p><h2 className="text-3xl font-black tracking-tight text-white sm:text-4xl">Todo el trabajo importante de tu despacho, conectado.</h2><p className="mt-4 leading-7 text-slate-400">Empieza por lo que más tiempo te quita y añade módulos cuando los necesites.</p></div><div className="mt-14 grid gap-4 md:grid-cols-2 lg:grid-cols-3">{MODULES.map(({ icon: Icon, title, description, color }) => <article key={title} className="group rounded-2xl border border-white/10 bg-white/[0.025] p-6 transition hover:-translate-y-1 hover:border-cyan-300/30 hover:bg-white/[0.045]"><div className={`mb-6 flex h-11 w-11 items-center justify-center rounded-xl border ${color}`}><Icon size={21} /></div><h3 className="font-bold text-white">{title}</h3><p className="mt-2 text-sm leading-6 text-slate-500">{description}</p><div className="mt-5 flex items-center gap-2 text-xs font-bold text-cyan-300 opacity-0 transition group-hover:opacity-100">Conocer módulo <ArrowRight size={13} /></div></article>)}</div></section>
 
-        <section id="planes" className="border-y border-white/[0.07] bg-[#0a1221] py-20 sm:py-24"><div className="mx-auto max-w-7xl px-5 sm:px-8"><div className="grid items-center gap-12 lg:grid-cols-[0.9fr_1.1fr]"><div><p className="mb-3 text-xs font-black uppercase tracking-[0.2em] text-cyan-300">Crece a tu ritmo</p><h2 className="text-3xl font-black tracking-tight text-white sm:text-4xl">Empieza con lo esencial. Amplía cuando tu despacho lo necesite.</h2><p className="mt-5 leading-7 text-slate-400">Planes desde 49 €/mes + IVA según el tamaño de tu cartera. En la demo definimos el nivel adecuado sin pagar por módulos que todavía no utilizas.</p><button type="button" onClick={() => goTo('/demo')} className="mt-8 inline-flex items-center gap-2 rounded-xl border border-cyan-300/30 px-5 py-3 text-sm font-bold text-cyan-200 transition hover:bg-cyan-300/10">Solicitar orientación <ArrowRight size={15} /></button></div><div className="grid gap-4 sm:grid-cols-3"><div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5"><p className="text-xs font-bold text-cyan-300">Starter</p><p className="mt-3 text-2xl font-black text-white">Desde 49 €/mes <span className="text-sm font-bold text-slate-400">+ IVA</span></p><p className="mt-3 text-sm leading-6 text-slate-500">Gestión de fincas, propietarios, documentos e incidencias.</p></div><div className="rounded-2xl border border-cyan-300/30 bg-cyan-300/[0.08] p-5 shadow-lg shadow-cyan-950/30"><p className="text-xs font-bold text-cyan-200">Profesional</p><p className="mt-3 text-2xl font-black text-white">Desde 99 €/mes <span className="text-sm font-bold text-slate-400">+ IVA</span></p><p className="mt-3 text-sm leading-6 text-slate-400">Más capacidad, cuotas, agenda, CRM y asistencia de IA.</p></div><div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5"><p className="text-xs font-bold text-cyan-300">Premium</p><p className="mt-3 text-2xl font-black text-white">Desde 199 €/mes <span className="text-sm font-bold text-slate-400">+ IVA</span></p><p className="mt-3 text-sm leading-6 text-slate-500">Mayor capacidad, automatización y soporte prioritario.</p></div></div></div></div></section>
+        <section id="planes" className="border-y border-white/[0.07] bg-[#0a1221] py-20 sm:py-24"><div className="mx-auto max-w-7xl px-5 sm:px-8"><div className="grid items-center gap-12 lg:grid-cols-[0.9fr_1.1fr]"><div><p className="mb-3 text-xs font-black uppercase tracking-[0.2em] text-cyan-300">Crece a tu ritmo</p><h2 className="text-3xl font-black tracking-tight text-white sm:text-4xl">Empieza con lo esencial. Amplía cuando tu despacho lo necesite.</h2><p className="mt-5 leading-7 text-slate-400">Todos los planes incluyen todos los módulos de gestión: solo cambian la capacidad de tu cartera y la transcripción de voz. Empieza con 15 días de prueba gratis, sin tarjeta.</p><button type="button" onClick={() => goTo('/demo')} className="mt-8 inline-flex items-center gap-2 rounded-xl border border-cyan-300/30 px-5 py-3 text-sm font-bold text-cyan-200 transition hover:bg-cyan-300/10">Solicitar orientación <ArrowRight size={15} /></button></div><div className="grid gap-4 sm:grid-cols-2">{planes.map((plan) => {
+          const destacado = plan.id === 'profesional';
+          return <div key={plan.id} className={`flex flex-col rounded-2xl border p-5 ${destacado ? 'border-cyan-300/30 bg-cyan-300/[0.08] shadow-lg shadow-cyan-950/30' : 'border-white/10 bg-white/[0.04]'}`}>
+            <p className={`text-xs font-bold ${destacado ? 'text-cyan-200' : 'text-cyan-300'}`}>{plan.nombre} <span className="font-medium text-slate-500">· {LEMA_PLAN[plan.id]}</span></p>
+            <p className="mt-3 text-2xl font-black text-white">{plan.precioDesde === null ? 'A medida' : <>{plan.precioDesde} €/mes <span className="text-sm font-bold text-slate-400">+ IVA</span></>}</p>
+            <ul className="mt-4 flex-grow space-y-2 text-sm text-slate-400">{caracteristicasPlan(plan).map((linea) => <li key={linea} className="flex gap-2"><Check size={15} className="mt-0.5 shrink-0 text-emerald-300" />{linea}</li>)}</ul>
+            <button type="button" onClick={() => goTo(plan.id === 'enterprise' ? '/demo' : '/register')} className="mt-5 rounded-xl border border-cyan-300/30 px-4 py-2.5 text-sm font-bold text-cyan-200 transition hover:bg-cyan-300/10">{plan.id === 'enterprise' ? 'Hablemos' : 'Probar 15 días gratis'}</button>
+          </div>;
+        })}</div></div></div></section>
 
         <section id="preguntas" className="mx-auto max-w-3xl px-5 py-20 sm:px-8 sm:py-28"><div className="text-center"><p className="mb-3 text-xs font-black uppercase tracking-[0.2em] text-cyan-300">Preguntas frecuentes</p><h2 className="text-3xl font-black tracking-tight text-white sm:text-4xl">Antes de dar el siguiente paso</h2></div><div className="mt-12 space-y-3">{FAQS.map(([question, answer], index) => <div key={question} className="rounded-2xl border border-white/10 bg-white/[0.025] px-5"><button type="button" onClick={() => setOpenFaq(openFaq === index ? null : index)} className="flex w-full items-center justify-between gap-4 py-5 text-left font-bold text-white"><span>{question}</span><ChevronDown size={18} className={`shrink-0 text-cyan-300 transition ${openFaq === index ? 'rotate-180' : ''}`} /></button>{openFaq === index && <p className="border-t border-white/10 pb-5 pt-4 text-sm leading-6 text-slate-400">{answer}</p>}</div>)}</div></section>
 
