@@ -1,7 +1,8 @@
 import { Router } from 'express';
-import { query } from '../db.js';
+import { query, withTransaction } from '../db.js';
 import { requireAuth, entityBelongsToTenant, propietarioBelongsToTenant, filaBelongsToTenant } from '../middleware/auth.js';
 import { marcarVencidas, recalcularMorosidad } from '../lib/morosidad.js';
+import { repartirImporte, generarPeriodos, MESES_POR_FRECUENCIA } from '../lib/reparto.js';
 
 const router = Router();
 
@@ -30,6 +31,116 @@ async function recalcularEstadoCuota(cuotaId) {
   return nuevoEstado;
 }
 
+// =========================================================================
+// 📨 EMISIÓN MASIVA — una cuota ordinaria o una derrama para toda la
+// comunidad de una vez, repartida por coeficiente o a partes iguales, para
+// uno o varios periodos. `previsualizar` calcula sin guardar nada;
+// `emision` guarda todas las cuotas en una sola transacción (o ninguna).
+// =========================================================================
+
+const FECHA_ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+async function prepararEmision(body, tenantId) {
+  const entityId = String(body.entity_id || '').trim();
+  const concepto = String(body.concepto || '').trim();
+  const tipo = body.tipo === 'derrama' ? 'derrama' : 'ordinaria';
+  const reparto = body.reparto === 'partes_iguales' ? 'partes_iguales' : 'coeficiente';
+  const importePorPeriodo = Math.round(Number(body.importe_por_periodo) * 100) / 100;
+  const frecuencia = MESES_POR_FRECUENCIA[body.frecuencia] ? body.frecuencia : 'unica';
+  const numero = frecuencia === 'unica' ? 1 : Math.min(24, Math.max(1, parseInt(body.numero_periodos, 10) || 1));
+  const primerVencimiento = String(body.primer_vencimiento || '').trim();
+  const excluidos = new Set((Array.isArray(body.excluidos) ? body.excluidos : []).map(String));
+
+  if (!entityId || !concepto) return { error: 'Indica la finca y el concepto.', status: 400 };
+  if (!(importePorPeriodo > 0)) return { error: 'El importe a repartir tiene que ser mayor que cero.', status: 400 };
+  if (!FECHA_ISO.test(primerVencimiento)) return { error: 'Indica la fecha de vencimiento.', status: 400 };
+  if (!(await entityBelongsToTenant(entityId, tenantId))) return { error: 'No autorizado para emitir cuotas en esta finca.', status: 403 };
+
+  const censo = await query(
+    `SELECT id, nombre_completo, propiedad_detalle, coeficiente FROM propietarios
+     WHERE entity_id = $1::uuid ORDER BY propiedad_detalle ASC NULLS LAST, nombre_completo ASC`,
+    [entityId]
+  );
+  const incluidos = censo.rows.filter((p) => !excluidos.has(p.id));
+  const repartos = repartirImporte(importePorPeriodo, incluidos, reparto);
+  if (repartos.length === 0) {
+    return { error: reparto === 'coeficiente' ? 'Los propietarios incluidos no tienen coeficiente: no se puede repartir por coeficiente.' : 'No hay propietarios a los que repartir.', status: 400 };
+  }
+
+  const periodos = frecuencia === 'unica'
+    ? [{ fecha_vencimiento: primerVencimiento, periodo: String(body.periodo || '').trim() || null }]
+    : generarPeriodos({ frecuencia, numero, primerVencimiento });
+
+  const avisos = [];
+  const sumaCoef = censo.rows.reduce((t, p) => t + Number(p.coeficiente || 0), 0);
+  if (reparto === 'coeficiente' && Math.abs(sumaCoef - 100) > 0.01) {
+    avisos.push(`Los coeficientes del censo suman ${sumaCoef.toFixed(4)} % en lugar de 100 %. El reparto se hace en proporción, pero conviene revisar el censo.`);
+  }
+  if (excluidos.size > 0) avisos.push(`${censo.rows.length - incluidos.length} propietario(s) excluido(s) de esta emisión.`);
+
+  const porId = new Map(incluidos.map((p) => [p.id, p]));
+  return {
+    entityId, concepto, tipo, reparto, importePorPeriodo, frecuencia, numero, primerVencimiento, excluidos: [...excluidos],
+    periodos,
+    avisos,
+    repartos: repartos.map((r) => ({ ...r, nombre_completo: porId.get(r.propietario_id).nombre_completo, propiedad_detalle: porId.get(r.propietario_id).propiedad_detalle, coeficiente: porId.get(r.propietario_id).coeficiente }))
+  };
+}
+
+router.post('/cuotas/emision/previsualizar', requireAuth, async (req, res) => {
+  try {
+    const e = await prepararEmision(req.body, req.tenantId);
+    if (e.error) return res.status(e.status).json({ error: e.error });
+    res.json({
+      success: true,
+      periodos: e.periodos,
+      repartos: e.repartos,
+      avisos: e.avisos,
+      totalPorPeriodo: e.importePorPeriodo,
+      totalEmision: Math.round(e.importePorPeriodo * e.periodos.length * 100) / 100,
+      cuotasAEmitir: e.repartos.length * e.periodos.length
+    });
+  } catch (err) {
+    console.error('Error al previsualizar la emisión:', err.message);
+    res.status(500).json({ error: 'No se pudo calcular la emisión.' });
+  }
+});
+
+router.post('/cuotas/emision', requireAuth, async (req, res) => {
+  try {
+    const e = await prepararEmision(req.body, req.tenantId);
+    if (e.error) return res.status(e.status).json({ error: e.error });
+
+    const emision = await withTransaction(async (tx) => {
+      const creada = await tx(
+        `INSERT INTO cuotas_emisiones (entity_id, concepto, tipo, reparto, importe_por_periodo, frecuencia, numero_periodos, primer_vencimiento, excluidos)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::uuid[])
+         RETURNING id`,
+        [e.entityId, e.concepto, e.tipo, e.reparto, e.importePorPeriodo, e.frecuencia, e.periodos.length, e.primerVencimiento, e.excluidos]
+      );
+      const emisionId = creada.rows[0].id;
+      // Una sola sentencia por periodo (unnest de los repartos): con fincas
+      // grandes y 12 mensualidades son miles de cuotas.
+      const conImporte = e.repartos.filter((r) => r.importe > 0);
+      for (const periodo of e.periodos) {
+        await tx(
+          `INSERT INTO cuotas (entity_id, propietario_id, concepto, periodo, importe, fecha_emision, fecha_vencimiento, emision_id, tipo)
+           SELECT $1::uuid, r.propietario_id, $2, $3, r.importe, CURRENT_DATE, $4::date, $5::uuid, $6
+           FROM unnest($7::uuid[], $8::numeric[]) AS r(propietario_id, importe)`,
+          [e.entityId, e.concepto, periodo.periodo, periodo.fecha_vencimiento, emisionId, e.tipo, conImporte.map((r) => r.propietario_id), conImporte.map((r) => r.importe)]
+        );
+      }
+      return emisionId;
+    });
+
+    const emitidas = e.repartos.filter((r) => r.importe > 0).length * e.periodos.length;
+    res.status(201).json({ success: true, emision_id: emision, cuotasEmitidas: emitidas, mensaje: `Se han emitido ${emitidas} cuotas.` });
+  } catch (err) {
+    console.error('Error al emitir cuotas:', err.message);
+    res.status(500).json({ error: 'No se pudieron emitir las cuotas.' });
+  }
+});
+
 router.get('/cuotas/lista/:entityId', requireAuth, async (req, res) => {
   const entityId = String(req.params.entityId).trim();
 
@@ -41,7 +152,7 @@ router.get('/cuotas/lista/:entityId', requireAuth, async (req, res) => {
     await marcarVencidas(entityId);
 
     const resultado = await query(
-      `SELECT c.id, c.propietario_id, p.nombre_completo, p.propiedad_detalle, c.concepto, c.periodo,
+      `SELECT c.id, c.propietario_id, p.nombre_completo, p.propiedad_detalle, c.concepto, c.periodo, c.tipo, c.emision_id,
               c.importe, c.fecha_emision, c.fecha_vencimiento, c.estado,
               COALESCE((SELECT SUM(importe) FROM pagos WHERE cuota_id = c.id), 0) AS total_pagado
        FROM cuotas c

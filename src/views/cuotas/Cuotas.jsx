@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { Wallet, Plus, CreditCard, Trash2 } from 'lucide-react';
+import { Wallet, Plus, CreditCard, Trash2, Users } from 'lucide-react';
 import Card from '../../components/ui/Card.jsx';
 import Modal from '../../components/ui/Modal.jsx';
 import Field from '../../components/ui/Field.jsx';
 import DataTable from '../../components/ui/DataTable.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
+import ModalEmisionCuotas from '../../components/ModalEmisionCuotas.jsx';
 
 const TONOS_ESTADO = {
   pendiente: 'neutral',
@@ -32,6 +33,8 @@ export default function Cuotas() {
   const [cargando, setCargando] = useState(true);
 
   const [modalCuotaAbierto, setModalCuotaAbierto] = useState(false);
+  const [modalEmisionAbierto, setModalEmisionAbierto] = useState(false);
+  const [avisoEmision, setAvisoEmision] = useState('');
   const [guardandoCuota, setGuardandoCuota] = useState(false);
   const [propietarioId, setPropietarioId] = useState('');
   const [concepto, setConcepto] = useState('');
@@ -192,10 +195,31 @@ export default function Cuotas() {
         <h1 className="text-lg font-black text-white flex items-center gap-2">
           <Wallet className="text-blue-500" size={20} /> Cuotas y Morosidad
         </h1>
-        <button onClick={() => setModalCuotaAbierto(true)} className="bg-blue-600 hover:bg-blue-500 text-white text-5xs font-black uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-md shadow-blue-600/10">
-          <Plus size={12} /> Nueva Cuota
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => setModalCuotaAbierto(true)} className="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 text-5xs font-black uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5">
+            <Plus size={12} /> Cuota individual
+          </button>
+          <button onClick={() => setModalEmisionAbierto(true)} className="bg-blue-600 hover:bg-blue-500 text-white text-5xs font-black uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-md shadow-blue-600/10">
+            <Users size={12} /> Emitir a toda la comunidad
+          </button>
+        </div>
       </div>
+
+      {avisoEmision && (
+        <p className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2.5 text-3xs font-bold text-emerald-300">{avisoEmision}</p>
+      )}
+
+      <ModalEmisionCuotas
+        open={modalEmisionAbierto}
+        onClose={() => setModalEmisionAbierto(false)}
+        entityId={entidadId}
+        propietarios={propietarios}
+        onEmitida={async (mensaje) => {
+          setModalEmisionAbierto(false);
+          setAvisoEmision(mensaje);
+          await refrescar();
+        }}
+      />
 
       <Card className="flex-grow overflow-hidden" padding="p-0" light>
         <div className="h-full overflow-y-auto custom-scrollbar">
