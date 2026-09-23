@@ -48,12 +48,20 @@ router.put('/meetings/:meetingId/asistencia/:propietarioId', requireAuth, async 
     }
 
     const resultado = await withTransaction(async (tx) => {
+      // Si el propietario había delegado desde la app, el cambio que hace el
+      // despacho en sala manda: la delegación queda revocada.
+      await tx(
+        `UPDATE meeting_delegaciones SET estado = 'revocada', revocada_en = now()
+         WHERE id = (SELECT delegacion_id FROM meeting_asistencia WHERE meeting_id = $1::uuid AND propietario_id = $2::uuid)
+           AND estado = 'aceptada'`,
+        [meetingId, propietarioId]
+      );
       const fila = await tx(
         `INSERT INTO meeting_asistencia (meeting_id, propietario_id, modo, representante_nombre, representacion_escrita)
          VALUES ($1, $2, $3, $4, $5)
          ON CONFLICT (meeting_id, propietario_id)
          DO UPDATE SET modo = EXCLUDED.modo, representante_nombre = EXCLUDED.representante_nombre,
-                       representacion_escrita = EXCLUDED.representacion_escrita, registrado_en = now()
+                       representacion_escrita = EXCLUDED.representacion_escrita, delegacion_id = NULL, registrado_en = now()
          RETURNING propietario_id, modo, representante_nombre, representacion_escrita`,
         [meetingId, propietarioId, modo, modo === 'representado' ? representante : null, modo === 'representado' && escrita]
       );
@@ -85,6 +93,14 @@ router.delete('/meetings/:meetingId/asistencia/:propietarioId', requireAuth, asy
     if (!junta.ok) return res.status(junta.status).json({ error: junta.error });
 
     await withTransaction(async (tx) => {
+      // Si el propietario había delegado desde la app, el cambio que hace el
+      // despacho en sala manda: la delegación queda revocada.
+      await tx(
+        `UPDATE meeting_delegaciones SET estado = 'revocada', revocada_en = now()
+         WHERE id = (SELECT delegacion_id FROM meeting_asistencia WHERE meeting_id = $1::uuid AND propietario_id = $2::uuid)
+           AND estado = 'aceptada'`,
+        [meetingId, propietarioId]
+      );
       await tx('DELETE FROM meeting_asistencia WHERE meeting_id = $1::uuid AND propietario_id = $2::uuid', [meetingId, propietarioId]);
       await tx(
         `DELETE FROM meeting_votos v USING meeting_puntos p

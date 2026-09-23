@@ -127,7 +127,7 @@ export default function PanelSala({ meetingId, censo, asistencia, votos, privado
                   <p className="text-4xs text-slate-500">
                     {Number(p.coeficiente).toFixed(2)}%
                     {asiste?.modo === 'presencial' && ' · Presente en sala'}
-                    {asiste?.modo === 'representado' && ` · Representado por ${asiste.representante_nombre}${asiste.representacion_escrita ? ' (por escrito)' : ' (sin escrito)'}`}
+                    {asiste?.modo === 'representado' && ` · Representado por ${asiste.representante_nombre}${asiste.delegacion_id ? ' (delegación en VotifAI aceptada por ambos)' : asiste.representacion_escrita ? ' (por escrito)' : ' (sin escrito)'}`}
                     {!asiste && votaronEnApp.has(p.id) && ' · Participa por la app'}
                     {privado && ' · Privado de voto'}
                   </p>

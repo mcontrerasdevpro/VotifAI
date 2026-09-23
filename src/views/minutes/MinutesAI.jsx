@@ -9,6 +9,8 @@ import { ETIQUETA_MAYORIA } from '../../lib/mayorias.js';
 
 const LABEL_ESTADO = { votando: 'Votando', cerrado: 'Cerrado', pendiente: 'Pendiente' };
 
+const fechaHora = (fecha) => (fecha ? new Date(fecha).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : '—');
+
 const hora = (fecha) => new Date(fecha).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 
 // Intervenciones de voz de los vecinos, agrupadas por el punto del orden
@@ -71,7 +73,7 @@ function seccionAsistencia(asistencia, votos) {
   if (presentes.length) bloques.push(`Presentes en la sala:\n${presentes.map((p) => `* ${nombre(p)} — ${cuota(p)}`).join('\n')}`);
   if (porApp.length) bloques.push(`Participan a distancia a través de VotifAI:\n${porApp.map((p) => `* ${nombre(p)} — ${cuota(p)}`).join('\n')}`);
   if (representados.length) {
-    bloques.push(`Representados (art. 15.1 LPH):\n${representados.map((p) => `* ${nombre(p)} — ${cuota(p)}, representado por ${p.representante_nombre}${p.representacion_escrita ? ' (representación acreditada por escrito)' : ' (sin escrito de representación)'}`).join('\n')}`);
+    bloques.push(`Representados (art. 15.1 LPH):\n${representados.map((p) => `* ${nombre(p)} — ${cuota(p)}, representado por ${p.representante_nombre}${p.delegacion_id ? ` (delegación electrónica en VotifAI, solicitada por el propietario el ${fechaHora(p.delegacion_solicitada_en)} y aceptada por el representante el ${fechaHora(p.delegacion_aceptada_en)})` : p.representacion_escrita ? ' (representación acreditada por escrito)' : ' (sin escrito de representación)'}`).join('\n')}`);
   }
   const total = presentes.length + porApp.length + representados.length;
   const coefTotal = [...presentes, ...porApp, ...representados].reduce((t, p) => t + Number(p.coeficiente || 0), 0);

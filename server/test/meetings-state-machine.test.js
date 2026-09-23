@@ -24,6 +24,10 @@ let puntoEstado = 'pendiente';
 let puntoTipo = 'votacion';
 // null = el vecino no figura como privado de voto; true/false = figura y está (o no) habilitado.
 let privadoHabilitado = null;
+// Delegaciones aceptadas en esta junta: representado -> representante.
+let delegaciones = {};
+const REPRESENTADO_ID = 'propietario-representado';
+const PROPIETARIO_ID = 'propietario-1'; // el vecino de vecinoCookie()
 
 const calls = [];
 mock.module('../db.js', {
@@ -53,6 +57,14 @@ mock.module('../db.js', {
       }
       if (text.includes('SELECT estado, tipo, meeting_id FROM meeting_puntos WHERE id')) {
         return { rows: [{ estado: puntoEstado, tipo: puntoTipo, meeting_id: MEETING_ID }] };
+      }
+      if (text.includes('FROM meeting_delegaciones') && text.includes('representante_id = $3')) {
+        // ¿Tiene el que vota (params[2]) una delegación aceptada de params[1]?
+        return { rows: delegaciones[params[1]] === params[2] ? [{ id: 'delegacion-1' }] : [] };
+      }
+      if (text.includes('FROM meeting_delegaciones') && text.includes('d.representado_id = $2')) {
+        // ¿Ha delegado su propio voto quien vota (params[1])?
+        return { rows: delegaciones[params[1]] ? [{ nombre_completo: 'Vecina Representante' }] : [] };
       }
       if (text.includes('FROM meeting_privados_voto WHERE meeting_id')) {
         return { rows: privadoHabilitado === null ? [] : [{ habilitado: privadoHabilitado }] };
@@ -209,4 +221,49 @@ test('iniciar: 400 si no se indica primera o segunda convocatoria (art. 17.7 LPH
     body: JSON.stringify({})
   });
   assert.equal(respuesta.status, 400);
+});
+
+test('votar: el representante vota en nombre de quien le delegó (delegación aceptada)', async () => {
+  puntoEstado = 'votando';
+  puntoTipo = 'votacion';
+  privadoHabilitado = null;
+  delegaciones = { [REPRESENTADO_ID]: PROPIETARIO_ID };
+  calls.length = 0;
+  const respuesta = await fetch(`${baseUrl}/api/meetings/vecino/puntos/${PUNTO_ID}/votar`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: vecinoCookie() },
+    body: JSON.stringify({ voto: 'si', en_nombre_de: REPRESENTADO_ID })
+  });
+  assert.equal(respuesta.status, 200);
+  const insert = calls.find((c) => c.text.includes('INSERT INTO meeting_votos'));
+  assert.equal(insert.params[1], REPRESENTADO_ID);
+  assert.equal(insert.params[4], 'representacion');
+  delegaciones = {};
+});
+
+test('votar: 403 si se intenta votar por otro sin una delegación aceptada', async () => {
+  puntoEstado = 'votando';
+  delegaciones = {};
+  calls.length = 0;
+  const respuesta = await fetch(`${baseUrl}/api/meetings/vecino/puntos/${PUNTO_ID}/votar`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: vecinoCookie() },
+    body: JSON.stringify({ voto: 'si', en_nombre_de: REPRESENTADO_ID })
+  });
+  assert.equal(respuesta.status, 403);
+  assert.equal(calls.some((c) => c.text.includes('INSERT INTO meeting_votos')), false);
+});
+
+test('votar: 409 si quien ha delegado su voto intenta votar por su cuenta', async () => {
+  puntoEstado = 'votando';
+  delegaciones = { [PROPIETARIO_ID]: 'otro-vecino' };
+  calls.length = 0;
+  const respuesta = await fetch(`${baseUrl}/api/meetings/vecino/puntos/${PUNTO_ID}/votar`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: vecinoCookie() },
+    body: JSON.stringify({ voto: 'no' })
+  });
+  assert.equal(respuesta.status, 409);
+  assert.equal((await respuesta.json()).codigo, 'VOTO_DELEGADO');
+  delegaciones = {};
 });

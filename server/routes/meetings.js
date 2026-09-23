@@ -216,8 +216,11 @@ router.get('/meetings/detalle/:meetingId', requireAuth, async (req, res) => {
     // despacho vea en el panel de sala quién falta por votar.
     const [asistencia, votos] = await Promise.all([
       query(
-        `SELECT a.propietario_id, a.modo, a.representante_nombre, a.representacion_escrita, p.nombre_completo, p.propiedad_detalle, p.coeficiente
+        `SELECT a.propietario_id, a.modo, a.representante_nombre, a.representacion_escrita, a.delegacion_id,
+                d.solicitada_en AS delegacion_solicitada_en, d.respondida_en AS delegacion_aceptada_en,
+                p.nombre_completo, p.propiedad_detalle, p.coeficiente
          FROM meeting_asistencia a JOIN propietarios p ON p.id = a.propietario_id
+         LEFT JOIN meeting_delegaciones d ON d.id = a.delegacion_id
          WHERE a.meeting_id = $1::uuid ORDER BY p.propiedad_detalle ASC NULLS LAST, p.nombre_completo ASC`,
         [meetingId]
       ),
@@ -622,7 +625,34 @@ router.get('/meetings/vecino/:entityId/actual', requireVoterAuth, async (req, re
     );
     const privadoDeVoto = privado.rows.length > 0 && !privado.rows[0].habilitado;
 
-    res.status(200).json({ success: true, meeting: junta, puntos: puntosResultado.rows, privadoDeVoto });
+    // Delegaciones aceptadas: a quién representa este vecino (con su voto
+    // en cada punto y si está privado de voto) y en quién ha delegado él.
+    const [representados, delegadoEn] = await Promise.all([
+      query(
+        `SELECT p.id AS propietario_id, p.nombre_completo, p.propiedad_detalle,
+                EXISTS (SELECT 1 FROM meeting_privados_voto pv WHERE pv.meeting_id = d.meeting_id AND pv.propietario_id = p.id AND NOT pv.habilitado) AS privado_de_voto,
+                COALESCE((SELECT json_object_agg(v.punto_id, v.voto) FROM meeting_votos v JOIN meeting_puntos mp ON mp.id = v.punto_id
+                          WHERE mp.meeting_id = d.meeting_id AND v.propietario_id = p.id), '{}'::json) AS votos
+         FROM meeting_delegaciones d JOIN propietarios p ON p.id = d.representado_id
+         WHERE d.meeting_id = $1::uuid AND d.representante_id = $2::uuid AND d.estado = 'aceptada'
+         ORDER BY p.propiedad_detalle ASC NULLS LAST`,
+        [junta.id, req.propietarioId]
+      ),
+      query(
+        `SELECT p.nombre_completo FROM meeting_delegaciones d JOIN propietarios p ON p.id = d.representante_id
+         WHERE d.meeting_id = $1::uuid AND d.representado_id = $2::uuid AND d.estado = 'aceptada'`,
+        [junta.id, req.propietarioId]
+      )
+    ]);
+
+    res.status(200).json({
+      success: true,
+      meeting: junta,
+      puntos: puntosResultado.rows,
+      privadoDeVoto,
+      representados: representados.rows,
+      votoDelegadoEn: delegadoEn.rows[0]?.nombre_completo || null
+    });
   } catch (err) {
     console.error('Error al consultar la junta en curso:', err.message);
     res.status(500).json({ error: `Fallo al consultar la junta en curso: ${err.message}` });
@@ -715,16 +745,51 @@ router.post('/meetings/vecino/puntos/:puntoId/votar', requireVoterAuth, async (r
     }
     const punto = puntoResultado.rows[0];
 
+    // Voto propio o, con `en_nombre_de`, el de un vecino que ha delegado en
+    // quien vota y cuya delegación está ACEPTADA para esta junta.
+    const enNombreDe = String(req.body.en_nombre_de || '').trim() || null;
+    let votanteId = req.propietarioId;
+    let origen = 'app';
+    if (enNombreDe && enNombreDe !== req.propietarioId) {
+      const delegacion = await query(
+        `SELECT id FROM meeting_delegaciones
+         WHERE meeting_id = $1::uuid AND representado_id = $2::uuid AND representante_id = $3::uuid AND estado = 'aceptada'`,
+        [punto.meeting_id, enNombreDe, req.propietarioId]
+      );
+      if (delegacion.rows.length === 0) {
+        return res.status(403).json({ error: 'No tienes una representación aceptada de ese propietario para esta junta.' });
+      }
+      votanteId = enNombreDe;
+      origen = 'representacion';
+    } else {
+      // Quien ha delegado su voto no vota por su cuenta mientras la
+      // delegación siga aceptada: el voto lo tiene su representante.
+      const delegada = await query(
+        `SELECT p.nombre_completo FROM meeting_delegaciones d JOIN propietarios p ON p.id = d.representante_id
+         WHERE d.meeting_id = $1::uuid AND d.representado_id = $2::uuid AND d.estado = 'aceptada'`,
+        [punto.meeting_id, req.propietarioId]
+      );
+      if (delegada.rows.length > 0) {
+        return res.status(409).json({
+          error: `Has delegado tu voto en ${delegada.rows[0].nombre_completo} para esta junta. Si quieres votar tú, revoca antes la delegación.`,
+          codigo: 'VOTO_DELEGADO'
+        });
+      }
+    }
+
     // Art. 15.2 LPH: quien no estaba al corriente de pago al iniciarse la
-    // junta puede participar pero no votar, salvo que el despacho lo haya
-    // habilitado (pago en la junta, impugnación o consignación).
+    // junta puede participar pero no votar (ni por representante), salvo que
+    // el despacho lo haya habilitado (pago en la junta, impugnación o
+    // consignación).
     const privado = await query(
       'SELECT habilitado FROM meeting_privados_voto WHERE meeting_id = $1::uuid AND propietario_id = $2::uuid',
-      [punto.meeting_id, req.propietarioId]
+      [punto.meeting_id, votanteId]
     );
     if (privado.rows.length > 0 && !privado.rows[0].habilitado) {
       return res.status(403).json({
-        error: 'No puedes votar en esta junta porque constan deudas vencidas con la comunidad al inicio de la reunión (art. 15.2 LPH). Puedes participar en las deliberaciones. Si ya has pagado, comunícaselo al administrador.',
+        error: votanteId === req.propietarioId
+          ? 'No puedes votar en esta junta porque constan deudas vencidas con la comunidad al inicio de la reunión (art. 15.2 LPH). Puedes participar en las deliberaciones. Si ya has pagado, comunícaselo al administrador.'
+          : 'Ese propietario está privado de voto en esta junta por deudas vencidas (art. 15.2 LPH), así que tampoco se puede votar en su nombre.',
         codigo: 'PRIVADO_DE_VOTO'
       });
     }
@@ -735,7 +800,7 @@ router.post('/meetings/vecino/puntos/:puntoId/votar', requireVoterAuth, async (r
       return res.status(409).json({ error: 'La votación de este punto no está abierta.' });
     }
 
-    const propietarioResultado = await query('SELECT coeficiente FROM propietarios WHERE id = $1::uuid', [req.propietarioId]);
+    const propietarioResultado = await query('SELECT coeficiente FROM propietarios WHERE id = $1::uuid', [votanteId]);
     if (propietarioResultado.rows.length === 0) {
       return res.status(404).json({ error: 'Propietario no encontrado.' });
     }
@@ -744,14 +809,14 @@ router.post('/meetings/vecino/puntos/:puntoId/votar', requireVoterAuth, async (r
     // ON CONFLICT sobre UNIQUE(punto_id, propietario_id): permite cambiar
     // el voto mientras el punto siga abierto sin crear filas duplicadas.
     await query(
-      `INSERT INTO meeting_votos (punto_id, propietario_id, voto, coeficiente_snapshot)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO meeting_votos (punto_id, propietario_id, voto, coeficiente_snapshot, origen)
+       VALUES ($1, $2, $3, $4, $5)
        ON CONFLICT (punto_id, propietario_id)
-       DO UPDATE SET voto = EXCLUDED.voto, coeficiente_snapshot = EXCLUDED.coeficiente_snapshot, origen = 'app', votado_en = now()`,
-      [puntoId, req.propietarioId, voto, coeficiente]
+       DO UPDATE SET voto = EXCLUDED.voto, coeficiente_snapshot = EXCLUDED.coeficiente_snapshot, origen = EXCLUDED.origen, votado_en = now()`,
+      [puntoId, votanteId, voto, coeficiente, origen]
     );
 
-    res.status(200).json({ success: true, voto });
+    res.status(200).json({ success: true, voto, propietario_id: votanteId });
   } catch (err) {
     console.error('Error al registrar voto:', err.message);
     res.status(500).json({ error: `Fallo al registrar el voto: ${err.message}` });

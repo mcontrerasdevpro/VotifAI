@@ -7,6 +7,7 @@ import HistorialVecino from '../../components/HistorialVecino.jsx';
 import PreferenciaNotificacion from '../../components/PreferenciaNotificacion.jsx';
 import Brand from '../../components/Brand.jsx';
 import VerPassword from '../../components/ui/VerPassword.jsx';
+import DelegacionVoto from '../../components/DelegacionVoto.jsx';
 
 /**
  * Pantalla de "manos alzadas": el vecino accede desde su propio móvil al
@@ -411,6 +412,8 @@ export default function Asistencia() {
                 />
 
                 <VotacionVecino entityId={entityId} onJuntaEnCurso={setJuntaEnCurso} />
+
+                <DelegacionVoto entityId={entityId} />
 
                 <HistorialVecino entityId={entityId} />
 

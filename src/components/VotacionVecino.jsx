@@ -22,6 +22,10 @@ export default function VotacionVecino({ entityId, onJuntaEnCurso }) {
   // Art. 15.2 LPH: con deudas vencidas al iniciarse la junta, el vecino
   // participa pero no vota (salvo que el despacho lo habilite).
   const [privadoDeVoto, setPrivadoDeVoto] = useState(false);
+  // Delegaciones aceptadas: a quién represento (voto también en su nombre)
+  // y, si he delegado el mío, en quién.
+  const [representados, setRepresentados] = useState([]);
+  const [votoDelegadoEn, setVotoDelegadoEn] = useState(null);
 
   useEffect(() => {
     if (!entityId) { setCargando(false); return; }
@@ -35,6 +39,8 @@ export default function VotacionVecino({ entityId, onJuntaEnCurso }) {
           setMeeting(resultado.meeting);
           setPuntos(resultado.puntos || []);
           setPrivadoDeVoto(Boolean(resultado.privadoDeVoto));
+          setRepresentados(resultado.representados || []);
+          setVotoDelegadoEn(resultado.votoDelegadoEn || null);
           onJuntaEnCurso?.(Boolean(resultado.meeting));
         }
       } catch (err) {
@@ -50,17 +56,19 @@ export default function VotacionVecino({ entityId, onJuntaEnCurso }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- el callback del padre no debe reiniciar el sondeo
   }, [entityId]);
 
-  const emitirVoto = async (puntoId, voto) => {
+  const emitirVoto = async (puntoId, voto, enNombreDe = null) => {
     setVotando(true);
     try {
       const respuesta = await fetch(`/api/meetings/vecino/puntos/${puntoId}/votar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ voto })
+        body: JSON.stringify(enNombreDe ? { voto, en_nombre_de: enNombreDe } : { voto })
       });
       const resultado = await respuesta.json();
-      if (respuesta.ok && resultado.success) {
+      if (respuesta.ok && resultado.success && enNombreDe) {
+        setRepresentados((actual) => actual.map((r) => (r.propietario_id === enNombreDe ? { ...r, votos: { ...r.votos, [puntoId]: voto } } : r)));
+      } else if (respuesta.ok && resultado.success) {
         setPuntos((actual) => actual.map((p) => (p.id === puntoId ? { ...p, mi_voto: voto } : p)));
       } else {
         alert(resultado.error || 'No se pudo registrar tu voto.');
@@ -98,6 +106,13 @@ export default function VotacionVecino({ entityId, onJuntaEnCurso }) {
         <Radio size={16} className="text-emerald-500 animate-pulse shrink-0" />
       </div>
 
+      {votoDelegadoEn && (
+        <div className="flex items-start gap-2 rounded-xl border border-blue-500/30 bg-blue-500/10 p-3 text-4xs leading-relaxed text-blue-200">
+          <Info size={14} className="mt-0.5 shrink-0 text-blue-400" />
+          <p>Has delegado tu voto en <strong>{votoDelegadoEn}</strong> para esta junta, así que votará por ti. Si prefieres votar tú, revoca la delegación en «Representación en juntas».</p>
+        </div>
+      )}
+
       {privadoDeVoto && (
         <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-4xs leading-relaxed text-amber-200">
           <AlertTriangle size={14} className="mt-0.5 shrink-0 text-amber-400" />
@@ -126,7 +141,7 @@ export default function VotacionVecino({ entityId, onJuntaEnCurso }) {
             </div>
           ) : null}
 
-          {puntoAbierto.tipo === 'votacion' && !privadoDeVoto && (
+          {puntoAbierto.tipo === 'votacion' && !privadoDeVoto && !votoDelegadoEn && (
             <div className="grid grid-cols-3 gap-2">
               {['si', 'no', 'abstencion'].map((opcion) => (
                 <button
@@ -145,6 +160,35 @@ export default function VotacionVecino({ entityId, onJuntaEnCurso }) {
               ))}
             </div>
           )}
+
+          {puntoAbierto.tipo === 'votacion' && representados.map((r) => (
+            <div key={r.propietario_id} className="space-y-1.5 rounded-lg border border-blue-500/20 bg-blue-500/5 p-2.5">
+              <p className="text-4xs font-bold text-blue-200">
+                En nombre de {r.nombre_completo}{r.propiedad_detalle ? ` (${r.propiedad_detalle})` : ''} — te ha delegado su voto
+              </p>
+              {r.privado_de_voto ? (
+                <p className="text-4xs text-amber-300">Está privado de voto por deudas en esta junta (art. 15.2 LPH): no se puede votar en su nombre.</p>
+              ) : (
+                <div className="grid grid-cols-3 gap-2">
+                  {['si', 'no', 'abstencion'].map((opcion) => (
+                    <button
+                      key={opcion}
+                      type="button"
+                      disabled={votando}
+                      onClick={() => emitirVoto(puntoAbierto.id, opcion, r.propietario_id)}
+                      className={`py-2 rounded-lg text-4xs font-black uppercase tracking-wider border transition-all disabled:opacity-50 ${
+                        r.votos?.[puntoAbierto.id] === opcion
+                          ? opcion === 'si' ? 'bg-emerald-600 border-emerald-500 text-white' : opcion === 'no' ? 'bg-rose-600 border-rose-500 text-white' : 'bg-slate-600 border-slate-500 text-white'
+                          : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
+                      }`}
+                    >
+                      {ETIQUETA_VOTO[opcion]}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
         </motion.div>
       )}
     </div>
