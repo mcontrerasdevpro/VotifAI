@@ -1,8 +1,9 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Users, PieChart, Radio, ArrowLeft, Play } from 'lucide-react';
+import { Users, PieChart, Radio, ArrowLeft, Play, Scale, UserX } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Card from './ui/Card.jsx';
+import { ETIQUETA_MAYORIA, ESTADO_RESULTADO } from '../lib/mayorias.js';
 
 /**
  * Monitor real: los recuentos vienen del poll de detalle de la junta
@@ -10,7 +11,7 @@ import Card from './ui/Card.jsx';
  * se genera aquí, este componente solo dispara las acciones del despacho
  * (iniciar junta, abrir/cerrar votación de un punto, clausurar asamblea).
  */
-export default function ColumnaMonitorCentral({ meeting, puntos, puntoActivoId, coeficienteTotal, onIniciarJunta, onAbrirVotacion, onCerrarVotacion, onClausurarAsamblea }) {
+export default function ColumnaMonitorCentral({ meeting, puntos, puntoActivoId, privadosVoto = [], onIniciarJunta, onHabilitarPrivado, onAbrirVotacion, onCerrarVotacion, onClausurarAsamblea }) {
   const navigate = useNavigate();
   const puntoActual = puntos.find((p) => p.id === puntoActivoId);
 
@@ -22,8 +23,13 @@ export default function ColumnaMonitorCentral({ meeting, puntos, puntoActivoId, 
   const coefAbs = Number(puntoActual?.coeficiente_abstencion) || 0;
   const totalVotantes = Number(puntoActual?.total_votantes) || 0;
 
-  // Cuórum = coeficiente de quienes han votado el punto actualmente
-  // abierto, sobre el coeficiente total del censo de esta junta.
+  // Participación = coeficiente de quienes han votado el punto actualmente
+  // abierto, sobre el coeficiente total del censo de esta junta. El
+  // resultado legal (doble mayoría, art. 17 LPH) lo calcula el servidor.
+  const resultado = puntoActual?.resultado;
+  const sinVoto = privadosVoto.filter((p) => !p.habilitado);
+  const coefSinVoto = sinVoto.reduce((t, p) => t + Number(p.coeficiente || 0), 0);
+
   const pctSi = censoTotalCoef > 0 ? (coefSi / censoTotalCoef) * 100 : 0;
   const pctNo = censoTotalCoef > 0 ? (coefNo / censoTotalCoef) * 100 : 0;
   const pctAbs = censoTotalCoef > 0 ? (coefAbs / censoTotalCoef) * 100 : 0;
@@ -45,17 +51,21 @@ export default function ColumnaMonitorCentral({ meeting, puntos, puntoActivoId, 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="bg-slate-950 p-4 rounded-xl border border-slate-900 shadow-inner">
             <span className="text-4xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
-              <Users size={12} className="text-blue-500" /> Cuórum del Punto Actual
+              <Users size={12} className="text-blue-500" /> Participación del punto actual
             </span>
             <div className="text-2xl font-black text-white mt-1">{cuorumPct.toFixed(2)}%</div>
             <p className="text-4xs text-slate-500 font-medium mt-0.5">{totalVotantes} de {censoTotalProp} propietarios han votado</p>
           </div>
           <div className="bg-slate-950 p-4 rounded-xl border border-slate-900 shadow-inner">
             <span className="text-4xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
-              <PieChart size={12} className="text-indigo-500" /> Coeficiente Censado
+              <PieChart size={12} className="text-indigo-500" /> Base para las mayorías
             </span>
-            <div className="text-2xl font-black text-white mt-1">{coeficienteTotal.toFixed(2)}%</div>
-            <p className="text-4xs text-emerald-500 font-semibold mt-0.5">{coeficienteTotal >= 50 ? '✓ Cuórum legal válido' : '⚠️ Cuórum aún insuficiente'}</p>
+            <div className="text-2xl font-black text-white mt-1">{Math.max(0, censoTotalProp - sinVoto.length)} <span className="text-xs text-slate-500">propietarios</span></div>
+            <p className="text-4xs text-slate-500 font-medium mt-0.5">
+              {Math.max(0, censoTotalCoef - coefSinVoto).toFixed(2)}% de cuotas
+              {sinVoto.length > 0 && ` · ${sinVoto.length} privado(s) de voto no computan (art. 15.2)`}
+              {meeting?.convocatoria && ` · ${meeting.convocatoria === 'segunda' ? '2ª' : '1ª'} convocatoria`}
+            </p>
           </div>
         </div>
 
@@ -90,13 +100,55 @@ export default function ColumnaMonitorCentral({ meeting, puntos, puntoActivoId, 
 
             {puntoActual.tipo === 'votacion' ? (
               <div className="space-y-4 pt-1">
-                <BarraVoto label="A Favor (SÍ)" color="emerald" pct={pctSi} />
-                <BarraVoto label="En Contra (NO)" color="rose" pct={pctNo} />
-                <BarraVoto label="Abstención" color="slate" pct={pctAbs} />
+                <BarraVoto label={`A Favor (SÍ) · ${puntoActual.votos_si || 0}`} color="emerald" pct={pctSi} />
+                <BarraVoto label={`En Contra (NO) · ${puntoActual.votos_no || 0}`} color="rose" pct={pctNo} />
+                <BarraVoto label={`Abstención · ${puntoActual.votos_abstencion || 0}`} color="slate" pct={pctAbs} />
+                {resultado && (
+                  <div className="rounded-lg border border-slate-800 p-3 space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-1.5 text-4xs font-black uppercase tracking-widest text-slate-400">
+                        <Scale size={12} className="text-indigo-400" /> {ETIQUETA_MAYORIA[resultado.mayoria]} · {resultado.articulo}
+                      </span>
+                      <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border ${ESTADO_RESULTADO[resultado.estado].clase}`}>
+                        {puntoActual.estado === 'cerrado' ? '' : 'Ahora mismo: '}{ESTADO_RESULTADO[resultado.estado].texto}
+                      </span>
+                    </div>
+                    <p className="text-4xs text-slate-500">{resultado.requisito}</p>
+                  </div>
+                )}
               </div>
             ) : (
               <p className="text-4xs text-slate-500 font-medium italic">Punto informativo, sin votación — úsalo para recoger ruegos y preguntas.</p>
             )}
+          </div>
+        )}
+
+        {meeting?.estado === 'en_curso' && privadosVoto.length > 0 && (
+          <div className="bg-slate-950 p-4 rounded-xl border border-rose-500/20 space-y-3">
+            <h3 className="flex items-center gap-1.5 text-3xs font-black uppercase tracking-widest text-rose-300">
+              <UserX size={13} /> Privados de voto por deudas (art. 15.2 LPH)
+            </h3>
+            <p className="text-4xs text-slate-500">Pueden participar en las deliberaciones pero no votan ni computan para las mayorías. Habilítalos si pagan en la junta o acreditan impugnación o consignación de la deuda.</p>
+            <ul className="space-y-2">
+              {privadosVoto.map((p) => (
+                <li key={p.propietario_id} className="flex items-center justify-between gap-3 rounded-lg border border-slate-900 px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-3xs font-bold text-white">{p.nombre_completo}{p.propiedad_detalle ? ` · ${p.propiedad_detalle}` : ''}</p>
+                    <p className="text-4xs text-slate-500">
+                      Debe {Number(p.deuda).toFixed(2)} € · {Number(p.coeficiente).toFixed(2)}%
+                      {p.habilitado && ` · Habilitado: ${p.habilitado_motivo}`}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onHabilitarPrivado?.(p)}
+                    className={`shrink-0 text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-md border ${p.habilitado ? 'border-slate-700 text-slate-400' : 'border-emerald-500/30 text-emerald-300'}`}
+                  >
+                    {p.habilitado ? 'Retirar voto' : 'Habilitar voto'}
+                  </button>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </div>
@@ -104,12 +156,25 @@ export default function ColumnaMonitorCentral({ meeting, puntos, puntoActivoId, 
       <div className="pt-2 flex gap-3 items-end w-full">
         <div className="flex-grow">
           {meeting?.estado === 'programada' ? (
-            <button
-              type="button" onClick={onIniciarJunta}
-              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-3xs font-black uppercase tracking-widest bg-blue-600 border border-blue-500 text-white"
-            >
-              <Play size={14} /> Iniciar Junta en Vivo
-            </button>
+            // La convocatoria cambia la mayoría simple (art. 17.7 LPH): 2ª
+            // convocatoria cuando en la 1ª no hubo la concurrencia necesaria.
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button" onClick={() => onIniciarJunta('primera')}
+                  className="flex items-center justify-center gap-2 py-3.5 rounded-xl text-3xs font-black uppercase tracking-widest bg-blue-600 border border-blue-500 text-white"
+                >
+                  <Play size={14} /> Iniciar en 1ª convocatoria
+                </button>
+                <button
+                  type="button" onClick={() => onIniciarJunta('segunda')}
+                  className="flex items-center justify-center gap-2 py-3.5 rounded-xl text-3xs font-black uppercase tracking-widest bg-slate-900 border border-blue-500/40 text-blue-200"
+                >
+                  <Play size={14} /> Iniciar en 2ª convocatoria
+                </button>
+              </div>
+              <p className="text-4xs text-slate-500 text-center">Segunda convocatoria si en la primera no concurrieron la mayoría de propietarios que representen la mayoría de las cuotas.</p>
+            </div>
           ) : todosCerrados ? (
             <div className="space-y-3 w-full">
               <div className="p-4 border border-dashed border-indigo-500/30 bg-indigo-500/5 rounded-xl flex items-center gap-3">

@@ -1,25 +1,9 @@
 import { Router } from 'express';
 import { query } from '../db.js';
 import { requireAuth, entityBelongsToTenant, propietarioBelongsToTenant, filaBelongsToTenant } from '../middleware/auth.js';
+import { marcarVencidas, recalcularMorosidad } from '../lib/morosidad.js';
 
 const router = Router();
-
-// Cuotas vencidas (pendiente/parcial cuya fecha de vencimiento ya pasó) se
-// marcan como 'impagada' de forma perezosa, en el momento de listar — no
-// hay ningún cron en este proyecto, así que el estado se recalcula cada
-// vez que alguien consulta las cuotas de una entidad.
-async function marcarVencidas(entityId) {
-  const vencidas = await query(
-    `UPDATE cuotas SET estado = 'impagada'
-     WHERE entity_id = $1::uuid AND estado IN ('pendiente', 'parcial') AND fecha_vencimiento < CURRENT_DATE
-     RETURNING propietario_id`,
-    [entityId]
-  );
-  const propietariosAfectados = [...new Set(vencidas.rows.map(r => r.propietario_id))];
-  for (const propietarioId of propietariosAfectados) {
-    await recalcularMorosidad(propietarioId);
-  }
-}
 
 async function recalcularEstadoCuota(cuotaId) {
   const cuota = await query('SELECT importe, fecha_vencimiento, estado FROM cuotas WHERE id = $1', [cuotaId]);
@@ -44,19 +28,6 @@ async function recalcularEstadoCuota(cuotaId) {
 
   await query('UPDATE cuotas SET estado = $1 WHERE id = $2', [nuevoEstado, cuotaId]);
   return nuevoEstado;
-}
-
-// Un propietario es moroso si tiene al menos una cuota impagada. Es la
-// única lógica que decide propietarios.es_moroso — antes de esta fase esa
-// columna no tenía ningún endpoint que la modificara.
-async function recalcularMorosidad(propietarioId) {
-  const impagadas = await query(
-    `SELECT COUNT(*) AS total FROM cuotas WHERE propietario_id = $1 AND estado = 'impagada'`,
-    [propietarioId]
-  );
-  const esMoroso = parseInt(impagadas.rows[0].total, 10) > 0;
-  await query('UPDATE propietarios SET es_moroso = $1 WHERE id = $2', [esMoroso, propietarioId]);
-  return esMoroso;
 }
 
 router.get('/cuotas/lista/:entityId', requireAuth, async (req, res) => {

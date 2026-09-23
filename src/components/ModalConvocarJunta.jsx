@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { CalendarPlus, Plus, Trash2, ChevronUp, ChevronDown, Loader2 } from 'lucide-react';
 import Modal from './ui/Modal.jsx';
+import { OPCIONES_MAYORIA } from '../lib/mayorias.js';
 
 const PUNTOS_INICIALES = [
-  { texto: '', tipo: 'votacion' },
-  { texto: 'Ruegos y preguntas', tipo: 'informativo' }
+  { texto: '', tipo: 'votacion', mayoria: 'simple' },
+  { texto: 'Ruegos y preguntas', tipo: 'informativo', mayoria: 'simple' }
 ];
 
 /**
@@ -53,7 +54,7 @@ export default function ModalConvocarJunta({ open, onClose, entityId, onConvocad
   };
 
   const añadirPunto = () => {
-    setPuntos((actual) => [...actual, { texto: '', tipo: 'votacion' }]);
+    setPuntos((actual) => [...actual, { texto: '', tipo: 'votacion', mayoria: 'simple' }]);
   };
 
   const handleSubmit = async (e) => {
@@ -214,6 +215,19 @@ export default function ModalConvocarJunta({ open, onClose, entityId, onConvocad
                     />
                     Informativo (sin votación)
                   </label>
+                  {punto.tipo !== 'informativo' && (
+                    <label className="block space-y-1">
+                      <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Mayoría necesaria (LPH)</span>
+                      <select
+                        value={punto.mayoria || 'simple'}
+                        onChange={(e) => actualizarPunto(index, 'mayoria', e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-lg py-1.5 px-2 text-3xs text-slate-200 focus:outline-none focus:border-blue-500"
+                      >
+                        {OPCIONES_MAYORIA.map((o) => <option key={o.id} value={o.id}>{o.etiqueta}</option>)}
+                      </select>
+                      <span className="block text-[9px] text-slate-600">{OPCIONES_MAYORIA.find((o) => o.id === (punto.mayoria || 'simple'))?.ayuda}</span>
+                    </label>
+                  )}
                 </div>
                 <div className="flex flex-col gap-1 shrink-0">
                   <button type="button" onClick={() => moverPunto(index, -1)} disabled={index === 0} className="text-slate-600 hover:text-white disabled:opacity-30 p-0.5">

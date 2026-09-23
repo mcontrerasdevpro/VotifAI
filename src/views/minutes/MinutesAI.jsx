@@ -5,6 +5,7 @@ import Chart from 'react-apexcharts';
 import { FileText, ListChecks, ArrowLeft, CheckCircle, Lock, Send, AlertTriangle } from 'lucide-react';
 import Card from '../../components/ui/Card.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
+import { ETIQUETA_MAYORIA } from '../../lib/mayorias.js';
 
 const LABEL_ESTADO = { votando: 'Votando', cerrado: 'Cerrado', pendiente: 'Pendiente' };
 
@@ -27,37 +28,71 @@ function seccionIntervenciones(puntos, intervenciones) {
   const sinPunto = intervenciones.filter((i) => !puntos.some((p) => p.id === i.punto_id));
   if (sinPunto.length) bloques.push(`**Intervenciones generales**\n${sinPunto.map(linea).join('\n')}`);
 
-  return `\n\n## 3. INTERVENCIONES DE LOS PROPIETARIOS\n${bloques.join('\n\n')}`;
+  return `\n\n## 4. INTERVENCIONES DE LOS PROPIETARIOS\n${bloques.join('\n\n')}`;
 }
 
-function generarActa(meeting, puntos, intervenciones = []) {
+const TEXTO_RESULTADO = {
+  aprobado: 'APROBADO',
+  rechazado: 'NO APROBADO',
+  pendiente_ausentes: 'PENDIENTE DEL CÓMPUTO DE AUSENTES (art. 17.8 LPH)'
+};
+
+const pct = (valor, base) => (base > 0 ? ((valor / base) * 100).toFixed(2) : '0.00');
+
+// Art. 15.2 LPH: "El acta de la Junta reflejará los propietarios privados
+// del derecho de voto". También los que se habilitaron y por qué.
+function seccionPrivados(privados) {
+  if (!privados.length) return 'Ningún propietario estaba privado del derecho de voto al inicio de la junta.';
+  const sinVoto = privados.filter((p) => !p.habilitado);
+  const habilitados = privados.filter((p) => p.habilitado);
+  const nombre = (p) => `${p.nombre_completo}${p.propiedad_detalle ? ` (${p.propiedad_detalle})` : ''}`;
+  let texto = '';
+  if (sinVoto.length) {
+    texto += `Al iniciarse la junta no se encontraban al corriente en el pago de las deudas vencidas con la comunidad, por lo que participaron sin derecho de voto y su persona y cuota no se computan para las mayorías:\n${sinVoto.map((p) => `* ${nombre(p)} — coeficiente ${Number(p.coeficiente).toFixed(2)}%, deuda ${Number(p.deuda).toFixed(2)} €`).join('\n')}`;
+  }
+  if (habilitados.length) {
+    texto += `${texto ? '\n\n' : ''}Recuperaron el derecho de voto durante la junta:\n${habilitados.map((p) => `* ${nombre(p)} — ${p.habilitado_motivo}`).join('\n')}`;
+  }
+  return texto;
+}
+
+function lineaPunto(p) {
+  if (p.tipo !== 'votacion') return `* **PUNTO ${p.orden}:** ${p.texto} (informativo, sin votación)`;
+  const r = p.resultado;
+  if (!r) return `* **PUNTO ${p.orden}:** ${p.texto}`;
+
+  const estado = p.estado === 'cerrado' ? TEXTO_RESULTADO[r.estado] : 'VOTACIÓN SIN CERRAR';
+  const baseC = Number(r.baseComputo.coeficiente) || 0;
+  let linea =
+    `* **PUNTO ${p.orden}:** ${p.texto}\n` +
+    `  Mayoría exigida: ${ETIQUETA_MAYORIA[r.mayoria]} (${r.articulo}). ${r.requisito}\n` +
+    `  Votos: ${p.votos_si || 0} a favor (${pct(Number(p.coeficiente_si), baseC)}% de cuotas), ${p.votos_no || 0} en contra (${pct(Number(p.coeficiente_no), baseC)}%), ${p.votos_abstencion || 0} abstenciones (${pct(Number(p.coeficiente_abstencion), baseC)}%). ` +
+    `Base de cómputo: ${r.baseComputo.propietarios} propietarios y ${baseC.toFixed(2)}% de cuotas.\n` +
+    `  **Resultado: ${estado}**`;
+  if (p.estado === 'cerrado' && r.estado === 'pendiente_ausentes') {
+    linea += `\n  El acuerdo no alcanza la mayoría con los votos de los presentes. Se comunicará a los ${r.ausentes} propietarios ausentes, y se computarán como favorables los de quienes, en el plazo de 30 días naturales desde la notificación, no manifiesten su discrepancia (art. 17.8 LPH).`;
+  }
+  return linea;
+}
+
+function generarActa(meeting, puntos, intervenciones = [], privados = []) {
   if (!meeting) return '';
   const fecha = meeting.fecha_hora_prevista
     ? new Date(meeting.fecha_hora_prevista).toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' })
     : 'fecha por determinar';
-
+  const convocatoria = meeting.convocatoria === 'segunda' ? 'segunda' : 'primera';
   const totalCenso = Number(meeting.censo_total_coeficiente) || 0;
-
-  const lineasPuntos = puntos.map((p) => {
-    if (p.tipo !== 'votacion') {
-      return `* **PUNTO ${p.orden}:** ${p.texto} (informativo, sin votación)`;
-    }
-    const coefSi = Number(p.coeficiente_si) || 0;
-    const coefNo = Number(p.coeficiente_no) || 0;
-    const pctSi = totalCenso > 0 ? ((coefSi / totalCenso) * 100).toFixed(2) : '0.00';
-    const pctNo = totalCenso > 0 ? ((coefNo / totalCenso) * 100).toFixed(2) : '0.00';
-    const resultado = p.estado === 'cerrado' ? (coefSi > coefNo ? 'APROBADO' : 'RECHAZADO') : 'SIN CERRAR';
-    return `* **PUNTO ${p.orden}:** ${p.texto}\n  ${resultado} — A favor: ${pctSi}% · En contra: ${pctNo}% (${p.votos_si || 0} SÍ / ${p.votos_no || 0} NO / ${p.votos_abstencion || 0} ABS.)`;
-  }).join('\n');
 
   return (
     `# ACTA DE LA ${meeting.tipo === 'extraordinaria' ? 'JUNTA GENERAL EXTRAORDINARIA' : 'JUNTA GENERAL ORDINARIA'} DE PROPIETARIOS\n` +
     `**COMUNIDAD:** ${meeting.finca_nombre || ''}\n` +
     `**CONVOCATORIA:** ${meeting.titulo}\n` +
-    `**FECHA Y HORA:** ${fecha}\n\n` +
-    `## 1. CENSO Y CUÓRUM\n` +
+    `**FECHA Y HORA:** ${fecha}\n` +
+    `**CELEBRADA EN:** ${convocatoria} convocatoria\n\n` +
+    `## 1. CENSO\n` +
     `Censo de la finca a fecha de convocatoria: ${meeting.censo_total_propietarios || 0} propietarios (${totalCenso.toFixed(2)}% de coeficiente).\n\n` +
-    `## 2. PUNTOS DEL ORDEN DEL DÍA Y ACUERDOS\n${lineasPuntos || 'Sin puntos registrados.'}` +
+    `## 2. PROPIETARIOS PRIVADOS DEL DERECHO DE VOTO (art. 15.2 LPH)\n${seccionPrivados(privados)}\n\n` +
+    `## 3. PUNTOS DEL ORDEN DEL DÍA Y ACUERDOS\n${puntos.map(lineaPunto).join('\n\n') || 'Sin puntos registrados.'}` +
     seccionIntervenciones(puntos, intervenciones)
   );
 }
@@ -88,7 +123,7 @@ export default function MinutesAI() {
         if (respuesta.ok) {
           setMeeting(resultado.meeting);
           setPuntos(resultado.puntos || []);
-          setActaTexto(generarActa(resultado.meeting, resultado.puntos || [], resultado.intervenciones || []));
+          setActaTexto(generarActa(resultado.meeting, resultado.puntos || [], resultado.intervenciones || [], resultado.privadosVoto || []));
         }
       } catch (err) {
         console.error('Fallo al cargar la junta:', err);

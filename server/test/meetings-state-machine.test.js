@@ -22,6 +22,8 @@ const PUNTO_ID = 'punto-1';
 let meetingEstado = 'en_curso';
 let puntoEstado = 'pendiente';
 let puntoTipo = 'votacion';
+// null = el vecino no figura como privado de voto; true/false = figura y está (o no) habilitado.
+let privadoHabilitado = null;
 
 const calls = [];
 mock.module('../db.js', {
@@ -49,8 +51,11 @@ mock.module('../db.js', {
         puntoEstado = 'votando';
         return { rows: [{ id: PUNTO_ID, estado: 'votando', abierto_en: new Date().toISOString() }], rowCount: 1 };
       }
-      if (text.includes('SELECT estado, tipo FROM meeting_puntos WHERE id')) {
-        return { rows: [{ estado: puntoEstado, tipo: puntoTipo }] };
+      if (text.includes('SELECT estado, tipo, meeting_id FROM meeting_puntos WHERE id')) {
+        return { rows: [{ estado: puntoEstado, tipo: puntoTipo, meeting_id: MEETING_ID }] };
+      }
+      if (text.includes('FROM meeting_privados_voto WHERE meeting_id')) {
+        return { rows: privadoHabilitado === null ? [] : [{ habilitado: privadoHabilitado }] };
       }
       if (text.includes('SELECT coeficiente FROM propietarios WHERE id')) {
         return { rows: [{ coeficiente: '25.00' }] };
@@ -168,4 +173,40 @@ test('votar: 200 en el camino feliz (punto votando, tipo votación, voto válido
   });
   assert.equal(respuesta.status, 200);
   assert.equal(calls.some((c) => c.text.includes('INSERT INTO meeting_votos')), true);
+});
+
+test('votar: 403 si el vecino está privado de voto por deudas (art. 15.2 LPH)', async () => {
+  puntoEstado = 'votando';
+  puntoTipo = 'votacion';
+  privadoHabilitado = false;
+  calls.length = 0;
+  const respuesta = await fetch(`${baseUrl}/api/meetings/vecino/puntos/${PUNTO_ID}/votar`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: vecinoCookie() },
+    body: JSON.stringify({ voto: 'si' })
+  });
+  assert.equal(respuesta.status, 403);
+  assert.equal((await respuesta.json()).codigo, 'PRIVADO_DE_VOTO');
+  assert.equal(calls.some((c) => c.text.includes('INSERT INTO meeting_votos')), false);
+});
+
+test('votar: 200 si el privado de voto ha sido habilitado por el despacho', async () => {
+  puntoEstado = 'votando';
+  privadoHabilitado = true;
+  const respuesta = await fetch(`${baseUrl}/api/meetings/vecino/puntos/${PUNTO_ID}/votar`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: vecinoCookie() },
+    body: JSON.stringify({ voto: 'no' })
+  });
+  assert.equal(respuesta.status, 200);
+  privadoHabilitado = null;
+});
+
+test('iniciar: 400 si no se indica primera o segunda convocatoria (art. 17.7 LPH)', async () => {
+  const respuesta = await fetch(`${baseUrl}/api/meetings/${MEETING_ID}/iniciar`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: despachoCookie() },
+    body: JSON.stringify({})
+  });
+  assert.equal(respuesta.status, 400);
 });

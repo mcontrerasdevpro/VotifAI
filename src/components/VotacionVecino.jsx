@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Vote, CheckCircle2, Info, Radio } from 'lucide-react';
+import { Vote, CheckCircle2, Info, Radio, AlertTriangle } from 'lucide-react';
 
 const ETIQUETA_VOTO = { si: 'SÍ', no: 'NO', abstencion: 'ABSTENCIÓN' };
 
@@ -19,6 +19,9 @@ export default function VotacionVecino({ entityId, onJuntaEnCurso }) {
   const [puntos, setPuntos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [votando, setVotando] = useState(false);
+  // Art. 15.2 LPH: con deudas vencidas al iniciarse la junta, el vecino
+  // participa pero no vota (salvo que el despacho lo habilite).
+  const [privadoDeVoto, setPrivadoDeVoto] = useState(false);
 
   useEffect(() => {
     if (!entityId) { setCargando(false); return; }
@@ -31,6 +34,7 @@ export default function VotacionVecino({ entityId, onJuntaEnCurso }) {
         if (activo && respuesta.ok) {
           setMeeting(resultado.meeting);
           setPuntos(resultado.puntos || []);
+          setPrivadoDeVoto(Boolean(resultado.privadoDeVoto));
           onJuntaEnCurso?.(Boolean(resultado.meeting));
         }
       } catch (err) {
@@ -94,6 +98,17 @@ export default function VotacionVecino({ entityId, onJuntaEnCurso }) {
         <Radio size={16} className="text-emerald-500 animate-pulse shrink-0" />
       </div>
 
+      {privadoDeVoto && (
+        <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-4xs leading-relaxed text-amber-200">
+          <AlertTriangle size={14} className="mt-0.5 shrink-0 text-amber-400" />
+          <p>
+            Constan deudas vencidas con la comunidad al inicio de la junta, así que puedes participar en las deliberaciones pero
+            <strong> no votar</strong> (art. 15.2 de la Ley de Propiedad Horizontal). Si ya has pagado, o has impugnado o consignado la deuda,
+            comunícaselo al administrador para que te habilite.
+          </p>
+        </div>
+      )}
+
       {!puntoAbierto ? (
         <p className="text-4xs text-slate-500 font-medium text-center py-3">Ningún punto abierto a votación por ahora.</p>
       ) : (
@@ -111,7 +126,7 @@ export default function VotacionVecino({ entityId, onJuntaEnCurso }) {
             </div>
           ) : null}
 
-          {puntoAbierto.tipo === 'votacion' && (
+          {puntoAbierto.tipo === 'votacion' && !privadoDeVoto && (
             <div className="grid grid-cols-3 gap-2">
               {['si', 'no', 'abstencion'].map((opcion) => (
                 <button

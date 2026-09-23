@@ -21,6 +21,7 @@ export default function Dashboard() {
   const [entidadFinca, setEntidadFinca] = useState(null);
   const [meeting, setMeeting] = useState(null);
   const [puntos, setPuntos] = useState([]);
+  const [privadosVoto, setPrivadosVoto] = useState([]);
   const [puntoActivoId, setPuntoActivoId] = useState(null);
   const [censoPersonas, setCensoPersonas] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -28,7 +29,6 @@ export default function Dashboard() {
   const [reenviandoPush, setReenviandoPush] = useState(false);
 
   const participantesActivos = getParticipantesActivos(censoPersonas);
-  const coeficienteTotal = getCoeficienteTotal(censoPersonas);
 
   const cargarDetalle = useCallback(async () => {
     if (!meetingId) return;
@@ -38,6 +38,7 @@ export default function Dashboard() {
       if (res.ok && data.success) {
         setMeeting(data.meeting);
         setPuntos(data.puntos || []);
+        setPrivadosVoto(data.privadosVoto || []);
         setPuntoActivoId((actual) =>
           actual && data.puntos.some((p) => p.id === actual) ? actual : (data.puntos[0]?.id ?? null)
         );
@@ -107,7 +108,33 @@ export default function Dashboard() {
     return data;
   };
 
-  const handleIniciarJunta = () => accionJunta(`${meetingId}/iniciar`);
+  const handleIniciarJunta = (convocatoria) => accionJunta(`${meetingId}/iniciar`, {
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ convocatoria })
+  });
+
+  // Art. 15.2 LPH: habilitar a un privado de voto exige dejar constancia del
+  // motivo (queda en el acta); retirarlo no.
+  const handleHabilitarPrivado = async (privado) => {
+    const habilitar = !privado.habilitado;
+    let motivo = '';
+    if (habilitar) {
+      motivo = window.prompt(`Motivo para habilitar el voto de ${privado.nombre_completo} (por ejemplo: "Ha pagado la deuda en la junta", "Acredita consignación notarial" o "Acredita impugnación judicial"):`) || '';
+      if (!motivo.trim()) return;
+    }
+    const res = await fetch(`/api/meetings/${meetingId}/privados/${privado.propietario_id}`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ habilitado: habilitar, motivo: motivo.trim() })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(data.error || 'No se pudo actualizar el derecho de voto.');
+      return;
+    }
+    await cargarDetalle();
+  };
   const handleAbrirVotacion = (puntoId) => accionJunta(`${meetingId}/puntos/${puntoId}/abrir-votacion`);
   const handleCerrarVotacion = (puntoId) => accionJunta(`${meetingId}/puntos/${puntoId}/cerrar-votacion`);
   const handleClausurarAsamblea = () => navigate('/acta-ia', { state: { meetingId, fincaId } });
@@ -234,8 +261,9 @@ export default function Dashboard() {
           meeting={meeting}
           puntos={puntos}
           puntoActivoId={puntoActivoId}
-          coeficienteTotal={coeficienteTotal}
+          privadosVoto={privadosVoto}
           onIniciarJunta={handleIniciarJunta}
+          onHabilitarPrivado={handleHabilitarPrivado}
           onAbrirVotacion={handleAbrirVotacion}
           onCerrarVotacion={handleCerrarVotacion}
           onClausurarAsamblea={handleClausurarAsamblea}

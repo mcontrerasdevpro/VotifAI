@@ -3,6 +3,8 @@ import { query, withTransaction } from '../db.js';
 import { notificar } from '../lib/notificaciones.js';
 import { generarActaPdf } from '../lib/pdfActa.js';
 import { reservarJuntaIniciada } from '../lib/suscripciones.js';
+import { deudoresVencidos } from '../lib/morosidad.js';
+import { calcularResultado, TIPOS_MAYORIA } from '../lib/mayorias.js';
 import {
   requireAuth,
   requireVoterAuth,
@@ -55,11 +57,14 @@ router.post('/meetings/create', requireAuth, async (req, res) => {
         const texto = String(puntos[i]?.texto || '').trim();
         if (!texto) continue;
         const tipoPunto = puntos[i]?.tipo === 'informativo' ? 'informativo' : 'votacion';
+        // Mayoría exigida por la LPH para este punto (art. 17). Por
+        // defecto simple, que es la de la mayoría de acuerdos ordinarios.
+        const mayoria = TIPOS_MAYORIA.includes(puntos[i]?.mayoria) ? puntos[i].mayoria : 'simple';
         const puntoResultado = await tx(
-          `INSERT INTO meeting_puntos (meeting_id, orden, texto, tipo)
-           VALUES ($1, $2, $3, $4)
-           RETURNING id, orden, texto, tipo, estado`,
-          [junta.id, i + 1, texto, tipoPunto]
+          `INSERT INTO meeting_puntos (meeting_id, orden, texto, tipo, mayoria)
+           VALUES ($1, $2, $3, $4, $5)
+           RETURNING id, orden, texto, tipo, mayoria, estado`,
+          [junta.id, i + 1, texto, tipoPunto, mayoria]
         );
         puntosCreados.push(puntoResultado.rows[0]);
       }
@@ -132,7 +137,7 @@ router.get('/meetings/detalle/:meetingId', requireAuth, async (req, res) => {
 
   try {
     const meetingResultado = await query(
-      `SELECT m.id, m.entity_id, m.titulo, m.tipo, m.estado, m.fecha_hora_prevista, m.convocada_en, m.iniciada_en, m.cerrada_en,
+      `SELECT m.id, m.entity_id, m.titulo, m.tipo, m.estado, m.convocatoria, m.fecha_hora_prevista, m.convocada_en, m.iniciada_en, m.cerrada_en,
               m.acta_texto_final, m.censo_total_propietarios, m.censo_total_coeficiente, e.nombre AS finca_nombre
        FROM meetings m
        JOIN entities e ON m.entity_id = e.id
@@ -149,7 +154,7 @@ router.get('/meetings/detalle/:meetingId', requireAuth, async (req, res) => {
     // (decenas/cientos de vecinos) es barato, y así el número mostrado
     // nunca puede desincronizarse de los votos reales.
     const puntosResultado = await query(
-      `SELECT p.id, p.orden, p.texto, p.tipo, p.estado, p.abierto_en, p.cerrado_en,
+      `SELECT p.id, p.orden, p.texto, p.tipo, p.mayoria, p.estado, p.abierto_en, p.cerrado_en,
         COALESCE(SUM(v.coeficiente_snapshot) FILTER (WHERE v.voto = 'si'), 0) AS coeficiente_si,
         COALESCE(SUM(v.coeficiente_snapshot) FILTER (WHERE v.voto = 'no'), 0) AS coeficiente_no,
         COALESCE(SUM(v.coeficiente_snapshot) FILTER (WHERE v.voto = 'abstencion'), 0) AS coeficiente_abstencion,
@@ -176,7 +181,40 @@ router.get('/meetings/detalle/:meetingId', requireAuth, async (req, res) => {
       [meetingId]
     );
 
-    res.status(200).json({ success: true, meeting: meetingResultado.rows[0], puntos: puntosResultado.rows, intervenciones: intervencionesResultado.rows });
+    // El resultado de cada punto se calcula aquí, con la mayoría que exige
+    // la LPH, y lo usan igual el monitor en vivo y el borrador del acta:
+    // así no puede haber dos cálculos distintos del mismo acuerdo.
+    const junta = meetingResultado.rows[0];
+    const privados = await query(
+      `SELECT propietario_id, nombre_completo, propiedad_detalle, coeficiente, deuda, habilitado, habilitado_motivo
+       FROM meeting_privados_voto WHERE meeting_id = $1::uuid ORDER BY propiedad_detalle ASC NULLS LAST, nombre_completo ASC`,
+      [meetingId]
+    );
+    const sinVoto = privados.rows.filter((p) => !p.habilitado);
+    const censo = { propietarios: Number(junta.censo_total_propietarios) || 0, coeficiente: Number(junta.censo_total_coeficiente) || 0 };
+    const privadosComputo = { propietarios: sinVoto.length, coeficiente: sinVoto.reduce((t, p) => t + Number(p.coeficiente || 0), 0) };
+
+    const puntos = puntosResultado.rows.map((p) => (p.tipo !== 'votacion' ? p : {
+      ...p,
+      resultado: calcularResultado({
+        mayoria: p.mayoria,
+        convocatoria: junta.convocatoria || 'primera',
+        censo,
+        privados: privadosComputo,
+        votos: {
+          si: Number(p.votos_si), no: Number(p.votos_no), abstencion: Number(p.votos_abstencion),
+          coefSi: Number(p.coeficiente_si), coefNo: Number(p.coeficiente_no), coefAbs: Number(p.coeficiente_abstencion)
+        }
+      })
+    }));
+
+    res.status(200).json({
+      success: true,
+      meeting: junta,
+      puntos,
+      privadosVoto: privados.rows,
+      intervenciones: intervencionesResultado.rows
+    });
   } catch (err) {
     console.error('Error al consultar el detalle de la junta:', err.message);
     res.status(500).json({ error: `Fallo al consultar la junta: ${err.message}` });
@@ -207,13 +245,20 @@ router.post('/meetings/:meetingId/convocar', requireAuth, async (req, res) => {
     );
     const despachoResultado = await query('SELECT nombre_entidad FROM tenants WHERE id = $1', [req.tenantId]);
 
+    // Art. 16.2 LPH: la convocatoria contiene la relación de propietarios
+    // que no están al corriente de pago y advierte de la privación del voto.
+    const deudores = await deudoresVencidos(junta.entity_id);
+    const avisoDeudores = deudores.length
+      ? `\n\nPropietarios que no están al corriente en el pago de las deudas vencidas con la comunidad (art. 16.2 LPH): ${deudores.map((d) => `${d.nombre_completo}${d.propiedad_detalle ? ` (${d.propiedad_detalle})` : ''}`).join(', ')}. Si al comienzo de la junta no han saldado su deuda, ni la han impugnado judicialmente o consignado, podrán participar en las deliberaciones pero no tendrán derecho de voto (art. 15.2 LPH).`
+      : '';
+
     const { resultadoEnvio, errorEnvio } = await intentarNotificar({
       tipo: 'convocatoria',
       despacho: { id: req.tenantId, nombre: despachoResultado.rows[0]?.nombre_entidad || null },
       finca: { id: junta.entity_id, nombre: junta.finca_nombre },
       mensaje: {
         titulo: `Convocatoria — ${junta.titulo}`,
-        cuerpo: `Se convoca junta ${junta.tipo} "${junta.titulo}"${junta.fecha_hora_prevista ? ` para el ${new Date(junta.fecha_hora_prevista).toLocaleString('es-ES')}` : ''}. Consulta el orden del día en VotifAI.`
+        cuerpo: `Se convoca junta ${junta.tipo} "${junta.titulo}"${junta.fecha_hora_prevista ? ` para el ${new Date(junta.fecha_hora_prevista).toLocaleString('es-ES')}` : ''}. Consulta el orden del día en VotifAI.${avisoDeudores}`
       },
       destinatarios: censoResultado.rows.map((p) => ({ nombre: p.nombre_completo, propiedad: p.propiedad_detalle, telefono: p.telefono, email: p.email, canal_preferido: p.canal_notificacion }))
     });
@@ -238,20 +283,33 @@ router.post('/meetings/:meetingId/convocar', requireAuth, async (req, res) => {
 
 router.post('/meetings/:meetingId/iniciar', requireAuth, async (req, res) => {
   const meetingId = String(req.params.meetingId).trim();
+  // Si la junta se celebra en 1ª o 2ª convocatoria cambia la mayoría simple
+  // (art. 17.7 LPH), así que el despacho lo indica al iniciarla.
+  const convocatoria = String(req.body?.convocatoria || '').trim();
+  if (!['primera', 'segunda'].includes(convocatoria)) {
+    return res.status(400).json({ error: 'Indica si la junta se celebra en primera o en segunda convocatoria.' });
+  }
 
   if (!(await filaBelongsToTenant('meetings', meetingId, req.tenantId))) {
     return res.status(403).json({ error: 'No autorizado para iniciar esta junta.' });
   }
 
   try {
+    const entidad = await query('SELECT entity_id FROM meetings WHERE id = $1::uuid', [meetingId]);
+    if (entidad.rows.length === 0) return res.status(404).json({ error: 'Junta no encontrada.' });
+
+    // Art. 15.2 LPH: cuenta la situación "en el momento de iniciarse la
+    // junta", así que la relación de privados de voto se congela aquí.
+    const deudores = await deudoresVencidos(entidad.rows[0].entity_id);
+
     // Todo o nada: si la junta no se puede iniciar, no se consume ninguna de
-    // las juntas de la prueba.
+    // las juntas de la prueba ni queda una lista de privados a medias.
     const inicio = await withTransaction(async (tx) => {
       const resultado = await tx(
-        `UPDATE meetings SET estado = 'en_curso', iniciada_en = now()
+        `UPDATE meetings SET estado = 'en_curso', iniciada_en = now(), convocatoria = $2
          WHERE id = $1::uuid AND estado = 'programada'
-         RETURNING id, estado, iniciada_en`,
-        [meetingId]
+         RETURNING id, estado, iniciada_en, convocatoria`,
+        [meetingId, convocatoria]
       );
       if (resultado.rowCount === 0) {
         return { rollback: true, status: 409, body: { error: 'Solo se puede iniciar una junta que esté programada.' } };
@@ -261,12 +319,59 @@ router.post('/meetings/:meetingId/iniciar', requireAuth, async (req, res) => {
       if (!reserva.ok) {
         return { rollback: true, status: reserva.status, body: { error: reserva.error, codigo: 'LIMITE_JUNTAS_PRUEBA' } };
       }
-      return { status: 200, body: { success: true, meeting: resultado.rows[0] } };
+
+      for (const d of deudores) {
+        await tx(
+          `INSERT INTO meeting_privados_voto (meeting_id, propietario_id, nombre_completo, propiedad_detalle, coeficiente, deuda)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [meetingId, d.propietario_id, d.nombre_completo, d.propiedad_detalle, d.coeficiente || 0, d.deuda]
+        );
+      }
+      return { status: 200, body: { success: true, meeting: resultado.rows[0], privadosDeVoto: deudores.length } };
     });
     res.status(inicio.status).json(inicio.body);
   } catch (err) {
     console.error('Error al iniciar junta:', err.message);
     res.status(500).json({ error: `Fallo al iniciar la junta: ${err.message}` });
+  }
+});
+
+// Art. 15.2 LPH: un privado de voto recupera el derecho si salda la deuda
+// en la propia junta o acredita haberla impugnado judicialmente o
+// consignado. El despacho lo habilita (o lo revierte) con el motivo, que
+// queda en el acta.
+router.put('/meetings/:meetingId/privados/:propietarioId', requireAuth, async (req, res) => {
+  const meetingId = String(req.params.meetingId).trim();
+  const propietarioId = String(req.params.propietarioId).trim();
+  const habilitado = req.body?.habilitado === true;
+  const motivo = String(req.body?.motivo || '').trim();
+
+  if (!(await filaBelongsToTenant('meetings', meetingId, req.tenantId))) {
+    return res.status(403).json({ error: 'No autorizado para gestionar esta junta.' });
+  }
+  if (habilitado && !motivo) {
+    return res.status(400).json({ error: 'Indica el motivo por el que se habilita el voto (pago en la junta, impugnación o consignación).' });
+  }
+
+  try {
+    const junta = await query('SELECT estado FROM meetings WHERE id = $1::uuid', [meetingId]);
+    if (junta.rows[0]?.estado !== 'en_curso') {
+      return res.status(409).json({ error: 'Solo se puede cambiar durante una junta en curso.' });
+    }
+    const resultado = await query(
+      `UPDATE meeting_privados_voto
+       SET habilitado = $3, habilitado_motivo = $4, habilitado_en = CASE WHEN $3 THEN now() ELSE NULL END
+       WHERE meeting_id = $1::uuid AND propietario_id = $2::uuid
+       RETURNING propietario_id, habilitado, habilitado_motivo`,
+      [meetingId, propietarioId, habilitado, habilitado ? motivo : null]
+    );
+    if (resultado.rowCount === 0) {
+      return res.status(404).json({ error: 'Ese propietario no figura como privado de voto en esta junta.' });
+    }
+    res.status(200).json({ success: true, privado: resultado.rows[0] });
+  } catch (err) {
+    console.error('Error al habilitar el voto de un privado:', err.message);
+    res.status(500).json({ error: `Fallo al actualizar el derecho de voto: ${err.message}` });
   }
 });
 
@@ -342,7 +447,7 @@ router.post('/meetings/:meetingId/cerrar', requireAuth, async (req, res) => {
 
   try {
     const meetingResultado = await query(
-      `SELECT m.id, m.titulo, m.tipo, m.entity_id, e.nombre AS finca_nombre
+      `SELECT m.id, m.titulo, m.tipo, m.estado, m.entity_id, e.nombre AS finca_nombre
        FROM meetings m JOIN entities e ON m.entity_id = e.id WHERE m.id = $1::uuid`,
       [meetingId]
     );
@@ -350,6 +455,11 @@ router.post('/meetings/:meetingId/cerrar', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Junta no encontrada.' });
     }
     const junta = meetingResultado.rows[0];
+    // Antes de generar el PDF y notificar: si no, un segundo intento sobre
+    // una junta ya cerrada volvía a mandar el acta a todo el censo.
+    if (junta.estado !== 'en_curso') {
+      return res.status(409).json({ error: 'Solo se puede cerrar una junta que esté en curso.' });
+    }
 
     const censoResultado = await query(
       `SELECT id, nombre_completo, propiedad_detalle, telefono, email, canal_notificacion FROM propietarios WHERE entity_id = $1::uuid`,
@@ -481,8 +591,13 @@ router.get('/meetings/vecino/:entityId/actual', requireVoterAuth, async (req, re
        ORDER BY p.orden ASC`,
       [junta.id, req.propietarioId]
     );
+    const privado = await query(
+      'SELECT habilitado FROM meeting_privados_voto WHERE meeting_id = $1::uuid AND propietario_id = $2::uuid',
+      [junta.id, req.propietarioId]
+    );
+    const privadoDeVoto = privado.rows.length > 0 && !privado.rows[0].habilitado;
 
-    res.status(200).json({ success: true, meeting: junta, puntos: puntosResultado.rows });
+    res.status(200).json({ success: true, meeting: junta, puntos: puntosResultado.rows, privadoDeVoto });
   } catch (err) {
     console.error('Error al consultar la junta en curso:', err.message);
     res.status(500).json({ error: `Fallo al consultar la junta en curso: ${err.message}` });
@@ -569,11 +684,25 @@ router.post('/meetings/vecino/puntos/:puntoId/votar', requireVoterAuth, async (r
   }
 
   try {
-    const puntoResultado = await query('SELECT estado, tipo FROM meeting_puntos WHERE id = $1::uuid', [puntoId]);
+    const puntoResultado = await query('SELECT estado, tipo, meeting_id FROM meeting_puntos WHERE id = $1::uuid', [puntoId]);
     if (puntoResultado.rows.length === 0) {
       return res.status(404).json({ error: 'Punto no encontrado.' });
     }
     const punto = puntoResultado.rows[0];
+
+    // Art. 15.2 LPH: quien no estaba al corriente de pago al iniciarse la
+    // junta puede participar pero no votar, salvo que el despacho lo haya
+    // habilitado (pago en la junta, impugnación o consignación).
+    const privado = await query(
+      'SELECT habilitado FROM meeting_privados_voto WHERE meeting_id = $1::uuid AND propietario_id = $2::uuid',
+      [punto.meeting_id, req.propietarioId]
+    );
+    if (privado.rows.length > 0 && !privado.rows[0].habilitado) {
+      return res.status(403).json({
+        error: 'No puedes votar en esta junta porque constan deudas vencidas con la comunidad al inicio de la reunión (art. 15.2 LPH). Puedes participar en las deliberaciones. Si ya has pagado, comunícaselo al administrador.',
+        codigo: 'PRIVADO_DE_VOTO'
+      });
+    }
     if (punto.tipo !== 'votacion') {
       return res.status(400).json({ error: 'Este punto es informativo y no admite votación.' });
     }
