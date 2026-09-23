@@ -123,7 +123,9 @@ router.post('/billing/checkout', requireAuth, async (req, res) => {
     res.status(201).json({ url: session.url });
   } catch (error) {
     console.error('Error al crear checkout de Stripe:', error.message);
-    res.status(502).json({ error: 'No se pudo iniciar el checkout.' });
+    // 500 y no 502: el proxy de EasyPanel sustituye cualquier 502 por su
+    // propia página HTML y el frontend perdería el mensaje de error.
+    res.status(500).json({ error: 'No se pudo iniciar el checkout.', detalle: error.message });
   }
 });
 
@@ -145,7 +147,7 @@ router.post('/billing/portal', requireAuth, async (req, res) => {
     res.status(201).json({ url: session.url });
   } catch (error) {
     console.error('Error al abrir el portal de Stripe:', error.message);
-    res.status(502).json({ error: 'No se pudo abrir la gestión de la suscripción.' });
+    res.status(500).json({ error: 'No se pudo abrir la gestión de la suscripción.', detalle: error.message });
   }
 });
 

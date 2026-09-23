@@ -54,7 +54,8 @@ router.post('/asistencia/:entityId/voz', requireVoterAuth, upload.single('audio'
     if (!respuestaOpenAI.ok) {
       const detalle = await respuestaOpenAI.text();
       console.error('Error de la API de transcripción:', detalle);
-      return res.status(502).json({ error: 'Fallo al transcribir el audio con el proveedor de voz.' });
+      // 500 y no 502: el proxy de EasyPanel sustituye los 502 por una página HTML.
+      return res.status(500).json({ error: 'Fallo al transcribir el audio con el proveedor de voz.' });
     }
 
     const { text } = await respuestaOpenAI.json();

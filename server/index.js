@@ -220,7 +220,7 @@ app.post('/api/auth/register', async (req, res) => {
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now(), $12)
        RETURNING id, nombre_entidad, email_maestro, tipo_organizacion, plan_suscripcion, cif, telefono, direccion, nombre_responsable`,
       [
-        nombreEntidad, email, passwordHash, tipoOrganizacion, planInicial,
+        nombreEntidad, email, passwordHash, tipoOrganizacion || 'administrador', planInicial,
         null, null,
         cif || null, telefono || null, direccion || null, nombreResponsable || null,
         VERSION_CONDICIONES
