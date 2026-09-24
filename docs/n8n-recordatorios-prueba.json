@@ -1,0 +1,59 @@
+{
+  "name": "VotifAI - Recordatorios fin de prueba",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 10
+            }
+          ]
+        }
+      },
+      "id": "5b0f9d7e-1c1a-4a47-9d1e-2f7c6a1b0001",
+      "name": "Cada día a las 10:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://votifai.nexuraia.com/api/tareas/recordatorios-prueba",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-admin-token",
+              "value": "PEGA_AQUI_TU_ADMIN_TOKEN"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5b0f9d7e-1c1a-4a47-9d1e-2f7c6a1b0002",
+      "name": "Enviar recordatorios",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [260, 0]
+    }
+  ],
+  "connections": {
+    "Cada día a las 10:00": {
+      "main": [
+        [
+          {
+            "node": "Enviar recordatorios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Europe/Madrid"
+  }
+}

@@ -22,6 +22,9 @@ import vecinosRouter from './routes/vecinos.js';
 import meetingsRouter from './routes/meetings.js';
 import salaRouter from './routes/sala.js';
 import delegacionesRouter from './routes/delegaciones.js';
+import sistemaRouter from './routes/sistema.js';
+import { avisarSiFaltaConfiguracion } from './lib/configuracion.js';
+import { avisarRegistro } from './lib/avisosNegocio.js';
 import billingRouter, { stripeWebhookHandler } from './routes/billing.js';
 import despachoRouter from './routes/despacho.js';
 import { notificar } from './lib/notificaciones.js';
@@ -128,6 +131,7 @@ app.use('/api', vecinosRouter);
 app.use('/api', meetingsRouter);
 app.use('/api', salaRouter);
 app.use('/api', delegacionesRouter);
+app.use('/api', sistemaRouter);
 
 app.post('/api/demo-solicitudes', demoLimiter, async (req, res) => {
   const nombre = String(req.body.nombre || '').trim();
@@ -242,6 +246,8 @@ app.post('/api/auth/register', async (req, res) => {
     );
 
     issueSessionCookie(res, nuevoTenant.rows[0]);
+    // Bienvenida al despacho y aviso a NexuraIA; sin esperar, no retrasan el alta.
+    avisarRegistro(nuevoTenant.rows[0].id).catch((err) => console.error('Aviso de registro no enviado:', err.message));
 
     res.status(201).json({
       mensaje: 'Despacho profesional registrado con éxito en la nube.',
@@ -863,4 +869,7 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Servidor unificado de VotifAI abierto en el puerto ${PORT}`);
+  // Aviso en el log si falta alguna variable imprescindible (p. ej. se borró
+  // N8N_WEBHOOK_URL al editar el entorno y dejaron de salir los emails).
+  avisarSiFaltaConfiguracion();
 });

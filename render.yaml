@@ -38,3 +38,7 @@ services:
         sync: false
       - key: STRIPE_TAX_RATE_IVA
         sync: false
+      - key: ADMIN_TOKEN
+        sync: false
+      - key: ALERTAS_EMAIL
+        sync: false

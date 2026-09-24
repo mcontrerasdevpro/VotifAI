@@ -4,6 +4,7 @@ import { query } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { PLANES } from '../lib/planes.js';
 import { obtenerEstadoSuscripcion } from '../lib/suscripciones.js';
+import { avisarPago, avisarCambioPlan, avisarCancelacion } from '../lib/avisosNegocio.js';
 
 const router = Router();
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
@@ -115,6 +116,7 @@ router.post('/billing/checkout', requireAuth, async (req, res) => {
         // El webhook customer.subscription.updated lo confirmará igualmente;
         // se actualiza ya para que el cambio se vea al volver a la pantalla.
         await query('UPDATE tenants SET plan_suscripcion = $1 WHERE id = $2', [plan, tenant.id]);
+        avisarCambioPlan(tenant.id, tenant.plan_suscripcion, plan).catch((err) => console.error('Aviso de cambio de plan no enviado:', err.message));
         return res.json({ cambiado: true, plan });
       }
     }
@@ -250,6 +252,10 @@ export async function stripeWebhookHandler(req, res) {
         [cambio.estado, cambio.periodoFin, cambio.suscripcionId, cambio.plan ? metadata.plan || null : null, tenantId]
       );
     }
+
+    // Avisos a NexuraIA (tras comprobar que el evento no estaba ya procesado).
+    if (cambio && event.type === 'checkout.session.completed') await avisarPago(tenantId, metadata.plan);
+    if (event.type === 'customer.subscription.deleted') await avisarCancelacion(tenantId);
 
     await query(
       `INSERT INTO suscripciones_eventos (tenant_id, proveedor, evento_id, tipo, datos)
