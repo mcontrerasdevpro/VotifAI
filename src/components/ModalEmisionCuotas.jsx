@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Users, LoaderCircle, AlertTriangle } from 'lucide-react';
 import Modal from './ui/Modal.jsx';
 import Field from './ui/Field.jsx';
+import { porc } from '../lib/formato.js';
 
 const eur = (n) => Number(n).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
 
@@ -138,7 +139,7 @@ export default function ModalEmisionCuotas({ open, onClose, entityId, propietari
             {propietarios.map((p) => (
               <label key={p.id} className="flex items-center gap-2 text-3xs text-slate-300">
                 <input type="checkbox" checked={excluidos.includes(p.id)} onChange={() => alternarExcluido(p.id)} className="accent-blue-600" />
-                {p.propiedad_detalle} — {p.nombre_completo} ({Number(p.coeficiente).toFixed(2)}%)
+                {p.propiedad_detalle} — {p.nombre_completo} ({porc(p.coeficiente)})
               </label>
             ))}
           </div>
@@ -169,7 +170,7 @@ export default function ModalEmisionCuotas({ open, onClose, entityId, propietari
                   <tr key={r.propietario_id} className="border-t border-slate-900 text-slate-200">
                     <td className="px-3 py-1.5">{r.propiedad_detalle}</td>
                     <td className="px-3 py-1.5">{r.nombre_completo}</td>
-                    <td className="px-3 py-1.5 text-right font-mono">{Number(r.coeficiente).toFixed(4)}%</td>
+                    <td className="px-3 py-1.5 text-right font-mono">{porc(r.coeficiente, 4)}</td>
                     <td className="px-3 py-1.5 text-right font-mono font-bold">{eur(r.importe)}</td>
                   </tr>
                 ))}

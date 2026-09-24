@@ -7,6 +7,7 @@ import Field from '../../components/ui/Field.jsx';
 import DataTable from '../../components/ui/DataTable.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
 import ModalEmisionCuotas from '../../components/ModalEmisionCuotas.jsx';
+import { eur } from '../../lib/formato.js';
 
 const TONOS_ESTADO = {
   pendiente: 'neutral',
@@ -79,7 +80,7 @@ export default function Cuotas() {
   };
 
   const handleAnularCobro = async (pago) => {
-    if (!window.confirm(`¿Anular el cobro de ${parseFloat(pago.importe).toFixed(2)} € del ${new Date(pago.fecha_pago).toLocaleDateString('es-ES')}? También se retirará su ingreso de la contabilidad.`)) return;
+    if (!window.confirm(`¿Anular el cobro de ${eur(pago.importe)} del ${new Date(pago.fecha_pago).toLocaleDateString('es-ES')}? También se retirará su ingreso de la contabilidad.`)) return;
     const res = await fetch(`/api/cuotas/pagos/${pago.id}`, { method: 'DELETE', credentials: 'include' });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -228,9 +229,9 @@ export default function Cuotas() {
     ) },
     { key: 'importe', header: 'Importe', align: 'right', render: (c) => (
       <div className="text-right">
-        <p className="font-bold text-slate-900">{parseFloat(c.importe).toFixed(2)}€</p>
+        <p className="font-bold text-slate-900">{eur(c.importe)}</p>
         {parseFloat(c.total_pagado) > 0 && parseFloat(c.total_pagado) < parseFloat(c.importe) && (
-          <p className="text-emerald-600 mt-0.5">Pagado: {parseFloat(c.total_pagado).toFixed(2)}€</p>
+          <p className="text-emerald-600 mt-0.5">Pagado: {eur(c.total_pagado)}</p>
         )}
       </div>
     ) },
@@ -253,7 +254,7 @@ export default function Cuotas() {
             <Ban size={12} />
           </button>
         )}
-        {parseFloat(c.total_pagado) === 0 && (
+        {parseFloat(c.total_pagado) === 0 && c.estado !== 'anulada' && (
           <button onClick={() => handleEliminarCuota(c.id)} className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-rose-400 hover:text-rose-300" title="Borrar (solo si se creó por error)">
             <Trash2 size={12} />
           </button>
@@ -389,7 +390,7 @@ export default function Cuotas() {
             <p className="text-5xs font-black uppercase tracking-widest text-slate-400">Cobros registrados</p>
             {cobrosCuota.map((pg) => (
               <div key={pg.id} className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 px-3 py-2 text-3xs text-slate-300">
-                <span>{new Date(pg.fecha_pago).toLocaleDateString('es-ES')} · {parseFloat(pg.importe).toFixed(2)} € · {pg.metodo_pago || '—'}{pg.referencia ? ` · ${pg.referencia}` : ''}</span>
+                <span>{new Date(pg.fecha_pago).toLocaleDateString('es-ES')} · {eur(pg.importe)} · {pg.metodo_pago || '—'}{pg.referencia ? ` · ${pg.referencia}` : ''}</span>
                 <span className="flex shrink-0 items-center gap-3">
                   <a href={`/api/cuotas/pagos/${pg.id}/recibo`} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-4xs font-bold uppercase tracking-wider text-blue-400 hover:text-blue-300">
                     <FileDown size={11} /> Recibo

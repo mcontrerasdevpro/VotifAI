@@ -4,6 +4,7 @@ import DataTable from './ui/DataTable.jsx';
 import StatusBadge from './ui/StatusBadge.jsx';
 import Modal from './ui/Modal.jsx';
 import Field from './ui/Field.jsx';
+import { porc } from '../lib/formato.js';
 
 const TONO_MOTIVO = {
     venta: 'success',
@@ -170,7 +171,7 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
         },
         {
             key: 'coeficiente', header: 'Coef.', align: 'right',
-            render: (v) => <span className="font-black text-emerald-400">{parseFloat(v.coeficiente || 5.00).toFixed(2)}%</span>
+            render: (v) => <span className="font-black text-emerald-400">{v.coeficiente === null || v.coeficiente === undefined ? '—' : porc(v.coeficiente)}</span>
         },
         {
             key: 'acciones', header: 'Acciones', align: 'center',
@@ -275,7 +276,7 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
             <div className="text-5xs text-slate-500 font-bold border-t border-slate-900 pt-3 flex justify-between uppercase shrink-0">
                 <span>Régimen General: Art. 17 LPH — VotifAI</span>
                 <span className="text-blue-500 font-mono font-black">
-                    Suma Coeficientes Cruzados: {(propietarios.reduce((acc, v) => acc + parseFloat(v.coeficiente || 0), 0) || 100).toFixed(2)}%
+                    Suma de coeficientes: {porc(propietarios.reduce((acc, v) => acc + parseFloat(v.coeficiente || 0), 0))}
                 </span>
             </div>
 

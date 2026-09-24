@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Armchair, Search, UserCheck, UserPlus, X } from 'lucide-react';
+import { porc } from '../lib/formato.js';
 
 const ETIQUETA_VOTO = { si: 'SÍ', no: 'NO', abstencion: 'ABS.' };
 const COLOR_VOTO = {
@@ -125,7 +126,7 @@ export default function PanelSala({ meetingId, censo, asistencia, votos, privado
                 <div className="min-w-0">
                   <p className="truncate text-3xs font-bold text-white">{p.nombre_completo}{p.propiedad_detalle ? ` · ${p.propiedad_detalle}` : ''}</p>
                   <p className="text-4xs text-slate-500">
-                    {Number(p.coeficiente).toFixed(2)}%
+                    {porc(p.coeficiente)}
                     {asiste?.modo === 'presencial' && ' · Presente en sala'}
                     {asiste?.modo === 'representado' && ` · Representado por ${asiste.representante_nombre}${asiste.delegacion_id ? ' (delegación en VotifAI aceptada por ambos)' : asiste.representacion_escrita ? ' (por escrito)' : ' (sin escrito)'}`}
                     {!asiste && votaronEnApp.has(p.id) && ' · Participa por la app'}

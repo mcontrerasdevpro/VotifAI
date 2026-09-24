@@ -4,6 +4,7 @@ import { Users, PieChart, Radio, ArrowLeft, Play, Scale, UserX, Send } from 'luc
 import { useNavigate } from 'react-router-dom';
 import Card from './ui/Card.jsx';
 import { ETIQUETA_MAYORIA, ESTADO_RESULTADO } from '../lib/mayorias.js';
+import { eur, porc } from '../lib/formato.js';
 
 /**
  * Monitor real: los recuentos vienen del poll de detalle de la junta
@@ -53,7 +54,7 @@ export default function ColumnaMonitorCentral({ meeting, puntos, puntoActivoId, 
             <span className="text-4xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
               <Users size={12} className="text-blue-500" /> Participación del punto actual
             </span>
-            <div className="text-2xl font-black text-white mt-1">{cuorumPct.toFixed(2)}%</div>
+            <div className="text-2xl font-black text-white mt-1">{porc(cuorumPct)}</div>
             <p className="text-4xs text-slate-500 font-medium mt-0.5">{totalVotantes} de {censoTotalProp} propietarios han votado</p>
           </div>
           <div className="bg-slate-950 p-4 rounded-xl border border-slate-900 shadow-inner">
@@ -62,7 +63,7 @@ export default function ColumnaMonitorCentral({ meeting, puntos, puntoActivoId, 
             </span>
             <div className="text-2xl font-black text-white mt-1">{Math.max(0, censoTotalProp - sinVoto.length)} <span className="text-xs text-slate-500">propietarios</span></div>
             <p className="text-4xs text-slate-500 font-medium mt-0.5">
-              {Math.max(0, censoTotalCoef - coefSinVoto).toFixed(2)}% de cuotas
+              {porc(Math.max(0, censoTotalCoef - coefSinVoto))} de cuotas
               {sinVoto.length > 0 && ` · ${sinVoto.length} privado(s) de voto no computan (art. 15.2)`}
               {meeting?.convocatoria && ` · ${meeting.convocatoria === 'segunda' ? '2ª' : '1ª'} convocatoria`}
             </p>
@@ -138,7 +139,7 @@ export default function ColumnaMonitorCentral({ meeting, puntos, puntoActivoId, 
                   <div className="min-w-0">
                     <p className="truncate text-3xs font-bold text-white">{p.nombre_completo}{p.propiedad_detalle ? ` · ${p.propiedad_detalle}` : ''}</p>
                     <p className="text-4xs text-slate-500">
-                      Debe {Number(p.deuda).toFixed(2)} € · {Number(p.coeficiente).toFixed(2)}%
+                      Debe {eur(p.deuda)} · {porc(p.coeficiente)}
                       {p.habilitado && ` · Habilitado: ${p.habilitado_motivo}`}
                     </p>
                   </div>
@@ -226,7 +227,7 @@ function BarraVoto({ label, color, pct }) {
     <div>
       <div className="flex justify-between text-3xs font-bold mb-1">
         <span className={c.text}>{label}</span>
-        <span className="font-mono">{pct.toFixed(1)}%</span>
+        <span className="font-mono">{porc(pct, 1)}</span>
       </div>
       <div className="w-full bg-slate-900 h-2.5 rounded-full overflow-hidden border border-slate-800">
         <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} className={`bg-gradient-to-r ${c.bar} h-full rounded-full`} />
