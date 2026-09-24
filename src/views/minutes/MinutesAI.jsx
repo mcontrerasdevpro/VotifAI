@@ -9,7 +9,12 @@ import { ETIQUETA_MAYORIA } from '../../lib/mayorias.js';
 
 const LABEL_ESTADO = { votando: 'Votando', cerrado: 'Cerrado', pendiente: 'Pendiente' };
 
-const fechaHora = (fecha) => (fecha ? new Date(fecha).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : '—');
+const fechaHora = (fecha) => (fecha ? new Date(fecha).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', '') : '—');
+
+// Formato español: coma decimal (100,00 %, 60,00 €) y plurales correctos.
+const num2 = (n) => Number(n || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const porc = (n) => `${num2(n)} %`;
+const plural = (n, singular, pluralTexto) => `${n} ${Number(n) === 1 ? singular : pluralTexto}`;
 
 const hora = (fecha) => new Date(fecha).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 
@@ -39,7 +44,7 @@ const TEXTO_RESULTADO = {
   pendiente_ausentes: 'PENDIENTE DEL CÓMPUTO DE AUSENTES (art. 17.8 LPH)'
 };
 
-const pct = (valor, base) => (base > 0 ? ((valor / base) * 100).toFixed(2) : '0.00');
+const pct = (valor, base) => (base > 0 ? (valor / base) * 100 : 0);
 
 // Art. 15.2 LPH: "El acta de la Junta reflejará los propietarios privados
 // del derecho de voto". También los que se habilitaron y por qué.
@@ -50,7 +55,7 @@ function seccionPrivados(privados) {
   const nombre = (p) => `${p.nombre_completo}${p.propiedad_detalle ? ` (${p.propiedad_detalle})` : ''}`;
   let texto = '';
   if (sinVoto.length) {
-    texto += `Al iniciarse la junta no se encontraban al corriente en el pago de las deudas vencidas con la comunidad, por lo que participaron sin derecho de voto y su persona y cuota no se computan para las mayorías:\n${sinVoto.map((p) => `* ${nombre(p)} — coeficiente ${Number(p.coeficiente).toFixed(2)}%, deuda ${Number(p.deuda).toFixed(2)} €`).join('\n')}`;
+    texto += `Al iniciarse la junta no se encontraban al corriente en el pago de las deudas vencidas con la comunidad, por lo que participaron sin derecho de voto y su persona y cuota no se computan para las mayorías:\n${sinVoto.map((p) => `* ${nombre(p)} — coeficiente ${porc(p.coeficiente)}, deuda ${num2(p.deuda)} €`).join('\n')}`;
   }
   if (habilitados.length) {
     texto += `${texto ? '\n\n' : ''}Recuperaron el derecho de voto durante la junta:\n${habilitados.map((p) => `* ${nombre(p)} — ${p.habilitado_motivo}`).join('\n')}`;
@@ -63,7 +68,7 @@ function seccionPrivados(privados) {
 // app (han votado algún punto desde su móvil).
 function seccionAsistencia(asistencia, votos) {
   const nombre = (p) => `${p.nombre_completo}${p.propiedad_detalle ? ` (${p.propiedad_detalle})` : ''}`;
-  const cuota = (p) => `${Number(p.coeficiente || 0).toFixed(2)}%`;
+  const cuota = (p) => porc(p.coeficiente);
   const enSala = new Set(asistencia.map((a) => a.propietario_id));
   const porApp = [...new Map(votos.filter((v) => v.origen === 'app' && !enSala.has(v.propietario_id)).map((v) => [v.propietario_id, v])).values()];
   const presentes = asistencia.filter((a) => a.modo === 'presencial');
@@ -78,22 +83,27 @@ function seccionAsistencia(asistencia, votos) {
   const total = presentes.length + porApp.length + representados.length;
   const coefTotal = [...presentes, ...porApp, ...representados].reduce((t, p) => t + Number(p.coeficiente || 0), 0);
   return bloques.length
-    ? `${bloques.join('\n\n')}\n\nTotal: ${total} propietarios, que representan el ${coefTotal.toFixed(2)}% de las cuotas.`
+    ? `${bloques.join('\n\n')}\n\nTotal: ${plural(total, 'propietario', 'propietarios')}, que ${total === 1 ? 'representa' : 'representan'} el ${porc(coefTotal)} de las cuotas.`
     : 'No consta ningún asistente registrado.';
 }
 
-function lineaPunto(p) {
+function lineaPunto(p, totalCenso) {
   if (p.tipo !== 'votacion') return `* **PUNTO ${p.orden}:** ${p.texto} (informativo, sin votación)`;
   const r = p.resultado;
   if (!r) return `* **PUNTO ${p.orden}:** ${p.texto}`;
 
   const estado = p.estado === 'cerrado' ? TEXTO_RESULTADO[r.estado] : 'VOTACIÓN SIN CERRAR';
   const baseC = Number(r.baseComputo.coeficiente) || 0;
+  const linea3 = (n, singular, pluralTexto, coef) =>
+    `${plural(n || 0, singular, pluralTexto)}, ${porc(pct(Number(coef), totalCenso || 100))} de las cuotas (${porc(pct(Number(coef), baseC))} de la base)`;
   let linea =
     `* **PUNTO ${p.orden}:** ${p.texto}\n` +
     `  Mayoría exigida: ${ETIQUETA_MAYORIA[r.mayoria]} (${r.articulo}). ${r.requisito}\n` +
-    `  Votos: ${p.votos_si || 0} a favor (${pct(Number(p.coeficiente_si), baseC)}% de cuotas), ${p.votos_no || 0} en contra (${pct(Number(p.coeficiente_no), baseC)}%), ${p.votos_abstencion || 0} abstenciones (${pct(Number(p.coeficiente_abstencion), baseC)}%). ` +
-    `Base de cómputo: ${r.baseComputo.propietarios} propietarios y ${baseC.toFixed(2)}% de cuotas. ` +
+    // Cada sentido del voto con su % sobre el total de cuotas y, entre
+    // paréntesis, sobre la base de cómputo (sin los privados de voto), que
+    // es la que decide las mayorías.
+    `  Votos: ${linea3(p.votos_si, 'voto a favor', 'votos a favor', p.coeficiente_si)}; ${linea3(p.votos_no, 'en contra', 'en contra', p.coeficiente_no)}; ${linea3(p.votos_abstencion, 'abstención', 'abstenciones', p.coeficiente_abstencion)}. ` +
+    `Base de cómputo: ${plural(r.baseComputo.propietarios, 'propietario', 'propietarios')} y ${porc(baseC)} de las cuotas. ` +
     `Emitidos: ${p.votos_app || 0} por la app, ${p.votos_sala || 0} en sala y ${p.votos_representacion || 0} por representación.\n` +
     `  **Resultado: ${estado}**`;
   if (p.estado === 'cerrado' && r.estado === 'pendiente_ausentes') {
@@ -117,10 +127,10 @@ function generarActa(meeting, puntos, intervenciones = [], privados = [], asiste
     `**FECHA Y HORA:** ${fecha}\n` +
     `**CELEBRADA EN:** ${convocatoria} convocatoria\n\n` +
     `## 1. CENSO Y ASISTENTES\n` +
-    `Censo de la finca a fecha de convocatoria: ${meeting.censo_total_propietarios || 0} propietarios (${totalCenso.toFixed(2)}% de coeficiente).\n\n` +
+    `Censo de la finca a fecha de convocatoria: ${plural(meeting.censo_total_propietarios || 0, 'propietario', 'propietarios')} (${porc(totalCenso)} de coeficiente).\n\n` +
     `${seccionAsistencia(asistencia, votos)}\n\n` +
     `## 2. PROPIETARIOS PRIVADOS DEL DERECHO DE VOTO (art. 15.2 LPH)\n${seccionPrivados(privados)}\n\n` +
-    `## 3. PUNTOS DEL ORDEN DEL DÍA Y ACUERDOS\n${puntos.map(lineaPunto).join('\n\n') || 'Sin puntos registrados.'}` +
+    `## 3. PUNTOS DEL ORDEN DEL DÍA Y ACUERDOS\n${puntos.map((p) => lineaPunto(p, totalCenso)).join('\n\n') || 'Sin puntos registrados.'}` +
     seccionIntervenciones(puntos, intervenciones)
   );
 }
