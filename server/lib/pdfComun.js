@@ -82,6 +82,8 @@ export function markdownSencillo(doc, texto) {
 }
 
 export const eur = (n) => `${Number(n || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
+// Porcentaje con coma decimal: 10,0000 % / 25,00 %.
+export const porcentaje = (n, decimales = 2) => `${Number(n || 0).toLocaleString('es-ES', { minimumFractionDigits: decimales, maximumFractionDigits: decimales })} %`;
 export const fecha = (f) => (f ? fechaES(f) : '—');
 
 // Tabla simple: cabecera y filas con anchos relativos; salta de página si

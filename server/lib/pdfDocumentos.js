@@ -1,4 +1,4 @@
-import { crearDocumento, membrete, pie, tabla, eur, fecha, MARGEN, ANCHO } from './pdfComun.js';
+import { crearDocumento, membrete, pie, tabla, eur, fecha, porcentaje, MARGEN, ANCHO } from './pdfComun.js';
 
 // Recibo de un cobro y certificado de deuda (art. 9.1.e LPH), con el
 // membrete del despacho, igual que el acta.
@@ -10,7 +10,7 @@ function datosFincaYPropietario(doc, finca, propietario) {
   doc.font('Helvetica-Bold').fillColor('#111111').text('Propietario');
   doc.font('Helvetica').fillColor('#333333').text(`${propietario?.nombre_completo || ''}${propietario?.propiedad_detalle ? ` — ${propietario.propiedad_detalle}` : ''}`);
   if (propietario?.coeficiente !== undefined && propietario?.coeficiente !== null) {
-    doc.text(`Coeficiente de participación: ${Number(propietario.coeficiente).toFixed(4)} %`);
+    doc.text(`Coeficiente de participación: ${porcentaje(propietario.coeficiente, 4)}`);
   }
   doc.moveDown(1);
 }
@@ -177,7 +177,7 @@ export function generarLiquidacionPdf({ despacho, finca, liquidacion, gastosPorC
     { titulo: 'Emitido', ancho: 1.3, derecha: true },
     { titulo: 'Cobrado', ancho: 1.3, derecha: true },
     { titulo: 'Pendiente', ancho: 1.3, derecha: true }
-  ], reparto.map((r) => [r.propiedad_detalle || '—', r.nombre_completo, `${Number(r.coeficiente).toFixed(2)}%`, eur(r.parte_gastos), eur(r.emitido), eur(r.cobrado), eur(r.pendiente)]));
+  ], reparto.map((r) => [r.propiedad_detalle || '—', r.nombre_completo, porcentaje(r.coeficiente), eur(r.parte_gastos), eur(r.emitido), eur(r.cobrado), eur(r.pendiente)]));
 
   seccion('Fondo de reserva (art. 9.1.f LPH)');
   doc.fontSize(10).font('Helvetica').fillColor('#111111').text(`Saldo al cierre del periodo: ${eur(fondo.saldo)}`);
