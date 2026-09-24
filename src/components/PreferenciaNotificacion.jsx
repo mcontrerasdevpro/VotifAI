@@ -4,7 +4,7 @@ import { Bell, Check } from 'lucide-react';
 const OPCIONES = [
   { valor: 'email', etiqueta: 'Email', requiere: 'email' },
   { valor: 'whatsapp', etiqueta: 'WhatsApp', requiere: 'telefono' },
-  { valor: 'ambos', etiqueta: 'Ambos', requiere: null }
+  { valor: 'ambos', etiqueta: 'Ambos', requiere: ['email', 'telefono'] }
 ];
 
 /**
@@ -18,7 +18,8 @@ export default function PreferenciaNotificacion({ sesion, onActualizado }) {
   const [guardando, setGuardando] = useState(false);
   const [guardado, setGuardado] = useState(false);
 
-  const opcionesDisponibles = OPCIONES.filter((o) => !o.requiere || sesion?.[o.requiere]);
+  // "Ambos" solo tiene sentido con email Y teléfono.
+  const opcionesDisponibles = OPCIONES.filter((o) => [].concat(o.requiere).every((campo) => sesion?.[campo]));
   if (opcionesDisponibles.length <= 1) return null;
 
   const elegir = async (valor) => {
