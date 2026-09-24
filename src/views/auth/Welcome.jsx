@@ -4,72 +4,124 @@ import Brand from '../../components/Brand.jsx';
 import { PLANES_RESPALDO, LEMA_PLAN, caracteristicasPlan } from '../../lib/planes.js';
 import {
   ArrowRight,
-  BarChart3,
   BellRing,
+  Building2,
   CalendarDays,
   Check,
   ChevronDown,
-  ClipboardCheck,
+  FileSignature,
   FileText,
+  Gavel,
+  Landmark,
+  Mail,
   Menu,
   MessageSquare,
-  Play,
-  Sparkles,
-  Users,
+  Mic,
+  PiggyBank,
+  Receipt,
+  ShieldCheck,
+  Smartphone,
+  UserCheck,
+  Vote,
   WalletCards,
   X
 } from 'lucide-react';
 
-const MODULES = [
-  { icon: ClipboardCheck, title: 'Juntas y votaciones', description: 'Controla asistencia, quórum y votaciones ponderadas por coeficiente desde una única pantalla.', color: 'text-cyan-300 bg-cyan-400/10 border-cyan-400/20' },
-  { icon: BellRing, title: 'Incidencias', description: 'Organiza avisos, proveedores y estados para que cada problema tenga seguimiento.', color: 'text-amber-300 bg-amber-400/10 border-amber-400/20' },
-  { icon: WalletCards, title: 'Cuotas y pagos', description: 'Consulta cuotas, pagos y morosidad con la información de cada propietario en contexto.', color: 'text-emerald-300 bg-emerald-400/10 border-emerald-400/20' },
-  { icon: FileText, title: 'Documentos y comunicados', description: 'Centraliza archivos, plantillas y comunicaciones para dejar atrás las búsquedas interminables.', color: 'text-blue-300 bg-blue-400/10 border-blue-400/20' },
-  { icon: CalendarDays, title: 'Agenda y reservas', description: 'Coordina juntas, vencimientos y reservas de zonas comunes sin solapamientos.', color: 'text-violet-300 bg-violet-400/10 border-violet-400/20' },
-  { icon: MessageSquare, title: 'Atención al propietario', description: 'Da seguimiento a consultas y reclamaciones con un historial claro para todo el despacho.', color: 'text-sky-300 bg-sky-400/10 border-sky-400/20' }
+// =========================================================================
+// Web pública de VotifAI. Estética propia del sector (despacho, acta,
+// papel), distinta de la de NexuraIA: cabecera y portada en azul tinta
+// (el logo tiene "Votif" en blanco y necesita fondo oscuro), el resto sobre
+// fondo papel con titulares en serifa. Todo lo que se promete aquí existe
+// en la app: si se cambia una función, revisar este texto.
+// =========================================================================
+
+const TINTA = 'bg-[#0b1a33]';
+const PAPEL = 'bg-[#f6f3ec]';
+
+const CICLO = [
+  { icon: Mail, paso: 'Convocatoria', texto: 'Orden del día a cada propietario por email, con la relación de morosos que la ley obliga a incluir.' },
+  { icon: UserCheck, paso: 'Delegaciones', texto: 'El vecino delega su voto en otro desde el móvil, con el consentimiento de ambos. Las representaciones en sala, también.' },
+  { icon: Vote, paso: 'Votación', texto: 'Desde el móvil o a mano alzada en la sala. Cada voto pondera por su coeficiente, en primera o segunda convocatoria.' },
+  { icon: Gavel, paso: 'Resultado', texto: 'Mayoría simple, tres quintos o unanimidad, con doble mayoría de propietarios y cuotas en cada punto.' },
+  { icon: FileSignature, paso: 'Acta', texto: 'Borrador del acta con asistentes, resultados e intervenciones transcritas. PDF y envío a todos al cerrar.' }
+];
+
+const LPH = [
+  { art: 'Art. 15.2', titulo: 'Privación del voto', texto: 'Los propietarios con deudas vencidas aparecen como privados de voto y no computan en las mayorías.' },
+  { art: 'Art. 16.2', titulo: 'Convocatoria', texto: 'La convocatoria incluye la relación de propietarios que no están al corriente de pago.' },
+  { art: 'Art. 17', titulo: 'Mayorías', texto: 'Cada punto se vota con la mayoría que le corresponde y se calcula por propietarios y por cuotas.' },
+  { art: 'Art. 17.8', titulo: 'Ausentes', texto: 'Si el acuerdo depende de los ausentes, queda pendiente del plazo para que manifiesten su voto.' },
+  { art: 'Art. 19', titulo: 'Acta', texto: 'Asistentes, representaciones, resultados y acuerdos, listos para revisar y firmar.' },
+  { art: 'Art. 9.1.f', titulo: 'Fondo de reserva', texto: 'Control de la aportación mínima del 10 % del último presupuesto ordinario.' }
+];
+
+const GESTION = [
+  { icon: WalletCards, titulo: 'Cuotas y recibos', texto: 'Emisión masiva por coeficiente o a partes iguales, cobros, recibos en PDF y certificados de deuda.' },
+  { icon: Landmark, titulo: 'Contabilidad', texto: 'Presupuestos por partidas, ejecución, cobros que se contabilizan solos y liquidaciones en PDF.' },
+  { icon: PiggyBank, titulo: 'Fondo de reserva', texto: 'Aportaciones, movimientos y saldo de cada comunidad, siempre a la vista.' },
+  { icon: BellRing, titulo: 'Incidencias', texto: 'Avisos, proveedores y estados, con el historial de cada avería.' },
+  { icon: FileText, titulo: 'Documentos', texto: 'Actas, estatutos, plantillas y comunicados de cada finca en su sitio.' },
+  { icon: CalendarDays, titulo: 'Agenda y reservas', texto: 'Juntas, vencimientos y reservas de zonas comunes sin solapamientos.' },
+  { icon: MessageSquare, titulo: 'Atención al propietario', texto: 'Consultas y reclamaciones con seguimiento para todo el despacho.' },
+  { icon: Building2, titulo: 'Censo y titularidad', texto: 'Propietarios, coeficientes y cambios de titular con su historial.' }
 ];
 
 const FAQS = [
-  ['¿Para quién está pensado VotifAI?', 'Para despachos profesionales que administran varias comunidades y necesitan centralizar su operativa sin añadir más herramientas desconectadas.'],
-  ['¿Puedo empezar con una sola finca?', 'Sí. Puedes comenzar con una cartera pequeña y ampliar el uso conforme tu despacho incorpore más comunidades.'],
-  ['¿Qué hace la IA?', 'Ayuda a organizar y preparar información de juntas, transcripciones y borradores. La revisión final siempre permanece bajo el control del despacho.'],
-  ['¿Los propietarios necesitan usar la misma cuenta?', 'No. El despacho y los propietarios tienen flujos de acceso separados, con permisos diferentes según su papel.']
+  ['¿Los propietarios tienen que instalar algo?', 'No. Entran desde el navegador del móvil o del ordenador con su correo y su contraseña. La primera vez reciben un enlace en el correo que el despacho tiene en el censo.'],
+  ['¿Y los vecinos que no usan el móvil?', 'El administrador registra en la sala la asistencia, las representaciones y los votos a mano alzada. Todo suma en el resultado y queda reflejado en el acta.'],
+  ['¿Qué hace la inteligencia artificial?', 'Transcribe las intervenciones de la junta y prepara el borrador del acta. El administrador revisa y aprueba siempre el texto final.'],
+  ['¿Puedo empezar con una sola comunidad?', 'Sí. Todos los planes incluyen todos los módulos; solo cambian el número de fincas y la transcripción de voz. Pruébalo 15 días gratis, sin tarjeta.'],
+  ['¿Cómo se tratan los datos de los propietarios?', 'El despacho es el responsable del tratamiento y VotifAI actúa como encargado, con su contrato de encargo del tratamiento (art. 28 RGPD) aceptado al registrarse.']
 ];
 
-function ProductPreview({ activeModule, setActiveModule }) {
-  const previewData = {
-    juntas: { label: 'Próxima junta', title: 'Residencial Los Olivos', value: '82%', note: 'quórum confirmado', icon: ClipboardCheck },
-    incidencias: { label: 'Incidencia prioritaria', title: 'Avería ascensor principal', value: 'En curso', note: 'Proveedor asignado', icon: BellRing },
-    cuotas: { label: 'Recaudación del mes', title: 'Estado de cuotas', value: '96,4%', note: 'cobrado hasta hoy', icon: WalletCards },
-    documentos: { label: 'Último documento', title: 'Acta junta ordinaria', value: 'Listo', note: 'pendiente de revisión', icon: FileText }
-  };
-  const preview = previewData[activeModule];
-  const PreviewIcon = preview.icon;
-
+// Maqueta del acta en vivo: un punto del orden del día con su mayoría y
+// el resultado por coeficiente, como lo ve el administrador en la junta.
+function ActaEnVivo() {
+  const puntos = [
+    { n: 1, titulo: 'Aprobación de cuentas del ejercicio 2025', mayoria: 'Simple', favor: 71.4, contra: 9.2, resultado: 'Aprobado' },
+    { n: 2, titulo: 'Instalación de ascensor', mayoria: 'Tres quintos', favor: 64.8, contra: 18.1, resultado: 'Aprobado' },
+    { n: 3, titulo: 'Cambio de los estatutos', mayoria: 'Unanimidad', favor: 88.5, contra: 0, resultado: 'Pendiente de ausentes' }
+  ];
   return (
-    <div className="relative mx-auto w-full max-w-[570px]">
-      <div className="absolute -inset-5 rounded-[2rem] bg-cyan-400/10 blur-3xl" />
-      <div className="relative overflow-hidden rounded-3xl border border-cyan-300/20 bg-[#0b1527]/95 p-4 shadow-2xl shadow-cyan-950/50 backdrop-blur-xl sm:p-5">
-        <div className="flex items-center justify-between border-b border-white/10 pb-4">
-          <div className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-rose-400" /><span className="h-2.5 w-2.5 rounded-full bg-amber-300" /><span className="h-2.5 w-2.5 rounded-full bg-emerald-400" /><span className="ml-2 text-[11px] font-medium text-slate-500">panel.votifai</span></div>
-          <span className="flex items-center gap-1.5 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-2.5 py-1 text-4xs font-bold text-cyan-200"><Sparkles size={11} /> Asistente activo</span>
-        </div>
-        <div className="grid grid-cols-4 gap-1.5 py-5">
-          {Object.entries(previewData).map(([key, item]) => (
-            <button key={key} type="button" aria-label={key} onClick={() => setActiveModule(key)} className={`rounded-xl px-2 py-2.5 text-4xs font-bold transition ${activeModule === key ? 'bg-cyan-300 text-slate-950 shadow-lg shadow-cyan-400/20' : 'bg-white/[0.04] text-slate-400 hover:bg-white/[0.08] hover:text-white'}`}>
-              <item.icon size={14} className="mx-auto mb-1" />
-              <span className="hidden sm:block">{key === 'juntas' ? 'Juntas' : key === 'incidencias' ? 'Incidencias' : key === 'cuotas' ? 'Cuotas' : 'Documentos'}</span>
-            </button>
-          ))}
-        </div>
-        <div className="grid gap-3 sm:grid-cols-[1.3fr_0.7fr]">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.045] p-5">
-            <div className="mb-8 flex items-start justify-between gap-3"><div><p className="mb-1 text-4xs font-bold uppercase tracking-[0.18em] text-cyan-300">{preview.label}</p><h3 className="text-base font-bold text-white">{preview.title}</h3></div><PreviewIcon size={19} className="text-cyan-300" /></div>
-            <div className="flex items-end justify-between"><div><p className="text-3xl font-black tracking-tight text-white">{preview.value}</p><p className="mt-1 text-xs text-slate-500">{preview.note}</p></div><div className="flex h-14 items-end gap-1.5">{[45, 62, 50, 78, 68, 88, 72].map((height, index) => <span key={index} className="w-2 rounded-t bg-gradient-to-t from-blue-600 to-cyan-300" style={{ height: `${height}%` }} />)}</div></div>
+    <div className="relative mx-auto w-full max-w-[560px]">
+      <div className="absolute -right-6 -top-6 hidden h-full w-full rounded-[1.75rem] border border-white/10 sm:block" />
+      <div className="relative rounded-[1.75rem] bg-[#fbf9f4] p-5 text-slate-800 shadow-2xl shadow-black/40 sm:p-7">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-300/70 pb-4">
+          <div>
+            <p className="text-4xs font-bold uppercase tracking-[0.2em] text-slate-500">Junta ordinaria · 2.ª convocatoria</p>
+            <h3 className="mt-1 font-display text-xl font-semibold text-slate-900">C.P. Residencial Los Olivos</h3>
           </div>
-          <div className="rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.06] p-5"><p className="mb-5 text-4xs font-bold uppercase tracking-[0.18em] text-cyan-200">Resumen del despacho</p><div className="space-y-4"><div><p className="text-2xl font-black text-white">24</p><p className="text-xs text-slate-500">comunidades</p></div><div><p className="text-2xl font-black text-white">438</p><p className="text-xs text-slate-500">propietarios</p></div><div className="flex items-center gap-2 text-xs font-semibold text-emerald-300"><Check size={14} /> Todo bajo control</div></div></div>
+          <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-600/10 px-2.5 py-1 text-4xs font-bold text-emerald-700">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-600" /> En curso
+          </span>
         </div>
-        <div className="mt-3 flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-3 text-xs"><span className="text-slate-400">Una vista para cada decisión importante.</span><span className="font-bold text-cyan-300">VotifAI</span></div>
+        <div className="grid grid-cols-3 gap-2 py-4 text-center">
+          <div><p className="font-display text-2xl font-semibold text-slate-900">31</p><p className="text-4xs text-slate-500">presentes</p></div>
+          <div><p className="font-display text-2xl font-semibold text-slate-900">9</p><p className="text-4xs text-slate-500">representados</p></div>
+          <div><p className="font-display text-2xl font-semibold text-slate-900">2</p><p className="text-4xs text-slate-500">privados de voto</p></div>
+        </div>
+        <ol className="space-y-3">
+          {puntos.map((p) => (
+            <li key={p.n} className="rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-xs font-semibold text-slate-900"><span className="mr-1.5 text-slate-400">{p.n}.</span>{p.titulo}</p>
+                <span className="shrink-0 rounded-md bg-slate-100 px-2 py-0.5 text-5xs font-bold uppercase tracking-wider text-slate-500">{p.mayoria}</span>
+              </div>
+              <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-slate-100">
+                <span className="bg-emerald-600" style={{ width: `${p.favor}%` }} />
+                <span className="bg-rose-500" style={{ width: `${p.contra}%` }} />
+              </div>
+              <div className="mt-2 flex items-center justify-between text-4xs">
+                <span className="text-slate-500">{p.favor.toLocaleString('es-ES')} % de cuotas a favor</span>
+                <span className={`font-bold ${p.resultado === 'Aprobado' ? 'text-emerald-700' : 'text-amber-700'}`}>{p.resultado}</span>
+              </div>
+            </li>
+          ))}
+        </ol>
+        <div className="mt-4 flex items-center gap-2 rounded-2xl bg-[#0b1a33] px-4 py-3 text-4xs text-slate-300">
+          <Mic size={13} className="shrink-0 text-sky-300" />
+          <span className="truncate"><span className="font-bold text-white">2.º B:</span> «Pido que conste en acta que el presupuesto incluye la…»</span>
+        </div>
       </div>
     </div>
   );
@@ -113,33 +165,35 @@ function DemoModal({ open, onClose }) {
     onClose();
   };
 
+  const campo = 'w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-[#1d4fd8]';
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-5 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="demo-title">
-      <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-cyan-300/20 bg-[#0b1527] p-6 shadow-2xl shadow-cyan-950/50 sm:p-8">
-        <button type="button" onClick={handleClose} aria-label="Cerrar solicitud de demo" className="absolute right-4 top-4 rounded-lg p-2 text-slate-400 transition hover:bg-white/10 hover:text-white"><X size={20} /></button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0b1a33]/70 p-5 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="demo-title">
+      <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-[#fbf9f4] p-6 text-slate-800 shadow-2xl sm:p-8">
+        <button type="button" onClick={handleClose} aria-label="Cerrar solicitud de demo" className="absolute right-4 top-4 rounded-lg p-2 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900"><X size={20} /></button>
         {enviada ? (
           <div className="py-8 text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-400/15 text-emerald-300"><Check size={28} /></div>
-            <h2 id="demo-title" className="mt-5 text-2xl font-black text-white">Solicitud recibida</h2>
-            <p className="mt-3 text-sm leading-6 text-slate-400">Te contactaremos para enseñarte VotifAI con el contexto de tu despacho.</p>
-            <button type="button" onClick={handleClose} className="mt-7 rounded-xl bg-cyan-300 px-5 py-3 font-bold text-slate-950">Cerrar</button>
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600/10 text-emerald-700"><Check size={28} /></div>
+            <h2 id="demo-title" className="mt-5 font-display text-2xl font-semibold text-slate-900">Solicitud recibida</h2>
+            <p className="mt-3 text-sm leading-6 text-slate-600">Te contactaremos para enseñarte VotifAI con las comunidades de tu despacho.</p>
+            <button type="button" onClick={handleClose} className="mt-7 rounded-xl bg-[#1d4fd8] px-5 py-3 font-bold text-white">Cerrar</button>
           </div>
         ) : (
           <>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">Demo personalizada</p>
-            <h2 id="demo-title" className="mt-3 text-2xl font-black text-white">Ve cómo encaja VotifAI en tu despacho.</h2>
-            <p className="mt-3 text-sm leading-6 text-slate-400">Cuéntanos lo esencial y prepararemos una demostración centrada en tu cartera.</p>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#1d4fd8]">Demo personalizada</p>
+            <h2 id="demo-title" className="mt-3 font-display text-2xl font-semibold text-slate-900">Te enseñamos una junta completa en VotifAI.</h2>
+            <p className="mt-3 text-sm leading-6 text-slate-600">Cuéntanos cuántas comunidades llevas y qué quieres resolver primero.</p>
             <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-              <input name="nombre" required placeholder="Nombre y apellidos" aria-label="Nombre y apellidos" className="w-full rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-300/50" />
-              <input name="email" required type="email" placeholder="Correo profesional" aria-label="Correo profesional" className="w-full rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-300/50" />
+              <input name="nombre" required placeholder="Nombre y apellidos" aria-label="Nombre y apellidos" className={campo} />
+              <input name="email" required type="email" placeholder="Correo profesional" aria-label="Correo profesional" className={campo} />
               <div className="grid gap-4 sm:grid-cols-2">
-                <input name="telefono" type="tel" placeholder="Teléfono" aria-label="Teléfono" className="w-full rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-300/50" />
-                <select name="comunidades" aria-label="Número de comunidades" defaultValue="" className="w-full rounded-xl border border-white/10 bg-[#101d32] px-4 py-3 text-sm text-slate-300 outline-none focus:border-cyan-300/50"><option value="" disabled>Comunidades gestionadas</option><option>1 - 20</option><option>21 - 50</option><option>51 - 150</option><option>Más de 150</option></select>
+                <input name="telefono" type="tel" placeholder="Teléfono" aria-label="Teléfono" className={campo} />
+                <select name="comunidades" aria-label="Número de comunidades" defaultValue="" className={campo}><option value="" disabled>Comunidades gestionadas</option><option>1 - 20</option><option>21 - 50</option><option>51 - 150</option><option>Más de 150</option></select>
               </div>
-              <textarea name="mensaje" rows="3" placeholder="¿Qué te gustaría resolver primero?" aria-label="Mensaje" className="w-full resize-none rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-300/50" />
-              <label className="flex items-start gap-3 text-xs leading-5 text-slate-400"><input name="consentimientoPrivacidad" type="checkbox" value="true" required className="mt-1 h-4 w-4 accent-cyan-300" /><span>Acepto la <Link to="/legal/privacidad" onClick={handleClose} className="text-cyan-300 underline underline-offset-2">política de privacidad</Link> y el contacto para gestionar esta solicitud.</span></label>
-              {error && <p className="rounded-xl border border-rose-300/20 bg-rose-300/10 px-3 py-2 text-sm text-rose-200">{error}</p>}
-              <button type="submit" disabled={enviando} className="w-full rounded-xl bg-cyan-300 px-5 py-3.5 font-extrabold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-wait disabled:opacity-60">{enviando ? 'Enviando solicitud...' : 'Solicitar mi demo'}</button>
+              <textarea name="mensaje" rows="3" placeholder="¿Qué te gustaría resolver primero?" aria-label="Mensaje" className={`${campo} resize-none`} />
+              <label className="flex items-start gap-3 text-xs leading-5 text-slate-600"><input name="consentimientoPrivacidad" type="checkbox" value="true" required className="mt-1 h-4 w-4 accent-[#1d4fd8]" /><span>Acepto la <Link to="/legal/privacidad" onClick={handleClose} className="text-[#1d4fd8] underline underline-offset-2">política de privacidad</Link> y el contacto para gestionar esta solicitud.</span></label>
+              {error && <p className="rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
+              <button type="submit" disabled={enviando} className="w-full rounded-xl bg-[#1d4fd8] px-5 py-3.5 font-bold text-white transition hover:bg-[#1a43b8] disabled:cursor-wait disabled:opacity-60">{enviando ? 'Enviando solicitud...' : 'Solicitar mi demo'}</button>
             </form>
           </>
         )}
@@ -148,11 +202,20 @@ function DemoModal({ open, onClose }) {
   );
 }
 
+function Encabezado({ kicker, titulo, texto, centrado = false, oscuro = false }) {
+  return (
+    <div className={centrado ? 'mx-auto max-w-2xl text-center' : 'max-w-2xl'}>
+      <p className={`mb-3 text-xs font-bold uppercase tracking-[0.2em] ${oscuro ? 'text-sky-300' : 'text-[#1d4fd8]'}`}>{kicker}</p>
+      <h2 className={`font-display text-3xl font-semibold leading-tight tracking-tight sm:text-[2.6rem] ${oscuro ? 'text-white' : 'text-slate-900'}`}>{titulo}</h2>
+      {texto && <p className={`mt-4 text-base leading-7 ${oscuro ? 'text-slate-400' : 'text-slate-600'}`}>{texto}</p>}
+    </div>
+  );
+}
+
 export default function Welcome() {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [activeModule, setActiveModule] = useState('juntas');
-  const [openFaq, setOpenFaq] = useState(null);
+  const [openFaq, setOpenFaq] = useState(0);
   const [demoOpen, setDemoOpen] = useState(false);
   const [planes, setPlanes] = useState(PLANES_RESPALDO);
   useEffect(() => {
@@ -171,39 +234,258 @@ export default function Welcome() {
   };
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#070d18] text-slate-100 selection:bg-cyan-300 selection:text-slate-950">
-      <div className="pointer-events-none fixed inset-0 -z-0 opacity-70 [background-image:linear-gradient(rgba(148,163,184,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.045)_1px,transparent_1px)] [background-size:72px_72px]" />
-      <div className="pointer-events-none fixed left-[-20rem] top-[-18rem] h-[42rem] w-[42rem] rounded-full bg-cyan-500/10 blur-[120px]" />
-      <div className="pointer-events-none fixed right-[-18rem] top-[30rem] h-[38rem] w-[38rem] rounded-full bg-blue-600/10 blur-[120px]" />
+    <div className={`min-h-screen overflow-x-hidden ${PAPEL} text-slate-800 selection:bg-[#1d4fd8] selection:text-white`}>
 
-      <header className="sticky top-0 z-40 border-b border-white/[0.08] bg-[#070d18]/80 backdrop-blur-xl">
-        <div className="mx-auto flex h-[4.5rem] max-w-7xl items-center justify-between px-5 sm:px-8"><Link to="/" aria-label="VotifAI inicio"><Brand className="h-14" /></Link><nav className="hidden items-center gap-8 text-sm font-medium text-slate-400 lg:flex"><a href="#plataforma" className="transition hover:text-white">Plataforma</a><a href="#problemas" className="transition hover:text-white">Qué resuelve</a><a href="#planes" className="transition hover:text-white">Planes</a><a href="#preguntas" className="transition hover:text-white">Preguntas</a></nav><div className="hidden items-center gap-3 sm:flex"><button type="button" onClick={() => goTo('/login/comunidad')} className="px-3 py-2 text-sm font-semibold text-slate-300 transition hover:text-white">Soy propietario</button><button type="button" onClick={() => goTo('/login/corporativo')} className="px-3 py-2 text-sm font-semibold text-slate-300 transition hover:text-white">Iniciar sesión</button><button type="button" onClick={() => goTo('/demo')} className="rounded-xl bg-cyan-300 px-4 py-2.5 text-sm font-extrabold text-slate-950 shadow-lg shadow-cyan-400/20 transition hover:-translate-y-0.5 hover:bg-cyan-200">Solicitar una demo</button></div><button type="button" aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'} onClick={() => setMenuOpen(!menuOpen)} className="rounded-lg p-2 text-slate-300 sm:hidden">{menuOpen ? <X size={22} /> : <Menu size={22} />}</button></div>
-        {menuOpen && <div className="border-t border-white/[0.08] px-5 py-5 sm:hidden"><div className="flex flex-col gap-4 text-sm text-slate-300"><a href="#plataforma" onClick={() => setMenuOpen(false)}>Plataforma</a><a href="#problemas" onClick={() => setMenuOpen(false)}>Qué resuelve</a><a href="#planes" onClick={() => setMenuOpen(false)}>Planes</a><button type="button" onClick={() => goTo('/login/comunidad')} className="border-t border-white/10 pt-4 text-left">Soy propietario: entrar con el código de mi comunidad</button><button type="button" onClick={() => goTo('/login/corporativo')} className="text-left">Iniciar sesión (despachos)</button><button type="button" onClick={() => goTo('/demo')} className="rounded-xl bg-cyan-300 py-3 font-bold text-slate-950">Solicitar una demo</button></div></div>}
+      <header className={`sticky top-0 z-40 border-b border-white/10 bg-[#0b1a33]/95 backdrop-blur-xl`}>
+        <div className="mx-auto flex h-[4.5rem] max-w-7xl items-center justify-between px-5 sm:px-8">
+          <Link to="/" aria-label="VotifAI inicio"><Brand className="h-12" /></Link>
+          <nav className="hidden items-center gap-8 text-sm font-medium text-slate-300 lg:flex">
+            <a href="#junta" className="transition hover:text-white">La junta</a>
+            <a href="#lph" className="transition hover:text-white">LPH</a>
+            <a href="#gestion" className="transition hover:text-white">Gestión</a>
+            <a href="#planes" className="transition hover:text-white">Planes</a>
+            <a href="#preguntas" className="transition hover:text-white">Preguntas</a>
+          </nav>
+          <div className="hidden items-center gap-2 sm:flex">
+            <button type="button" onClick={() => goTo('/login/comunidad')} className="px-3 py-2 text-sm font-semibold text-slate-300 transition hover:text-white">Soy propietario</button>
+            <button type="button" onClick={() => goTo('/login/corporativo')} className="px-3 py-2 text-sm font-semibold text-slate-300 transition hover:text-white">Acceso despachos</button>
+            <button type="button" onClick={() => goTo('/demo')} className="ml-1 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-[#0b1a33] transition hover:bg-slate-200">Solicitar demo</button>
+          </div>
+          <button type="button" aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'} onClick={() => setMenuOpen(!menuOpen)} className="rounded-lg p-2 text-slate-200 sm:hidden">{menuOpen ? <X size={22} /> : <Menu size={22} />}</button>
+        </div>
+        {menuOpen && (
+          <div className="border-t border-white/10 px-5 py-5 sm:hidden">
+            <div className="flex flex-col gap-4 text-sm text-slate-200">
+              <a href="#junta" onClick={() => setMenuOpen(false)}>La junta</a>
+              <a href="#lph" onClick={() => setMenuOpen(false)}>LPH</a>
+              <a href="#gestion" onClick={() => setMenuOpen(false)}>Gestión</a>
+              <a href="#planes" onClick={() => setMenuOpen(false)}>Planes</a>
+              <button type="button" onClick={() => goTo('/login/comunidad')} className="border-t border-white/10 pt-4 text-left">Soy propietario</button>
+              <button type="button" onClick={() => goTo('/login/corporativo')} className="text-left">Acceso despachos</button>
+              <button type="button" onClick={() => goTo('/demo')} className="rounded-xl bg-white py-3 font-bold text-[#0b1a33]">Solicitar demo</button>
+            </div>
+          </div>
+        )}
       </header>
 
-      <main className="relative z-10">
-        <section id="plataforma" className="mx-auto max-w-7xl px-5 pb-20 pt-16 sm:px-8 sm:pt-24 lg:pb-28"><div className="grid items-center gap-14 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16"><div className="max-w-2xl"><div className="mb-7 inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/[0.07] px-3.5 py-2 text-xs font-bold text-cyan-200"><span className="h-2 w-2 animate-pulse rounded-full bg-cyan-300" /> Plataforma para administradores de fincas</div><h1 className="text-4xl font-black leading-[1.03] tracking-tight text-white sm:text-6xl lg:text-[4.55rem]">Menos gestión.<br /><span className="bg-gradient-to-r from-cyan-200 via-cyan-300 to-blue-500 bg-clip-text text-transparent">Más control</span> sobre tus comunidades.</h1><p className="mt-7 max-w-xl text-base leading-8 text-slate-400 sm:text-lg">Centraliza juntas, incidencias, cuotas, documentos y comunicación en una sola plataforma para que tu despacho avance sin perseguir información.</p><div className="mt-9 flex flex-col gap-3 sm:flex-row"><button type="button" onClick={() => goTo('/register')} className="group inline-flex items-center justify-center gap-3 rounded-xl bg-cyan-300 px-6 py-4 font-extrabold text-slate-950 shadow-xl shadow-cyan-400/20 transition hover:-translate-y-1 hover:bg-cyan-200">Empezar con VotifAI <ArrowRight size={17} className="transition group-hover:translate-x-1" /></button><a href="#plataforma" className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-6 py-4 font-bold text-white transition hover:bg-white/[0.09]"><Play size={16} className="fill-cyan-300 text-cyan-300" /> Ver cómo funciona</a></div><div className="mt-10 flex flex-wrap gap-x-6 gap-y-3 text-xs font-semibold text-slate-500"><span className="flex items-center gap-2"><Check size={14} className="text-emerald-300" /> Prueba inicial sin compromiso</span><span className="flex items-center gap-2"><Check size={14} className="text-emerald-300" /> Crece con tu cartera</span></div></div><div id="plataforma"><ProductPreview activeModule={activeModule} setActiveModule={setActiveModule} /></div></div></section>
+      <main>
+        {/* PORTADA */}
+        <section className={`${TINTA} relative overflow-hidden text-white`}>
+          <svg aria-hidden="true" className="pointer-events-none absolute bottom-0 left-0 hidden h-72 w-auto text-white/[0.035] lg:block" viewBox="0 0 400 300" fill="currentColor">
+            <rect x="20" y="60" width="110" height="240" /><rect x="140" y="20" width="130" height="280" /><rect x="280" y="100" width="100" height="200" />
+          </svg>
+          <div className="relative mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)] items-center gap-14 px-5 pb-20 pt-14 sm:px-8 sm:pt-20 lg:grid-cols-2 lg:gap-16 lg:pb-28">
+            <div>
+              <p className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/15 px-3.5 py-1.5 text-xs font-semibold text-slate-300">
+                <Building2 size={14} className="text-sky-300" /> Para administradores de fincas
+              </p>
+              <h1 className="font-display text-[2.6rem] font-semibold leading-[1.05] tracking-tight sm:text-6xl">
+                La junta de propietarios, <span className="italic text-sky-300">de la convocatoria al acta.</span>
+              </h1>
+              <p className="mt-6 max-w-xl text-base leading-8 text-slate-300 sm:text-lg">
+                VotifAI calcula el quórum y las mayorías por coeficiente aplicando la Ley de Propiedad Horizontal, recoge los votos desde el móvil o en la sala y redacta el acta mientras la junta sucede. Y lleva el resto del año: cuotas, contabilidad e incidencias de cada comunidad.
+              </p>
+              <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+                <button type="button" onClick={() => goTo('/register')} className="group inline-flex items-center justify-center gap-3 rounded-xl bg-[#1d4fd8] px-6 py-4 font-bold text-white shadow-xl shadow-black/30 transition hover:bg-[#2458e6]">
+                  Probar 15 días gratis <ArrowRight size={17} className="transition group-hover:translate-x-1" />
+                </button>
+                <button type="button" onClick={() => goTo('/demo')} className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 px-6 py-4 font-bold text-white transition hover:bg-white/10">
+                  Solicitar una demo
+                </button>
+              </div>
+              <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-xs font-medium text-slate-400">
+                <span className="flex items-center gap-2"><Check size={14} className="text-emerald-400" /> Sin tarjeta</span>
+                <span className="flex items-center gap-2"><Check size={14} className="text-emerald-400" /> Todos los módulos en todos los planes</span>
+                <span className="flex items-center gap-2"><ShieldCheck size={14} className="text-emerald-400" /> Contrato de encargo RGPD</span>
+              </div>
+            </div>
+            <ActaEnVivo />
+          </div>
+        </section>
 
-        <section id="problemas" className="border-y border-white/[0.07] bg-white/[0.018] py-20 sm:py-24"><div className="mx-auto max-w-7xl px-5 sm:px-8"><div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:items-end"><div><p className="mb-3 text-xs font-black uppercase tracking-[0.2em] text-cyan-300">Tu día a día, en orden</p><h2 className="max-w-lg text-3xl font-black tracking-tight text-white sm:text-4xl">El despacho no debería depender de diez herramientas distintas.</h2></div><p className="max-w-xl text-base leading-7 text-slate-400">Cuando cada comunidad se gestiona en un lugar distinto, las tareas se repiten y los detalles se pierden. VotifAI reúne el contexto donde lo necesitas.</p></div><div className="mt-14 grid gap-4 sm:grid-cols-3"><div className="rounded-2xl border border-white/10 bg-[#0b1527]/80 p-6"><BarChart3 className="mb-8 text-cyan-300" size={24} /><h3 className="font-bold text-white">Información dispersa</h3><p className="mt-2 text-sm leading-6 text-slate-500">Encuentra juntas, documentos, avisos y pagos desde la ficha de cada finca.</p></div><div className="rounded-2xl border border-white/10 bg-[#0b1527]/80 p-6"><Users className="mb-8 text-cyan-300" size={24} /><h3 className="font-bold text-white">Seguimiento manual</h3><p className="mt-2 text-sm leading-6 text-slate-500">Conoce qué está pendiente, quién lo lleva y cuál es el siguiente paso.</p></div><div className="rounded-2xl border border-white/10 bg-[#0b1527]/80 p-6"><Sparkles className="mb-8 text-cyan-300" size={24} /><h3 className="font-bold text-white">Trabajo repetitivo</h3><p className="mt-2 text-sm leading-6 text-slate-500">Apóyate en IA para preparar información y dedicar más tiempo a tus clientes.</p></div></div></div></section>
+        {/* EL CICLO DE LA JUNTA */}
+        <section id="junta" className="mx-auto max-w-7xl scroll-mt-20 px-5 py-20 sm:px-8 sm:py-28">
+          <Encabezado
+            kicker="Una junta, de principio a fin"
+            titulo="Todo lo que pasa en una junta, en el mismo sitio."
+            texto="Sin hojas de cálculo para sumar coeficientes ni actas redactadas de memoria dos semanas después."
+          />
+          <ol className="mt-14 grid gap-4 md:grid-cols-5">
+            {CICLO.map(({ icon: Icon, paso, texto }, i) => (
+              <li key={paso} className="relative rounded-2xl border border-slate-300/70 bg-white p-5">
+                <div className="mb-5 flex items-center justify-between">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0b1a33] text-white"><Icon size={18} /></span>
+                  <span className="font-display text-3xl font-semibold text-slate-200">{i + 1}</span>
+                </div>
+                <h3 className="font-bold text-slate-900">{paso}</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{texto}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
 
-        <section className="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-28"><div className="mx-auto max-w-2xl text-center"><p className="mb-3 text-xs font-black uppercase tracking-[0.2em] text-cyan-300">Una plataforma, varios flujos</p><h2 className="text-3xl font-black tracking-tight text-white sm:text-4xl">Todo el trabajo importante de tu despacho, conectado.</h2><p className="mt-4 leading-7 text-slate-400">Empieza por lo que más tiempo te quita y añade módulos cuando los necesites.</p></div><div className="mt-14 grid gap-4 md:grid-cols-2 lg:grid-cols-3">{MODULES.map(({ icon: Icon, title, description, color }) => <article key={title} className="group rounded-2xl border border-white/10 bg-white/[0.025] p-6 transition hover:-translate-y-1 hover:border-cyan-300/30 hover:bg-white/[0.045]"><div className={`mb-6 flex h-11 w-11 items-center justify-center rounded-xl border ${color}`}><Icon size={21} /></div><h3 className="font-bold text-white">{title}</h3><p className="mt-2 text-sm leading-6 text-slate-500">{description}</p><div className="mt-5 flex items-center gap-2 text-xs font-bold text-cyan-300 opacity-0 transition group-hover:opacity-100">Conocer módulo <ArrowRight size={13} /></div></article>)}</div></section>
+        {/* LA LPH, INCLUIDA */}
+        <section id="lph" className="scroll-mt-20 border-y border-slate-300/70 bg-[#efeadf] py-20 sm:py-28">
+          <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)] gap-12 px-5 sm:px-8 lg:grid-cols-[0.8fr_1.2fr]">
+            <div className="lg:sticky lg:top-28 lg:self-start">
+              <Encabezado
+                kicker="Ley de Propiedad Horizontal"
+                titulo="La ley ya viene aplicada."
+                texto="Las reglas que un administrador revisa a mano en cada junta, VotifAI las aplica en cada punto del orden del día. Tú decides; el cálculo no se equivoca."
+              />
+            </div>
+            <div className="grid gap-px overflow-hidden rounded-2xl border border-slate-300/70 bg-slate-300/70 sm:grid-cols-2">
+              {LPH.map(({ art, titulo, texto }) => (
+                <div key={art} className="bg-[#fbf9f4] p-6">
+                  <p className="font-display text-sm font-semibold italic text-[#1d4fd8]">{art}</p>
+                  <h3 className="mt-2 font-bold text-slate-900">{titulo}</h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">{texto}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
 
-        <section id="planes" className="border-y border-white/[0.07] bg-[#0a1221] py-20 sm:py-24"><div className="mx-auto max-w-7xl px-5 sm:px-8"><div className="grid items-center gap-12 lg:grid-cols-[0.9fr_1.1fr]"><div><p className="mb-3 text-xs font-black uppercase tracking-[0.2em] text-cyan-300">Crece a tu ritmo</p><h2 className="text-3xl font-black tracking-tight text-white sm:text-4xl">Empieza con lo esencial. Amplía cuando tu despacho lo necesite.</h2><p className="mt-5 leading-7 text-slate-400">Todos los planes incluyen todos los módulos de gestión: solo cambian la capacidad de tu cartera y la transcripción de voz. Empieza con 15 días de prueba gratis, sin tarjeta.</p><button type="button" onClick={() => goTo('/demo')} className="mt-8 inline-flex items-center gap-2 rounded-xl border border-cyan-300/30 px-5 py-3 text-sm font-bold text-cyan-200 transition hover:bg-cyan-300/10">Solicitar orientación <ArrowRight size={15} /></button></div><div className="grid gap-4 sm:grid-cols-2">{planes.map((plan) => {
-          const destacado = plan.id === 'profesional';
-          return <div key={plan.id} className={`flex flex-col rounded-2xl border p-5 ${destacado ? 'border-cyan-300/30 bg-cyan-300/[0.08] shadow-lg shadow-cyan-950/30' : 'border-white/10 bg-white/[0.04]'}`}>
-            <p className={`text-xs font-bold ${destacado ? 'text-cyan-200' : 'text-cyan-300'}`}>{plan.nombre} <span className="font-medium text-slate-500">· {LEMA_PLAN[plan.id]}</span></p>
-            <p className="mt-3 text-2xl font-black text-white">{plan.precioDesde === null ? 'A medida' : <>{plan.precioDesde} €/mes <span className="text-sm font-bold text-slate-400">+ IVA</span></>}</p>
-            <ul className="mt-4 flex-grow space-y-2 text-sm text-slate-400">{caracteristicasPlan(plan).map(({ texto, incluido }) => <li key={texto} className={`flex gap-2 ${incluido ? '' : 'text-slate-600'}`}>{incluido ? <Check size={15} className="mt-0.5 shrink-0 text-emerald-300" /> : <X size={15} className="mt-0.5 shrink-0 text-slate-600" />}{incluido ? texto : `Sin ${texto.charAt(0).toLowerCase()}${texto.slice(1)}`}</li>)}</ul>
-            <button type="button" onClick={() => goTo(plan.id === 'enterprise' ? '/demo' : `/register?plan=${plan.id}`)} className="mt-5 rounded-xl border border-cyan-300/30 px-4 py-2.5 text-sm font-bold text-cyan-200 transition hover:bg-cyan-300/10">{plan.id === 'enterprise' ? 'Hablemos' : 'Probar 15 días gratis'}</button>
-          </div>;
-        })}</div></div></div></section>
+        {/* DOS ACCESOS */}
+        <section className="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-28">
+          <Encabezado centrado kicker="Dos puertas" titulo="Una para el despacho. Otra para cada vecino." />
+          <div className="mt-14 grid gap-5 lg:grid-cols-2">
+            <div className="rounded-3xl bg-[#0b1a33] p-8 text-white">
+              <Landmark size={26} className="text-sky-300" />
+              <h3 className="mt-5 font-display text-2xl font-semibold">El despacho</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-400">Toda la cartera de comunidades en un panel.</p>
+              <ul className="mt-6 space-y-3 text-sm text-slate-200">
+                {['Convoca, dirige la junta y cierra el acta', 'Registra en sala asistencia, representaciones y votos', 'Emite cuotas, cobra y lleva la contabilidad', 'Recibos, certificados de deuda y liquidaciones en PDF'].map((t) => (
+                  <li key={t} className="flex gap-3"><Check size={16} className="mt-0.5 shrink-0 text-emerald-400" />{t}</li>
+                ))}
+              </ul>
+              <button type="button" onClick={() => goTo('/register')} className="mt-8 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-[#0b1a33] transition hover:bg-slate-200">Dar de alta mi despacho <ArrowRight size={15} /></button>
+            </div>
+            <div className="rounded-3xl border border-slate-300/70 bg-white p-8">
+              <Smartphone size={26} className="text-[#1d4fd8]" />
+              <h3 className="mt-5 font-display text-2xl font-semibold text-slate-900">El propietario</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-600">Desde el móvil, sin instalar nada.</p>
+              <ul className="mt-6 space-y-3 text-sm text-slate-700">
+                {['Vota en la junta, esté en la sala o en casa', 'Delega su voto en otro vecino, con su consentimiento', 'Consulta sus cuotas y descarga sus recibos', 'Revisa el historial de juntas y sus actas'].map((t) => (
+                  <li key={t} className="flex gap-3"><Check size={16} className="mt-0.5 shrink-0 text-emerald-600" />{t}</li>
+                ))}
+              </ul>
+              <button type="button" onClick={() => goTo('/login/comunidad')} className="mt-8 inline-flex items-center gap-2 rounded-xl border border-slate-300 px-5 py-3 text-sm font-bold text-slate-900 transition hover:bg-slate-100">Soy propietario <ArrowRight size={15} /></button>
+            </div>
+          </div>
+        </section>
 
-        <section id="preguntas" className="mx-auto max-w-3xl px-5 py-20 sm:px-8 sm:py-28"><div className="text-center"><p className="mb-3 text-xs font-black uppercase tracking-[0.2em] text-cyan-300">Preguntas frecuentes</p><h2 className="text-3xl font-black tracking-tight text-white sm:text-4xl">Antes de dar el siguiente paso</h2></div><div className="mt-12 space-y-3">{FAQS.map(([question, answer], index) => <div key={question} className="rounded-2xl border border-white/10 bg-white/[0.025] px-5"><button type="button" onClick={() => setOpenFaq(openFaq === index ? null : index)} className="flex w-full items-center justify-between gap-4 py-5 text-left font-bold text-white"><span>{question}</span><ChevronDown size={18} className={`shrink-0 text-cyan-300 transition ${openFaq === index ? 'rotate-180' : ''}`} /></button>{openFaq === index && <p className="border-t border-white/10 pb-5 pt-4 text-sm leading-6 text-slate-400">{answer}</p>}</div>)}</div></section>
+        {/* GESTIÓN DEL AÑO */}
+        <section id="gestion" className="scroll-mt-20 border-t border-slate-300/70 bg-white py-20 sm:py-28">
+          <div className="mx-auto max-w-7xl px-5 sm:px-8">
+            <Encabezado
+              kicker="Y el resto del año"
+              titulo="La gestión diaria de cada comunidad, conectada con sus juntas."
+              texto="Los morosos de la convocatoria salen de las cuotas, los privados de voto también, y cada cobro se contabiliza solo."
+            />
+            <div className="mt-14 grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
+              {GESTION.map(({ icon: Icon, titulo, texto }) => (
+                <div key={titulo} className="border-t-2 border-[#0b1a33] pt-5">
+                  <Icon size={20} className="text-[#1d4fd8]" />
+                  <h3 className="mt-4 font-bold text-slate-900">{titulo}</h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">{texto}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
 
-        <section className="px-5 pb-20 sm:px-8 sm:pb-28"><div className="mx-auto max-w-5xl overflow-hidden rounded-3xl border border-cyan-300/20 bg-gradient-to-br from-cyan-300/[0.13] via-blue-500/[0.08] to-transparent p-8 text-center sm:p-14"><p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-200">Menos tareas repetidas. Más tiempo para tu cartera.</p><h2 className="mx-auto mt-4 max-w-2xl text-3xl font-black tracking-tight text-white sm:text-5xl">Haz que tu despacho trabaje con una vista compartida.</h2><p className="mx-auto mt-5 max-w-xl leading-7 text-slate-400">Conoce VotifAI y descubre qué procesos puedes centralizar primero.</p><button type="button" onClick={() => goTo('/demo')} className="mt-8 inline-flex items-center gap-3 rounded-xl bg-cyan-300 px-6 py-4 font-extrabold text-slate-950 shadow-xl shadow-cyan-400/20 transition hover:-translate-y-1 hover:bg-cyan-200">Solicitar una demo <ArrowRight size={17} /></button></div></section>
+        {/* PLANES */}
+        <section id="planes" className={`${TINTA} scroll-mt-20 py-20 text-white sm:py-28`}>
+          <div className="mx-auto max-w-7xl px-5 sm:px-8">
+            <Encabezado
+              oscuro centrado
+              kicker="Planes"
+              titulo="Paga por el tamaño de tu cartera, no por módulos."
+              texto="Todos los planes incluyen todos los módulos. Solo cambian el número de fincas y la transcripción de voz. 15 días de prueba gratis, sin tarjeta."
+            />
+            <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {planes.map((plan) => {
+                const destacado = plan.id === 'profesional';
+                return (
+                  <div key={plan.id} className={`flex flex-col rounded-2xl p-6 ${destacado ? 'bg-[#fbf9f4] text-slate-800 ring-2 ring-sky-300' : 'border border-white/15 bg-white/[0.04]'}`}>
+                    <div className="flex items-center justify-between">
+                      <p className={`font-display text-xl font-semibold ${destacado ? 'text-slate-900' : 'text-white'}`}>{plan.nombre}</p>
+                      {destacado && <span className="rounded-full bg-[#1d4fd8] px-2.5 py-0.5 text-5xs font-bold uppercase tracking-wider text-white">Recomendado</span>}
+                    </div>
+                    <p className={`text-xs ${destacado ? 'text-slate-500' : 'text-slate-400'}`}>{LEMA_PLAN[plan.id]}</p>
+                    <p className={`mt-5 font-display text-3xl font-semibold ${destacado ? 'text-slate-900' : 'text-white'}`}>
+                      {plan.precioDesde === null ? 'A medida' : <>{plan.precioDesde} € <span className={`font-sans text-sm font-medium ${destacado ? 'text-slate-500' : 'text-slate-400'}`}>/mes + IVA</span></>}
+                    </p>
+                    <ul className={`mt-5 flex-grow space-y-2.5 text-sm ${destacado ? 'text-slate-700' : 'text-slate-300'}`}>
+                      {caracteristicasPlan(plan).map(({ texto, incluido }) => (
+                        <li key={texto} className={`flex gap-2 ${incluido ? '' : destacado ? 'text-slate-400' : 'text-slate-500'}`}>
+                          {incluido ? <Check size={15} className={`mt-0.5 shrink-0 ${destacado ? 'text-emerald-600' : 'text-emerald-400'}`} /> : <X size={15} className="mt-0.5 shrink-0" />}
+                          {incluido ? texto : `Sin ${texto.charAt(0).toLowerCase()}${texto.slice(1)}`}
+                        </li>
+                      ))}
+                    </ul>
+                    <button
+                      type="button"
+                      onClick={() => goTo(plan.id === 'enterprise' ? '/demo' : `/register?plan=${plan.id}`)}
+                      className={`mt-6 rounded-xl px-4 py-3 text-sm font-bold transition ${destacado ? 'bg-[#1d4fd8] text-white hover:bg-[#1a43b8]' : 'border border-white/25 text-white hover:bg-white/10'}`}
+                    >
+                      {plan.id === 'enterprise' ? 'Hablemos' : 'Probar 15 días gratis'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* PREGUNTAS */}
+        <section id="preguntas" className="mx-auto max-w-3xl scroll-mt-20 px-5 py-20 sm:px-8 sm:py-28">
+          <Encabezado centrado kicker="Preguntas frecuentes" titulo="Lo que suelen preguntarnos los administradores" />
+          <div className="mt-12 divide-y divide-slate-300/70 border-y border-slate-300/70">
+            {FAQS.map(([question, answer], index) => (
+              <div key={question}>
+                <button type="button" onClick={() => setOpenFaq(openFaq === index ? null : index)} className="flex w-full items-center justify-between gap-4 py-5 text-left font-semibold text-slate-900">
+                  <span>{question}</span>
+                  <ChevronDown size={18} className={`shrink-0 text-[#1d4fd8] transition ${openFaq === index ? 'rotate-180' : ''}`} />
+                </button>
+                {openFaq === index && <p className="pb-5 text-sm leading-7 text-slate-600">{answer}</p>}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* LLAMADA FINAL */}
+        <section className="px-5 pb-20 sm:px-8 sm:pb-28">
+          <div className="relative mx-auto max-w-5xl overflow-hidden rounded-3xl bg-[#0b1a33] p-8 text-center text-white sm:p-14">
+            <Receipt aria-hidden="true" size={220} className="pointer-events-none absolute -right-10 -top-10 text-white/[0.04]" />
+            <h2 className="relative mx-auto max-w-2xl font-display text-3xl font-semibold tracking-tight sm:text-5xl">Tu próxima junta, con el acta hecha al terminar.</h2>
+            <p className="relative mx-auto mt-5 max-w-xl leading-7 text-slate-400">Da de alta tu despacho y tu primera comunidad en unos minutos. Si prefieres verlo antes, te lo enseñamos.</p>
+            <div className="relative mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+              <button type="button" onClick={() => goTo('/register')} className="inline-flex items-center justify-center gap-3 rounded-xl bg-[#1d4fd8] px-6 py-4 font-bold text-white transition hover:bg-[#2458e6]">Probar 15 días gratis <ArrowRight size={17} /></button>
+              <button type="button" onClick={() => goTo('/demo')} className="inline-flex items-center justify-center rounded-xl border border-white/20 px-6 py-4 font-bold text-white transition hover:bg-white/10">Solicitar una demo</button>
+            </div>
+          </div>
+        </section>
       </main>
 
-      <footer className="border-t border-white/[0.08] bg-[#050a12] py-10"><div className="mx-auto flex max-w-7xl flex-col gap-7 px-5 text-sm text-slate-500 sm:px-8 lg:flex-row lg:items-center lg:justify-between"><div><Brand /><p className="mt-4 max-w-xs text-xs leading-5 text-slate-600">Gobernanza y gestión inteligente para despachos de administración de fincas.</p></div><div className="flex flex-wrap gap-x-6 gap-y-3 text-xs"><Link to="/legal/aviso-legal" className="transition hover:text-white">Aviso legal</Link><Link to="/legal/privacidad" className="transition hover:text-white">Privacidad</Link><Link to="/legal/terminos" className="transition hover:text-white">Términos</Link><Link to="/legal/encargo-tratamiento" className="transition hover:text-white">Encargo del tratamiento</Link><button type="button" onClick={() => goTo('/login/corporativo')} className="transition hover:text-white">Acceso administradores</button><button type="button" onClick={() => goTo('/login/comunidad')} className="transition hover:text-white">Acceso propietarios</button></div><p className="text-xs text-slate-600">© {new Date().getFullYear()} VotifAI</p></div></footer>
+      <footer className={`${TINTA} py-10`}>
+        <div className="mx-auto flex max-w-7xl flex-col gap-7 px-5 text-sm text-slate-400 sm:px-8 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <Brand />
+            <p className="mt-4 max-w-xs text-xs leading-5 text-slate-500">Juntas y gestión de comunidades de propietarios para despachos de administración de fincas.</p>
+          </div>
+          <div className="flex flex-wrap gap-x-6 gap-y-3 text-xs">
+            <Link to="/legal/aviso-legal" className="transition hover:text-white">Aviso legal</Link>
+            <Link to="/legal/privacidad" className="transition hover:text-white">Privacidad</Link>
+            <Link to="/legal/terminos" className="transition hover:text-white">Términos</Link>
+            <Link to="/legal/encargo-tratamiento" className="transition hover:text-white">Encargo del tratamiento</Link>
+            <button type="button" onClick={() => goTo('/login/corporativo')} className="transition hover:text-white">Acceso despachos</button>
+            <button type="button" onClick={() => goTo('/login/comunidad')} className="transition hover:text-white">Acceso propietarios</button>
+          </div>
+          <p className="text-xs text-slate-500">© {new Date().getFullYear()} VotifAI · un producto de NexuraIA</p>
+        </div>
+      </footer>
       <DemoModal open={demoOpen} onClose={() => setDemoOpen(false)} />
     </div>
   );
