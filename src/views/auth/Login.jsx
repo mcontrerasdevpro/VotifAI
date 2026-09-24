@@ -194,8 +194,21 @@ export default function Login() {
             type="submit" disabled={cargando}
             className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider transition-all mt-6 shadow-lg shadow-blue-600/10 active:scale-98 disabled:opacity-50"
           >
-            {cargando ? 'Interrogando a Neon Cloud...' : 'Verificar Identidad y Acceder'}
+            {cargando ? 'Comprobando...' : 'Verificar Identidad y Acceder'}
           </button>
+
+          {/* Cada perfil tiene su puerta: el propietario entra con el código de su
+              comunidad; el despacho, con CIF, email y contraseña. */}
+          <p className="text-center text-4xs text-slate-500 mt-5">
+            {esComunidad ? '¿Eres administrador de fincas? ' : '¿Eres propietario de una comunidad? '}
+            <button
+              type="button"
+              onClick={() => navigate(esComunidad ? '/login/corporativo' : '/login/comunidad')}
+              className="font-black text-blue-400 hover:underline"
+            >
+              {esComunidad ? 'Acceso de despachos' : 'Entra con el código de tu comunidad'}
+            </button>
+          </p>
         </form>
       </div>
     </div>
