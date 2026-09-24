@@ -52,7 +52,7 @@ const demoLimiter = rateLimit({
   message: { error: 'Has alcanzado el límite de solicitudes de demo por ahora.' }
 });
 
-// Render (y Cloudflare delante) terminan el TLS antes de llegar a Express, así
+// El proxy de EasyPanel termina el TLS antes de llegar a Express, así
 // que sin esto req.protocol siempre da 'http' aunque el navegador esté en
 // https — y la detección de same-origin de más abajo compararía mal.
 app.set('trust proxy', 1);
@@ -80,8 +80,8 @@ const RANGO_LAN_DEV = /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1
 // Además de la whitelist estática, se permite siempre el origen que
 // coincide con el propio host de la petición (mismo dominio que sirve el
 // build) — así el registro/login desde la SPA en producción funciona sin
-// tener que mantener CORS_ORIGIN sincronizado con el dominio de Render,
-// Vercel o el que sea, y sin abrir la API a orígenes de verdad externos.
+// tener que mantener CORS_ORIGIN sincronizado con el dominio donde
+// se despliegue, y sin abrir la API a orígenes de verdad externos.
 const corsOptionsDelegate = (req, callback) => {
   const origin = req.header('Origin');
   const origenPropio = `${req.protocol}://${req.get('host')}`;

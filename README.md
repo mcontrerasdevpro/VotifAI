@@ -81,18 +81,19 @@ pnpm install
 pnpm run dev --force
 ```
 
-## 🚀 Despliegue en Render
+## 🚀 Despliegue (EasyPanel)
 
-El repositorio contiene `render.yaml` para que Render instale las dependencias
-del frontend y del backend antes de compilar. Si el servicio ya existe y no usa
-Blueprints, configura manualmente:
+Producción corre en un VPS con EasyPanel, construida con el `Dockerfile` del
+repositorio (servicio `votifai-api`, base de datos `votifai-db`), en
+`https://votifai.nexuraia.com`. Tras cada despliegue con migraciones nuevas,
+ejecuta en la consola del servicio:
 
-```text
-Build Command: pnpm install --frozen-lockfile && pnpm install --dir server --frozen-lockfile && pnpm build
-Start Command: node server/index.js
+```bash
+cd /app/server && pnpm run migrate
 ```
 
-En Render configura como mínimo `DATABASE_URL`, `JWT_SECRET` y `CORS_ORIGIN`.
+Las variables de entorno necesarias están en `.env.example`. Para comprobar
+que no falta ninguna: `GET /api/estado-sistema?token=ADMIN_TOKEN`.
 
 ---
 
