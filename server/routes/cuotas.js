@@ -486,14 +486,17 @@ router.post('/cuotas/:id/anular', requireAuth, async (req, res) => {
     if (c.estado === 'anulada') return res.status(409).json({ error: 'Esta cuota ya estaba anulada.' });
     if (c.cobros > 0) return res.status(409).json({ error: 'Esta cuota tiene cobros. Anula antes los cobros si no proceden.' });
 
+    // $1 es la cuota o la emisión entera. PostgreSQL rechaza un parámetro
+    // que la consulta no usa, así que no se pasan los dos a la vez.
+    const porEmision = todaLaEmision && c.emision_id;
     const anuladas = await withTransaction(async (tx) => {
       const r = await tx(
         `UPDATE cuotas SET estado = 'anulada', anulada_en = now(), motivo_anulacion = $2
          WHERE estado <> 'anulada'
            AND NOT EXISTS (SELECT 1 FROM pagos WHERE cuota_id = cuotas.id)
-           AND ${todaLaEmision && c.emision_id ? 'emision_id = $3::uuid' : 'id = $1::uuid'}
+           AND ${porEmision ? 'emision_id' : 'id'} = $1::uuid
          RETURNING propietario_id`,
-        todaLaEmision && c.emision_id ? [id, motivo, c.emision_id] : [id, motivo]
+        [porEmision ? c.emision_id : id, motivo]
       );
       return r.rows;
     });

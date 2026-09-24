@@ -41,7 +41,7 @@ const fakeQuery = async (text, params) => {
   if (text.startsWith('DELETE FROM cuotas')) { escrituras.push({ tabla: 'cuota_borrada' }); return { rows: [], rowCount: 1 }; }
   if (text.startsWith('SELECT id, emision_id, estado, (SELECT COUNT(*) FROM pagos')) return { rows: [{ id: CUOTA, emision_id: 'emision-1', estado: 'pendiente', cobros: cobrosDeLaCuota }] };
   if (text.startsWith("UPDATE cuotas SET estado = 'anulada'")) {
-    escrituras.push({ tabla: 'anulacion', porEmision: text.includes('emision_id = $3'), motivo: params[1] });
+    escrituras.push({ tabla: 'anulacion', porEmision: text.includes('emision_id = $1'), objetivo: params[0], motivo: params[1], parametros: params.length });
     return { rows: [{ propietario_id: 'p1' }, { propietario_id: 'p2' }] };
   }
   if (text.startsWith('SELECT COUNT(*)::int AS total FROM cuotas WHERE emision_id')) return { rows: [{ total: 1 }] };
@@ -132,6 +132,9 @@ test('anular exige motivo y puede anular toda la emisión (sin tocar las que tie
   const data = await r.json();
   assert.equal(r.status, 200);
   assert.equal(escrituras[0].porEmision, true);
+  // Solo los parámetros que usa la consulta: PostgreSQL rechaza los sobrantes.
+  assert.equal(escrituras[0].objetivo, 'emision-1');
+  assert.equal(escrituras[0].parametros, 2);
   assert.equal(escrituras[0].motivo, 'Emisión duplicada');
   assert.match(data.mensaje, /tienen cobros/);
 });
