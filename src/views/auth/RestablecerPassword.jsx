@@ -10,6 +10,8 @@ export default function RestablecerPassword() {
   const navigate = useNavigate();
   const esComunidad = perfil === 'comunidad';
   const token = searchParams.get('token') || '';
+  // alta=1: el vecino crea su contraseña por primera vez (enlace de activación)
+  const esAlta = esComunidad && searchParams.get('alta') === '1';
 
   const [password, setPassword] = useState('');
   const [confirmar, setConfirmar] = useState('');
@@ -61,7 +63,7 @@ export default function RestablecerPassword() {
           <div className="flex justify-center items-center gap-2 mb-1">
             <Brand className="h-8" />
           </div>
-          <p className="text-xs text-slate-400 mt-2">Crear una nueva contraseña</p>
+          <p className="text-xs text-slate-400 mt-2">{esAlta ? 'Activa tu cuenta de vecino' : 'Crear una nueva contraseña'}</p>
         </div>
 
         <div className="p-6">
@@ -70,7 +72,7 @@ export default function RestablecerPassword() {
           ) : exito ? (
             <div className="text-center space-y-3 py-4">
               <CheckCircle2 size={32} className="text-emerald-400 mx-auto" />
-              <p className="text-xs text-slate-300">Contraseña actualizada correctamente.</p>
+              <p className="text-xs text-slate-300">{esAlta ? 'Cuenta activada. Ya puedes entrar con tu correo y tu contraseña.' : 'Contraseña actualizada correctamente.'}</p>
               <button
                 onClick={() => navigate(`/login/${perfil}`)}
                 className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl text-xs uppercase tracking-wider transition-all mt-2"
@@ -86,7 +88,7 @@ export default function RestablecerPassword() {
                 </div>
               )}
               <Field
-                label="Nueva Contraseña" icon={Lock}
+                label={esAlta ? 'Tu contraseña' : 'Nueva Contraseña'} icon={Lock}
                 type="password" required minLength={8} placeholder="Mínimo 8 caracteres" value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
@@ -99,7 +101,7 @@ export default function RestablecerPassword() {
                 type="submit" disabled={cargando}
                 className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-lg shadow-blue-600/10 active:scale-98 disabled:opacity-50"
               >
-                {cargando ? 'Guardando...' : 'Restablecer Contraseña'}
+                {cargando ? 'Guardando...' : esAlta ? 'Crear contraseña' : 'Restablecer Contraseña'}
               </button>
             </form>
           )}

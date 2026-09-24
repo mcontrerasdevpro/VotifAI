@@ -17,8 +17,11 @@ export default function Login() {
 
   const [codigoJunta, setCodigoJunta] = useState('');
   // El propietario que ya tiene cuenta entra con su email y contraseña, sin
-  // código ni junta convocada; el código solo hace falta la primera vez.
-  const [modoVecino, setModoVecino] = useState('cuenta'); // 'cuenta' | 'codigo'
+  // código ni junta convocada. La primera vez recibe por email un enlace
+  // para crear la contraseña (con el email que figura en el censo) o, si su
+  // administrador no tiene su email, usa el código de la comunidad.
+  const [modoVecino, setModoVecino] = useState('cuenta'); // 'cuenta' | 'alta' | 'codigo'
+  const [enlaceEnviado, setEnlaceEnviado] = useState('');
   const [emailVecino, setEmailVecino] = useState('');
   const [passwordVecino, setPasswordVecino] = useState('');
 
@@ -60,6 +63,25 @@ export default function Login() {
         setErrorMensaje('No se pudo establecer comunicación con el servidor central de VotifAI.');
         setCargando(false);
       }
+    } else if (esComunidad && modoVecino === 'alta') {
+      setCargando(true);
+      try {
+        const respuesta = await fetch('/api/vecinos/activar-cuenta', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: emailVecino })
+        });
+        const resultado = await respuesta.json();
+        if (!respuesta.ok) {
+          setErrorMensaje(resultado.error || 'No se pudo enviar el enlace.');
+        } else {
+          setEnlaceEnviado(resultado.mensaje);
+        }
+      } catch (error) {
+        console.error('Error al solicitar la activación de cuenta:', error);
+        setErrorMensaje('No se pudo establecer comunicación con el servidor central de VotifAI.');
+      }
+      setCargando(false);
     } else if (esComunidad) {
       setCargando(true);
       try {
@@ -184,9 +206,9 @@ export default function Login() {
                la contraseña vive en /asistencia) */
             <div className="space-y-4">
               <div className="flex gap-2 bg-slate-900 p-1 rounded-xl border border-slate-800">
-                {[['cuenta', 'Ya tengo cuenta'], ['codigo', 'Primera vez']].map(([id, texto]) => (
-                  <button key={id} type="button" onClick={() => { setModoVecino(id); setErrorMensaje(''); }}
-                    className={`flex-1 py-2.5 rounded-lg text-4xs font-black uppercase tracking-widest transition-all ${modoVecino === id ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-300'}`}>
+                {[['cuenta', 'Ya tengo cuenta'], ['alta', 'Primera vez']].map(([id, texto]) => (
+                  <button key={id} type="button" onClick={() => { setModoVecino(id); setErrorMensaje(''); setEnlaceEnviado(''); }}
+                    className={`flex-1 py-2.5 rounded-lg text-4xs font-black uppercase tracking-widest transition-all ${modoVecino === id || (id === 'alta' && modoVecino === 'codigo') ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-300'}`}>
                     {texto}
                   </button>
                 ))}
@@ -210,6 +232,30 @@ export default function Login() {
                     </button>
                   </div>
                 </>
+              ) : modoVecino === 'alta' ? (
+                enlaceEnviado ? (
+                  <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-3xs text-emerald-300 leading-relaxed space-y-2">
+                    <p className="font-bold">{enlaceEnviado}</p>
+                    <p className="text-slate-400">Revisa también la carpeta de spam. El enlace caduca en 24 horas.</p>
+                  </div>
+                ) : (
+                <>
+                  <Field
+                    label="El correo que diste a tu administrador" icon={Mail}
+                    type="email" required placeholder="tu@correo.com" value={emailVecino}
+                    onChange={(e) => setEmailVecino(e.target.value)}
+                  />
+                  <p className="text-4xs text-slate-500 leading-relaxed">
+                    Si figura en el censo de tu comunidad, te enviaremos un enlace para crear tu contraseña.
+                  </p>
+                  <p className="text-4xs text-slate-500 leading-relaxed">
+                    ¿Tu administrador no tiene tu correo?{' '}
+                    <button type="button" onClick={() => { setModoVecino('codigo'); setErrorMensaje(''); }} className="font-black text-blue-400 hover:underline">
+                      Usa el código de tu comunidad
+                    </button>
+                  </p>
+                </>
+                )
               ) : (
               <>
               <Field
@@ -219,7 +265,12 @@ export default function Login() {
                 inputClassName="font-mono tracking-widest uppercase"
               />
               <p className="text-4xs text-slate-500 leading-relaxed">
-                Este código te lo facilita el administrador de tu comunidad. Solo lo necesitas la primera vez, para identificar tu vivienda y crear tu cuenta de vecino.
+                Este código te lo facilita el administrador de tu comunidad. Con él identificarás tu vivienda y crearás tu cuenta de vecino.
+              </p>
+              <p className="text-4xs text-slate-500 leading-relaxed">
+                <button type="button" onClick={() => { setModoVecino('alta'); setErrorMensaje(''); }} className="font-black text-blue-400 hover:underline">
+                  Prefiero recibir un enlace en mi correo
+                </button>
               </p>
               </>
               )}
@@ -257,12 +308,14 @@ export default function Login() {
             </div>
           )}
 
+          {!(esComunidad && modoVecino === 'alta' && enlaceEnviado) && (
           <button
             type="submit" disabled={cargando}
             className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider transition-all mt-6 shadow-lg shadow-blue-600/10 active:scale-98 disabled:opacity-50"
           >
-            {cargando ? 'Comprobando...' : esComunidad && modoVecino === 'codigo' ? 'Continuar' : 'Entrar'}
+            {cargando ? 'Comprobando...' : esComunidad && modoVecino === 'alta' ? 'Enviarme el enlace' : esComunidad && modoVecino === 'codigo' ? 'Continuar' : 'Entrar'}
           </button>
+          )}
 
           {/* Cada perfil tiene su puerta: el propietario entra con el código de su
               comunidad; el despacho, con CIF, email y contraseña. */}

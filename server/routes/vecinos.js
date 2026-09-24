@@ -182,6 +182,52 @@ router.post('/vecinos/olvide-password', async (req, res) => {
   }
 });
 
+// Alta sin código: el propietario escribe el email que dio a su
+// administrador (el que figura en el censo) y recibe un enlace para crear
+// su contraseña. Recibir el email demuestra que el correo es suyo, así que
+// no hace falta el código de la comunidad. Si ya tenía cuenta, el enlace
+// sirve para restablecer la contraseña. Respuesta siempre genérica para no
+// revelar qué correos están en un censo.
+router.post('/vecinos/activar-cuenta', async (req, res) => {
+  const email = String(req.body.email || '').trim().toLowerCase();
+
+  const respuestaGenerica = { success: true, mensaje: 'Si ese correo figura en el censo de tu comunidad, recibirás un enlace para crear tu contraseña.' };
+  if (!email) return res.status(200).json(respuestaGenerica);
+
+  try {
+    const resultado = await query(
+      `SELECT p.id, p.nombre_completo, p.propiedad_detalle, (p.password_hash IS NOT NULL) AS tiene_cuenta, e.nombre AS finca
+       FROM propietarios p JOIN entities e ON e.id = p.entity_id
+       WHERE LOWER(p.email) = $1`,
+      [email]
+    );
+    if (resultado.rows.length === 0) return res.status(200).json(respuestaGenerica);
+
+    const vecino = resultado.rows[0];
+    const token = crypto.randomBytes(32).toString('hex');
+    await query(
+      `UPDATE propietarios SET reset_token = $1, reset_token_expira = NOW() + INTERVAL '24 hours' WHERE id = $2`,
+      [token, vecino.id]
+    );
+
+    const enlace = `${allowedOrigins[0]}/restablecer-password/comunidad?token=${token}${vecino.tiene_cuenta ? '' : '&alta=1'}`;
+    const cuerpo = vecino.tiene_cuenta
+      ? `Ya tienes una cuenta de vecino en VotifAI para ${vecino.finca} (${vecino.propiedad_detalle}). Si no recuerdas tu contraseña, puedes crear una nueva con este enlace (caduca en 24 horas): ${enlace}`
+      : `Para activar tu cuenta de vecino en VotifAI de ${vecino.finca} (${vecino.propiedad_detalle}), crea tu contraseña con este enlace (caduca en 24 horas): ${enlace}\n\nDesde tu cuenta podrás votar en las juntas, delegar tu voto y consultar tus cuotas y el historial de juntas.`;
+    await notificar({
+      tipo: 'activar_cuenta_vecino',
+      finca: { nombre: vecino.finca },
+      mensaje: { titulo: vecino.tiene_cuenta ? 'Tu cuenta de VotifAI' : 'Activa tu cuenta de vecino en VotifAI', cuerpo },
+      destinatarios: [{ nombre: vecino.nombre_completo, propiedad: vecino.propiedad_detalle, email, canal_preferido: 'email' }]
+    });
+
+    res.status(200).json(respuestaGenerica);
+  } catch (err) {
+    console.error('Error al solicitar la activación de cuenta de vecino:', err.message);
+    res.status(200).json(respuestaGenerica);
+  }
+});
+
 router.post('/vecinos/restablecer-password', async (req, res) => {
   const { token, password } = req.body;
   if (!token || !password) {
