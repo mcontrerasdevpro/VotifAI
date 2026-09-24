@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useVotifaiStore } from '../../store.jsx';
 import { ArrowLeft, KeyRound, Building, Mail, Lock, AlertCircle } from 'lucide-react';
@@ -16,6 +16,20 @@ export default function Login() {
   const [errorMensaje, setErrorMensaje] = useState('');
 
   const [codigoJunta, setCodigoJunta] = useState('');
+  // El propietario que ya tiene cuenta entra con su email y contraseña, sin
+  // código ni junta convocada; el código solo hace falta la primera vez.
+  const [modoVecino, setModoVecino] = useState('cuenta'); // 'cuenta' | 'codigo'
+  const [emailVecino, setEmailVecino] = useState('');
+  const [passwordVecino, setPasswordVecino] = useState('');
+
+  // Si ya hay una sesión de vecino abierta, directo a su comunidad.
+  useEffect(() => {
+    if (!esComunidad) return;
+    fetch('/api/vecinos/sesion', { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((r) => { if (r?.vecino?.entity_id) navigate(`/asistencia/${r.vecino.entity_id}`, { replace: true }); })
+      .catch(() => {});
+  }, [esComunidad, navigate]);
 
   const [cifDespacho, setCifDespacho] = useState('');
   const [emailAdmin, setEmailAdmin] = useState('');
@@ -25,7 +39,28 @@ export default function Login() {
     e.preventDefault();
     setErrorMensaje('');
 
-    if (esComunidad) {
+    if (esComunidad && modoVecino === 'cuenta') {
+      setCargando(true);
+      try {
+        const respuesta = await fetch('/api/vecinos/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ email: emailVecino, password: passwordVecino })
+        });
+        const resultado = await respuesta.json();
+        if (!respuesta.ok) {
+          setErrorMensaje(resultado.error || 'Credenciales incorrectas.');
+          setCargando(false);
+          return;
+        }
+        navigate(`/asistencia/${resultado.vecino.entity_id}`);
+      } catch (error) {
+        console.error('Error al iniciar sesión de vecino:', error);
+        setErrorMensaje('No se pudo establecer comunicación con el servidor central de VotifAI.');
+        setCargando(false);
+      }
+    } else if (esComunidad) {
       setCargando(true);
       try {
         const respuesta = await fetch('/api/vecinos/resolver-codigo', {
@@ -144,9 +179,39 @@ export default function Login() {
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
 
           {esComunidad ? (
-            /* FORMULARIO VECINAL: solo el código que reparte el administrador — la
-               identificación real (elegirte del censo + contraseña) vive en /asistencia */
+            /* FORMULARIO VECINAL: con cuenta, email + contraseña; la primera vez,
+               el código que reparte el administrador (elegirte del censo y crear
+               la contraseña vive en /asistencia) */
             <div className="space-y-4">
+              <div className="flex gap-2 bg-slate-900 p-1 rounded-xl border border-slate-800">
+                {[['cuenta', 'Ya tengo cuenta'], ['codigo', 'Primera vez']].map(([id, texto]) => (
+                  <button key={id} type="button" onClick={() => { setModoVecino(id); setErrorMensaje(''); }}
+                    className={`flex-1 py-2.5 rounded-lg text-4xs font-black uppercase tracking-widest transition-all ${modoVecino === id ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-300'}`}>
+                    {texto}
+                  </button>
+                ))}
+              </div>
+              {modoVecino === 'cuenta' ? (
+                <>
+                  <Field
+                    label="Tu correo" icon={Mail}
+                    type="email" required placeholder="tu@correo.com" value={emailVecino}
+                    onChange={(e) => setEmailVecino(e.target.value)}
+                  />
+                  <Field
+                    label="Tu contraseña" icon={Lock}
+                    type="password" required placeholder="••••••••" value={passwordVecino}
+                    onChange={(e) => setPasswordVecino(e.target.value)}
+                  />
+                  <div className="text-right">
+                    <button type="button" onClick={() => navigate('/olvide-password/comunidad')}
+                      className="text-4xs text-slate-500 hover:text-blue-400 font-bold uppercase tracking-wider">
+                      ¿Olvidaste tu contraseña?
+                    </button>
+                  </div>
+                </>
+              ) : (
+              <>
               <Field
                 label="Código de Acceso de tu Comunidad" icon={KeyRound}
                 type="text" required placeholder="Ej: VAI-7721-M" value={codigoJunta}
@@ -154,8 +219,10 @@ export default function Login() {
                 inputClassName="font-mono tracking-widest uppercase"
               />
               <p className="text-4xs text-slate-500 leading-relaxed">
-                Este código te lo facilita el administrador de tu comunidad. Con él identificarás tu vivienda y crearás (o iniciarás) tu cuenta de vecino.
+                Este código te lo facilita el administrador de tu comunidad. Solo lo necesitas la primera vez, para identificar tu vivienda y crear tu cuenta de vecino.
               </p>
+              </>
+              )}
             </div>
           ) : (
             /* FORMULARIO DE ADMINISTRADOR DE FINCAS CONECTADO A NEON */
@@ -194,7 +261,7 @@ export default function Login() {
             type="submit" disabled={cargando}
             className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider transition-all mt-6 shadow-lg shadow-blue-600/10 active:scale-98 disabled:opacity-50"
           >
-            {cargando ? 'Comprobando...' : 'Verificar Identidad y Acceder'}
+            {cargando ? 'Comprobando...' : esComunidad && modoVecino === 'codigo' ? 'Continuar' : 'Entrar'}
           </button>
 
           {/* Cada perfil tiene su puerta: el propietario entra con el código de su
@@ -206,7 +273,7 @@ export default function Login() {
               onClick={() => navigate(esComunidad ? '/login/corporativo' : '/login/comunidad')}
               className="font-black text-blue-400 hover:underline"
             >
-              {esComunidad ? 'Acceso de despachos' : 'Entra con el código de tu comunidad'}
+              {esComunidad ? 'Acceso de despachos' : 'Acceso de propietarios'}
             </button>
           </p>
         </form>
