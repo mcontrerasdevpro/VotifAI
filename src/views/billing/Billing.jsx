@@ -106,7 +106,7 @@ export default function Billing() {
           // tiene que poder contratar igualmente.
           const actual = estado?.plan === plan.id && estado?.suscripcionPagada;
           return <article key={plan.id} className={`flex flex-col rounded-2xl border p-5 ${actual ? 'border-cyan-300/40 bg-cyan-300/[0.08]' : 'border-white/10 bg-white/[0.03]'}`}>
-            <div className="flex items-center justify-between"><p className="text-xs font-black uppercase tracking-wider text-cyan-300">{plan.nombre}</p>{actual && <span className="rounded-full bg-cyan-300/15 px-2 py-1 text-[10px] font-bold text-cyan-200">Actual</span>}</div>
+            <div className="flex items-center justify-between"><p className="text-xs font-black uppercase tracking-wider text-cyan-300">{plan.nombre}</p>{actual && <span className="rounded-full bg-cyan-300/15 px-2 py-1 text-4xs font-bold text-cyan-200">Actual</span>}</div>
             <p className="mt-4 text-2xl font-black text-white">{plan.precioDesde === null ? 'A medida' : <>{plan.precioDesde} €/mes <span className="text-sm font-bold text-slate-400">+ IVA</span></>}</p>
             <p className="mt-5 text-xl font-black text-white">{LEMA_PLAN[plan.id]}</p>
             <ul className="mt-5 flex-grow space-y-3 text-sm text-slate-400">{caracteristicasPlan(plan).map(({ texto, incluido }) => <li key={texto} className={`flex gap-2 ${incluido ? '' : 'text-slate-600'}`}>{incluido ? <Check size={15} className="mt-0.5 shrink-0 text-emerald-300" /> : <X size={15} className="mt-0.5 shrink-0 text-slate-600" />}{incluido ? texto : `Sin ${texto.charAt(0).toLowerCase()}${texto.slice(1)}`}</li>)}</ul>

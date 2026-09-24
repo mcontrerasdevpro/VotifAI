@@ -13,14 +13,21 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
 
-  --text-2xs: 0.6875rem;
-  --text-2xs--line-height: 1rem;
-  --text-3xs: 0.625rem;
-  --text-3xs--line-height: 0.875rem;
-  --text-4xs: 0.5625rem;
-  --text-4xs--line-height: 0.75rem;
-  --text-5xs: 0.5rem;
-  --text-5xs--line-height: 0.75rem;
+  /*
+   * Tamaños mínimos legibles: antes 5xs=8px, 4xs=9px, 3xs=10px y más de 400
+   * textos quedaban por debajo de 11px (difícil de leer para buena parte de
+   * administradores y vecinos). Subir o bajar toda la escala se hace aquí.
+   */
+  --text-xs: 0.8125rem;          /* 13px (Tailwind: 12px) */
+  --text-xs--line-height: 1.125rem;
+  --text-2xs: 0.78125rem;        /* 12.5px */
+  --text-2xs--line-height: 1.125rem;
+  --text-3xs: 0.75rem;           /* 12px */
+  --text-3xs--line-height: 1.05rem;
+  --text-4xs: 0.6875rem;         /* 11px */
+  --text-4xs--line-height: 0.95rem;
+  --text-5xs: 0.625rem;          /* 10px */
+  --text-5xs--line-height: 0.875rem;
 
   /*
    * Acento neutro para el gestor de comunidad (incidencias, cuotas,

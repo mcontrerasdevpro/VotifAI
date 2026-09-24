@@ -228,20 +228,20 @@ export default function ResumenFinca() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 shrink-0">
           <Card>
-            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Hash size={12} /> CIF</span>
+            <span className="text-5xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Hash size={12} /> CIF</span>
             <p className="text-sm font-mono font-bold text-slate-200 mt-1 uppercase">{entidad?.cif || '—'}</p>
           </Card>
           <Card>
-            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Users size={12} /> Viviendas</span>
+            <span className="text-5xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Users size={12} /> Viviendas</span>
             <p className="text-sm font-black text-blue-400 mt-1">{numPropietarios ?? '—'}</p>
           </Card>
           <Card>
-            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><MapPin size={12} /> Dirección</span>
+            <span className="text-5xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><MapPin size={12} /> Dirección</span>
             <p className="text-sm font-medium text-slate-200 mt-1 truncate">{entidad?.direccion || '—'}</p>
           </Card>
           <Card className="hover:border-blue-500/30 transition-colors">
             <button type="button" onClick={copiarCodigoAcceso} className="w-full text-left" disabled={!entidad?.codigo_acceso}>
-              <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><KeyRound size={12} /> Código de Acceso Vecinos</span>
+              <span className="text-5xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><KeyRound size={12} /> Código de Acceso Vecinos</span>
               <p className="text-sm font-mono font-black text-blue-400 mt-1 flex items-center gap-1.5">
                 {entidad?.codigo_acceso || '—'}
                 {codigoCopiado ? <Check size={13} className="text-emerald-400" /> : null}

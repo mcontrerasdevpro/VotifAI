@@ -66,18 +66,18 @@ export default function FondoReserva({ entidadId }) {
     <div className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card>
-          <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><PiggyBank size={12} className="text-blue-500" /> Saldo del fondo</span>
+          <span className="text-5xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><PiggyBank size={12} className="text-blue-500" /> Saldo del fondo</span>
           <p className="text-sm font-black text-blue-400 mt-1 font-mono">{eur(estado.saldo)}</p>
         </Card>
         <Card>
-          <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Mínimo legal (10 %)</span>
+          <span className="text-5xs font-black text-slate-500 uppercase tracking-widest">Mínimo legal (10 %)</span>
           <p className="text-sm font-black text-slate-200 mt-1 font-mono">{estado.minimo === null ? '—' : eur(estado.minimo)}</p>
-          <p className="text-[10px] text-slate-500 mt-0.5">
+          <p className="text-4xs text-slate-500 mt-0.5">
             {estado.presupuestoReferencia ? `Del presupuesto ordinario «${estado.presupuestoReferencia.nombre}» (${eur(estado.presupuestoReferencia.importe)})` : 'Crea un presupuesto ordinario para calcularlo'}
           </p>
         </Card>
         <Card>
-          <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Art. 9.1.f LPH</span>
+          <span className="text-5xs font-black text-slate-500 uppercase tracking-widest">Art. 9.1.f LPH</span>
           {estado.cumple === null ? (
             <p className="text-3xs text-slate-400 mt-1">Sin presupuesto ordinario de referencia.</p>
           ) : estado.cumple ? (

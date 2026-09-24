@@ -52,11 +52,11 @@ function ProductPreview({ activeModule, setActiveModule }) {
       <div className="relative overflow-hidden rounded-3xl border border-cyan-300/20 bg-[#0b1527]/95 p-4 shadow-2xl shadow-cyan-950/50 backdrop-blur-xl sm:p-5">
         <div className="flex items-center justify-between border-b border-white/10 pb-4">
           <div className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-rose-400" /><span className="h-2.5 w-2.5 rounded-full bg-amber-300" /><span className="h-2.5 w-2.5 rounded-full bg-emerald-400" /><span className="ml-2 text-[11px] font-medium text-slate-500">panel.votifai</span></div>
-          <span className="flex items-center gap-1.5 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-2.5 py-1 text-[10px] font-bold text-cyan-200"><Sparkles size={11} /> Asistente activo</span>
+          <span className="flex items-center gap-1.5 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-2.5 py-1 text-4xs font-bold text-cyan-200"><Sparkles size={11} /> Asistente activo</span>
         </div>
         <div className="grid grid-cols-4 gap-1.5 py-5">
           {Object.entries(previewData).map(([key, item]) => (
-            <button key={key} type="button" aria-label={key} onClick={() => setActiveModule(key)} className={`rounded-xl px-2 py-2.5 text-[10px] font-bold transition ${activeModule === key ? 'bg-cyan-300 text-slate-950 shadow-lg shadow-cyan-400/20' : 'bg-white/[0.04] text-slate-400 hover:bg-white/[0.08] hover:text-white'}`}>
+            <button key={key} type="button" aria-label={key} onClick={() => setActiveModule(key)} className={`rounded-xl px-2 py-2.5 text-4xs font-bold transition ${activeModule === key ? 'bg-cyan-300 text-slate-950 shadow-lg shadow-cyan-400/20' : 'bg-white/[0.04] text-slate-400 hover:bg-white/[0.08] hover:text-white'}`}>
               <item.icon size={14} className="mx-auto mb-1" />
               <span className="hidden sm:block">{key === 'juntas' ? 'Juntas' : key === 'incidencias' ? 'Incidencias' : key === 'cuotas' ? 'Cuotas' : 'Documentos'}</span>
             </button>
@@ -64,10 +64,10 @@ function ProductPreview({ activeModule, setActiveModule }) {
         </div>
         <div className="grid gap-3 sm:grid-cols-[1.3fr_0.7fr]">
           <div className="rounded-2xl border border-white/10 bg-white/[0.045] p-5">
-            <div className="mb-8 flex items-start justify-between gap-3"><div><p className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-300">{preview.label}</p><h3 className="text-base font-bold text-white">{preview.title}</h3></div><PreviewIcon size={19} className="text-cyan-300" /></div>
+            <div className="mb-8 flex items-start justify-between gap-3"><div><p className="mb-1 text-4xs font-bold uppercase tracking-[0.18em] text-cyan-300">{preview.label}</p><h3 className="text-base font-bold text-white">{preview.title}</h3></div><PreviewIcon size={19} className="text-cyan-300" /></div>
             <div className="flex items-end justify-between"><div><p className="text-3xl font-black tracking-tight text-white">{preview.value}</p><p className="mt-1 text-xs text-slate-500">{preview.note}</p></div><div className="flex h-14 items-end gap-1.5">{[45, 62, 50, 78, 68, 88, 72].map((height, index) => <span key={index} className="w-2 rounded-t bg-gradient-to-t from-blue-600 to-cyan-300" style={{ height: `${height}%` }} />)}</div></div>
           </div>
-          <div className="rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.06] p-5"><p className="mb-5 text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-200">Resumen del despacho</p><div className="space-y-4"><div><p className="text-2xl font-black text-white">24</p><p className="text-xs text-slate-500">comunidades</p></div><div><p className="text-2xl font-black text-white">438</p><p className="text-xs text-slate-500">propietarios</p></div><div className="flex items-center gap-2 text-xs font-semibold text-emerald-300"><Check size={14} /> Todo bajo control</div></div></div>
+          <div className="rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.06] p-5"><p className="mb-5 text-4xs font-bold uppercase tracking-[0.18em] text-cyan-200">Resumen del despacho</p><div className="space-y-4"><div><p className="text-2xl font-black text-white">24</p><p className="text-xs text-slate-500">comunidades</p></div><div><p className="text-2xl font-black text-white">438</p><p className="text-xs text-slate-500">propietarios</p></div><div className="flex items-center gap-2 text-xs font-semibold text-emerald-300"><Check size={14} /> Todo bajo control</div></div></div>
         </div>
         <div className="mt-3 flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-3 text-xs"><span className="text-slate-400">Una vista para cada decisión importante.</span><span className="font-bold text-cyan-300">VotifAI</span></div>
       </div>

@@ -30,7 +30,7 @@ const TONOS_LIGHT = {
 export default function StatusBadge({ tone = 'neutral', light = false, children, className = '' }) {
   const tonos = light ? TONOS_LIGHT : TONOS;
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded font-black uppercase tracking-wider text-[8px] border ${tonos[tone] || tonos.neutral} ${className}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded font-black uppercase tracking-wider text-5xs border ${tonos[tone] || tonos.neutral} ${className}`}>
       {children}
     </span>
   );

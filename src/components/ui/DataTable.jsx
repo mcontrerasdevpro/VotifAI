@@ -60,7 +60,7 @@ export default function DataTable({
           ))
         ) : (
           <tr>
-            <td colSpan={columns.length} className={`text-center py-12 font-medium uppercase tracking-widest text-[9px] ${vacio}`}>
+            <td colSpan={columns.length} className={`text-center py-12 font-medium uppercase tracking-widest text-5xs ${vacio}`}>
               {emptyLabel}
             </td>
           </tr>

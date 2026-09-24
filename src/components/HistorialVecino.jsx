@@ -75,7 +75,7 @@ export default function HistorialVecino({ entityId }) {
               >
                 <div>
                   <p className="text-3xs font-bold text-white">{junta.titulo}</p>
-                  <p className="text-[9px] text-slate-500 mt-0.5">
+                  <p className="text-5xs text-slate-500 mt-0.5">
                     {ETIQUETA_TIPO[junta.tipo] || junta.tipo} — {new Date(junta.cerrada_en).toLocaleDateString('es-ES')}
                   </p>
                 </div>

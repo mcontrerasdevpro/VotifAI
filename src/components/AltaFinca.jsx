@@ -113,7 +113,7 @@ export default function AltaFinca() {
 
           {/* Capturador de PDF */}
           <div className="space-y-1.5">
-            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Convocatoria Inicial (Opcional)</label>
+            <label className="block text-4xs font-black uppercase tracking-wider text-slate-400">Convocatoria Inicial (Opcional)</label>
             <label className="w-full border border-dashed border-slate-800 hover:border-slate-700 bg-slate-950 rounded-xl p-4 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors shadow-inner">
               <input
                 type="file" accept="application/pdf" className="hidden"
@@ -149,7 +149,7 @@ export default function AltaFinca() {
           </button>
         </form>
 
-        <div className="text-[9px] text-slate-600 font-medium border-t border-slate-900/60 pt-4 shrink-0">
+        <div className="text-5xs text-slate-600 font-medium border-t border-slate-900/60 pt-4 shrink-0">
           * Alta con cifrado HASH SHA-256 para prevenir la alteración posterior del libro de actas.
         </div>
       </div>
@@ -164,9 +164,9 @@ export default function AltaFinca() {
           <div className="flex justify-between items-center border-b border-slate-800 pb-3">
             <div className="flex items-center gap-2">
               <span className={`h-2 w-2 rounded-full ${procesando ? 'bg-amber-400 animate-ping' : 'bg-emerald-500'}`} />
-              <span className="text-[10px] font-mono font-black uppercase text-slate-400 tracking-wider">Estado de Aislamiento Inquilino</span>
+              <span className="text-4xs font-mono font-black uppercase text-slate-400 tracking-wider">Estado de Aislamiento Inquilino</span>
             </div>
-            <span className="text-[9px] font-mono bg-slate-950 border border-slate-800 text-slate-500 px-2 py-0.5 rounded-md font-bold uppercase">
+            <span className="text-5xs font-mono bg-slate-950 border border-slate-800 text-slate-500 px-2 py-0.5 rounded-md font-bold uppercase">
               Tenant Activo
             </span>
           </div>
@@ -188,7 +188,7 @@ export default function AltaFinca() {
                       initial={{ width: "0%" }} animate={{ width: "100%" }} transition={{ duration: 2.3, ease: "easeInOut" }}
                     />
                   </div>
-                  <p className="text-[9px] text-slate-500 font-medium">
+                  <p className="text-5xs text-slate-500 font-medium">
                     Generando censo aleatorio legal de 20 propietarios de España...
                   </p>
                 </motion.div>
@@ -199,7 +199,7 @@ export default function AltaFinca() {
                 >
                   <CheckCircle size={28} className="text-emerald-500 mx-auto animate-bounce" />
                   <p className="text-3xs font-black uppercase text-white tracking-wider">Nodo Vinculado Correctamente</p>
-                  <p className="text-[10px] text-emerald-400/80 font-mono">UUID-SECURE GENERADO</p>
+                  <p className="text-4xs text-emerald-400/80 font-mono">UUID-SECURE GENERADO</p>
                 </motion.div>
               ) : (
                 <motion.div
@@ -228,7 +228,7 @@ export default function AltaFinca() {
           </div>
 
           {/* Logs informativos */}
-          <div className="bg-slate-950 p-3 rounded-xl border border-slate-900/60 font-mono text-[9px] text-slate-500 leading-normal space-y-1">
+          <div className="bg-slate-950 p-3 rounded-xl border border-slate-900/60 font-mono text-5xs text-slate-500 leading-normal space-y-1">
             <p><span className="text-blue-500">▶</span> status --isolation-check --tenant</p>
             <p className="text-slate-400">✓ Aislamiento relacional PostgreSQL (pgAdmin) verificado en la nube.</p>
           </div>

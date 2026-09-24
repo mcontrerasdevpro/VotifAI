@@ -238,7 +238,7 @@ export default function Cuotas() {
     { key: 'estado', header: 'Estado', render: (c) => (
       <div>
         <StatusBadge light tone={TONOS_ESTADO[c.estado] || 'neutral'}>{ETIQUETAS_ESTADO[c.estado] || c.estado}</StatusBadge>
-        {c.estado === 'anulada' && c.motivo_anulacion && <p className="mt-1 max-w-[12rem] text-[10px] text-slate-500">{c.motivo_anulacion}</p>}
+        {c.estado === 'anulada' && c.motivo_anulacion && <p className="mt-1 max-w-[12rem] text-4xs text-slate-500">{c.motivo_anulacion}</p>}
       </div>
     ) },
     { key: 'acciones', header: 'Acciones', align: 'center', render: (c) => (
@@ -391,10 +391,10 @@ export default function Cuotas() {
               <div key={pg.id} className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 px-3 py-2 text-3xs text-slate-300">
                 <span>{new Date(pg.fecha_pago).toLocaleDateString('es-ES')} · {parseFloat(pg.importe).toFixed(2)} € · {pg.metodo_pago || '—'}{pg.referencia ? ` · ${pg.referencia}` : ''}</span>
                 <span className="flex shrink-0 items-center gap-3">
-                  <a href={`/api/cuotas/pagos/${pg.id}/recibo`} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-blue-400 hover:text-blue-300">
+                  <a href={`/api/cuotas/pagos/${pg.id}/recibo`} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-4xs font-bold uppercase tracking-wider text-blue-400 hover:text-blue-300">
                     <FileDown size={11} /> Recibo
                   </a>
-                  <button type="button" onClick={() => handleAnularCobro(pg)} className="text-[10px] font-bold uppercase tracking-wider text-rose-400 hover:text-rose-300">Anular</button>
+                  <button type="button" onClick={() => handleAnularCobro(pg)} className="text-4xs font-bold uppercase tracking-wider text-rose-400 hover:text-rose-300">Anular</button>
                 </span>
               </div>
             ))}

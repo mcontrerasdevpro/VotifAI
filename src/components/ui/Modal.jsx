@@ -61,7 +61,7 @@ export default function Modal({
                   )}
                   <div className="min-w-0">
                     {eyebrow && (
-                      <span className={`inline-block text-[9px] font-mono font-bold px-2.5 py-1 rounded uppercase tracking-wider border ${acento}`}>
+                      <span className={`inline-block text-5xs font-mono font-bold px-2.5 py-1 rounded uppercase tracking-wider border ${acento}`}>
                         {eyebrow}
                       </span>
                     )}

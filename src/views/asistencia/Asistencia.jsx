@@ -246,7 +246,7 @@ export default function Asistencia() {
         <Brand className="h-7" />
         <div>
           <h1 className="text-4xs font-black tracking-widest text-slate-400 uppercase">Sala de Asistencia</h1>
-          <p className="text-[8px] font-mono text-slate-500 uppercase tracking-widest mt-0.5">Manos Alzadas y Transcripción de Intervenciones</p>
+          <p className="text-5xs font-mono text-slate-500 uppercase tracking-widest mt-0.5">Manos Alzadas y Transcripción de Intervenciones</p>
         </div>
       </header>
 
@@ -362,7 +362,7 @@ export default function Asistencia() {
                           placeholder="Ej: VAI-7721-M"
                           className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-xs text-slate-200 font-mono uppercase tracking-widest focus:outline-none focus:border-blue-500" />
                       </div>
-                      <p className="text-[9px] text-slate-600">Te lo facilita el administrador de tu comunidad.</p>
+                      <p className="text-5xs text-slate-600">Te lo facilita el administrador de tu comunidad.</p>
                     </div>
 
                     <div className="space-y-1.5">
@@ -398,7 +398,7 @@ export default function Asistencia() {
 
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between shadow-inner">
                   <div>
-                    <span className="block text-[8px] font-mono text-blue-400 font-bold uppercase tracking-wider">Interviniendo como</span>
+                    <span className="block text-5xs font-mono text-blue-400 font-bold uppercase tracking-wider">Interviniendo como</span>
                     <h3 className="text-xs font-black text-white">{sesion.nombre_completo}</h3>
                     <p className="text-4xs text-slate-500">{sesion.propiedad_detalle}</p>
                   </div>
@@ -478,7 +478,7 @@ export default function Asistencia() {
       </main>
 
       <footer className="w-full max-w-md mx-auto py-3 text-center shrink-0">
-        <p className="text-[8px] font-mono text-slate-600 uppercase tracking-widest leading-none">
+        <p className="text-5xs font-mono text-slate-600 uppercase tracking-widest leading-none">
           Cifrado en tránsito — Ley de Propiedad Horizontal Art. 15 — VotifAI
         </p>
       </footer>

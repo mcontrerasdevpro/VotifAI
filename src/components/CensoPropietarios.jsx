@@ -183,7 +183,7 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
                         setNuevoTelefono('');
                         setNuevoEmail('');
                     }}
-                    className="bg-slate-900 border border-slate-800 hover:bg-slate-800 text-blue-400 hover:text-blue-300 px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-wider transition-colors flex items-center gap-1 mx-auto shadow-sm"
+                    className="bg-slate-900 border border-slate-800 hover:bg-slate-800 text-blue-400 hover:text-blue-300 px-2 py-1 rounded-md text-5xs font-black uppercase tracking-wider transition-colors flex items-center gap-1 mx-auto shadow-sm"
                 >
                     <ArrowLeftRight size={10} /> Traspasar
                 </button>

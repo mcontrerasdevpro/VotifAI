@@ -80,7 +80,7 @@ export default function PanelEscrutinio({ entidadId, meetingId }) {
           <div className="h-full flex flex-col justify-center items-center text-center p-4 border border-dashed border-slate-800/60 rounded-xl bg-slate-950/20">
             <Radio size={28} className="mb-2 text-slate-700" />
             <p className="text-4xs text-slate-400 font-medium">Sin intervenciones todavía</p>
-            <p className="text-[9px] text-slate-600 mt-1 max-w-[150px]">Comparte el enlace de asistencia para que los vecinos puedan hablar desde su móvil.</p>
+            <p className="text-5xs text-slate-600 mt-1 max-w-[150px]">Comparte el enlace de asistencia para que los vecinos puedan hablar desde su móvil.</p>
           </div>
         ) : (
           <div className="space-y-2.5">
@@ -91,7 +91,7 @@ export default function PanelEscrutinio({ entidadId, meetingId }) {
                 key={t.id}
                 className="p-2.5 bg-slate-950 border border-slate-900 rounded-xl space-y-1 shadow-sm"
               >
-                <div className="flex justify-between items-center text-[9px] font-black text-indigo-400 font-mono tracking-wide uppercase gap-2">
+                <div className="flex justify-between items-center text-5xs font-black text-indigo-400 font-mono tracking-wide uppercase gap-2">
                   <span className="truncate">🎙️ {t.propietario_nombre || 'Propietario'} {t.propiedad_detalle ? `— ${t.propiedad_detalle}` : ''}</span>
                   <span className="text-slate-600 font-normal shrink-0">{new Date(t.creado_en).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>

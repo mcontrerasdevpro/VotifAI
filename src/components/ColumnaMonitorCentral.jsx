@@ -79,7 +79,7 @@ export default function ColumnaMonitorCentral({ meeting, puntos, puntoActivoId, 
               {puntoActual.estado === 'votando' ? (
                 <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-lg">
                   <span className="text-4xs font-mono font-black text-amber-400 uppercase tracking-widest animate-pulse">● Abierto</span>
-                  <button type="button" onClick={() => onCerrarVotacion(puntoActual.id)} className="text-[9px] font-black bg-amber-500 text-slate-950 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                  <button type="button" onClick={() => onCerrarVotacion(puntoActual.id)} className="text-5xs font-black bg-amber-500 text-slate-950 px-2 py-0.5 rounded-md uppercase tracking-wider">
                     {puntoActual.tipo === 'votacion' ? 'Cerrar Votación' : 'Cerrar Turno'}
                   </button>
                 </div>
@@ -91,7 +91,7 @@ export default function ColumnaMonitorCentral({ meeting, puntos, puntoActivoId, 
                 <button
                   type="button"
                   onClick={() => onAbrirVotacion(puntoActual.id)}
-                  className={`text-[9px] font-black text-white px-3 py-1 rounded-md uppercase tracking-wider ${puntoActual.tipo === 'votacion' ? 'bg-blue-600' : 'bg-indigo-600'}`}
+                  className={`text-5xs font-black text-white px-3 py-1 rounded-md uppercase tracking-wider ${puntoActual.tipo === 'votacion' ? 'bg-blue-600' : 'bg-indigo-600'}`}
                 >
                   {puntoActual.tipo === 'votacion' ? 'Abrir Votación' : 'Abrir Turno'}
                 </button>
@@ -109,7 +109,7 @@ export default function ColumnaMonitorCentral({ meeting, puntos, puntoActivoId, 
                       <span className="flex items-center gap-1.5 text-4xs font-black uppercase tracking-widest text-slate-400">
                         <Scale size={12} className="text-indigo-400" /> {ETIQUETA_MAYORIA[resultado.mayoria]} · {resultado.articulo}
                       </span>
-                      <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border ${ESTADO_RESULTADO[resultado.estado].clase}`}>
+                      <span className={`text-5xs font-black uppercase tracking-wider px-2 py-0.5 rounded border ${ESTADO_RESULTADO[resultado.estado].clase}`}>
                         {puntoActual.estado === 'cerrado' ? '' : 'Ahora mismo: '}{ESTADO_RESULTADO[resultado.estado].texto}
                       </span>
                     </div>
@@ -145,7 +145,7 @@ export default function ColumnaMonitorCentral({ meeting, puntos, puntoActivoId, 
                   <button
                     type="button"
                     onClick={() => onHabilitarPrivado?.(p)}
-                    className={`shrink-0 text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-md border ${p.habilitado ? 'border-slate-700 text-slate-400' : 'border-emerald-500/30 text-emerald-300'}`}
+                    className={`shrink-0 text-5xs font-black uppercase tracking-wider px-2 py-1 rounded-md border ${p.habilitado ? 'border-slate-700 text-slate-400' : 'border-emerald-500/30 text-emerald-300'}`}
                   >
                     {p.habilitado ? 'Retirar voto' : 'Habilitar voto'}
                   </button>

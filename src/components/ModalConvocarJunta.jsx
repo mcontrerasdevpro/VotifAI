@@ -206,7 +206,7 @@ export default function ModalConvocarJunta({ open, onClose, entityId, onConvocad
                     placeholder="Describe el punto a tratar..."
                     className="w-full bg-slate-900 border border-slate-800 rounded-lg py-1.5 px-2.5 text-3xs text-slate-200 focus:outline-none focus:border-blue-500"
                   />
-                  <label className="flex items-center gap-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+                  <label className="flex items-center gap-1.5 text-5xs font-bold text-slate-500 uppercase tracking-wider">
                     <input
                       type="checkbox"
                       checked={punto.tipo === 'informativo'}
@@ -217,7 +217,7 @@ export default function ModalConvocarJunta({ open, onClose, entityId, onConvocad
                   </label>
                   {punto.tipo !== 'informativo' && (
                     <label className="block space-y-1">
-                      <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Mayoría necesaria (LPH)</span>
+                      <span className="text-5xs font-bold text-slate-500 uppercase tracking-wider">Mayoría necesaria (LPH)</span>
                       <select
                         value={punto.mayoria || 'simple'}
                         onChange={(e) => actualizarPunto(index, 'mayoria', e.target.value)}
@@ -225,7 +225,7 @@ export default function ModalConvocarJunta({ open, onClose, entityId, onConvocad
                       >
                         {OPCIONES_MAYORIA.map((o) => <option key={o.id} value={o.id}>{o.etiqueta}</option>)}
                       </select>
-                      <span className="block text-[9px] text-slate-600">{OPCIONES_MAYORIA.find((o) => o.id === (punto.mayoria || 'simple'))?.ayuda}</span>
+                      <span className="block text-5xs text-slate-600">{OPCIONES_MAYORIA.find((o) => o.id === (punto.mayoria || 'simple'))?.ayuda}</span>
                     </label>
                   )}
                 </div>

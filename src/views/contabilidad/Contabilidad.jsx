@@ -237,7 +237,7 @@ export default function Contabilidad() {
       <div>
         <p className="font-bold text-slate-900">{m.concepto}</p>
         {m.categoria && <p className="text-slate-500 mt-0.5">{m.categoria}</p>}
-        {m.origen === 'cuota' && <p className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-600">Automático · cobro de cuota</p>}
+        {m.origen === 'cuota' && <p className="mt-0.5 text-4xs font-bold uppercase tracking-wider text-blue-600">Automático · cobro de cuota</p>}
       </div>
     ) },
     { key: 'tipo', header: 'Tipo', render: (m) => <StatusBadge light tone={m.tipo === 'ingreso' ? 'success' : 'danger'}>{m.tipo === 'ingreso' ? 'Ingreso' : 'Gasto'}</StatusBadge> },
@@ -249,7 +249,7 @@ export default function Contabilidad() {
     ) },
     { key: 'acciones', header: 'Acciones', align: 'center', render: (m) => (
       // Los ingresos de cuotas se retiran anulando el cobro desde Cuotas.
-      m.origen === 'cuota' ? <span className="text-[10px] text-slate-400" title="Se anula desde Cuotas">—</span> : (
+      m.origen === 'cuota' ? <span className="text-4xs text-slate-400" title="Se anula desde Cuotas">—</span> : (
         <button onClick={() => handleEliminarMovimiento(m.id)} className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-rose-400 hover:text-rose-300" title="Eliminar">
           <Trash2 size={12} />
         </button>
@@ -261,7 +261,7 @@ export default function Contabilidad() {
     { key: 'nombre', header: 'Presupuesto', render: (p) => (
       <div>
         <p className="font-bold text-slate-900">{p.nombre}</p>
-        <p className="mt-0.5 text-[10px] text-slate-500">
+        <p className="mt-0.5 text-4xs text-slate-500">
           {p.tipo === 'extraordinario' ? 'Extraordinario' : 'Ordinario'}
           {p.partidas?.length ? ` · ${p.partidas.length} partidas` : ' · sin partidas'}
         </p>
@@ -291,8 +291,8 @@ export default function Contabilidad() {
       <div>
         <p className={`font-bold ${l.anulada_en ? 'text-slate-400 line-through' : 'text-slate-900'}`}>{new Date(l.periodo_inicio).toLocaleDateString('es-ES')} — {new Date(l.periodo_fin).toLocaleDateString('es-ES')}</p>
         {l.anulada_en
-          ? <p className="mt-0.5 text-[10px] font-bold text-amber-600">Anulada el {new Date(l.anulada_en).toLocaleDateString('es-ES')}: {l.motivo_anulacion}</p>
-          : <p className="mt-0.5 text-[10px] text-slate-500">Periodo cerrado: no admite cambios mientras esté vigente</p>}
+          ? <p className="mt-0.5 text-4xs font-bold text-amber-600">Anulada el {new Date(l.anulada_en).toLocaleDateString('es-ES')}: {l.motivo_anulacion}</p>
+          : <p className="mt-0.5 text-4xs text-slate-500">Periodo cerrado: no admite cambios mientras esté vigente</p>}
       </div>
     ) },
     { key: 'total_ingresos', header: 'Ingresos', align: 'right', render: (l) => <span className="font-mono text-emerald-600">{fmt(l.total_ingresos)} €</span> },
@@ -302,11 +302,11 @@ export default function Contabilidad() {
     ) },
     { key: 'acciones', header: 'Acciones', align: 'center', render: (l) => (
       <div className="flex items-center justify-center gap-2">
-        <a href={`/api/liquidaciones/${l.id}/pdf`} target="_blank" rel="noreferrer" className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 text-[10px] font-bold uppercase tracking-wider text-blue-400 hover:text-blue-300" title="Liquidación con reparto por propietario, para la junta">
+        <a href={`/api/liquidaciones/${l.id}/pdf`} target="_blank" rel="noreferrer" className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 text-4xs font-bold uppercase tracking-wider text-blue-400 hover:text-blue-300" title="Liquidación con reparto por propietario, para la junta">
           <FileDown size={11} /> PDF
         </a>
         {!l.anulada_en && (
-          <button onClick={() => handleAnularLiquidacion(l.id)} className="px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 text-[10px] font-bold uppercase tracking-wider text-amber-400 hover:text-amber-300" title="Anular y reabrir el periodo">
+          <button onClick={() => handleAnularLiquidacion(l.id)} className="px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 text-4xs font-bold uppercase tracking-wider text-amber-400 hover:text-amber-300" title="Anular y reabrir el periodo">
             Anular
           </button>
         )}
@@ -339,15 +339,15 @@ export default function Contabilidad() {
       {tab === 'movimientos' && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 shrink-0">
           <Card>
-            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><TrendingUp size={12} className="text-emerald-500" /> Ingresos</span>
+            <span className="text-5xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><TrendingUp size={12} className="text-emerald-500" /> Ingresos</span>
             <p className="text-sm font-black text-emerald-400 mt-1 font-mono">{fmt(totales.ingresos)} €</p>
           </Card>
           <Card>
-            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><TrendingDown size={12} className="text-rose-500" /> Gastos</span>
+            <span className="text-5xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><TrendingDown size={12} className="text-rose-500" /> Gastos</span>
             <p className="text-sm font-black text-rose-400 mt-1 font-mono">{fmt(totales.gastos)} €</p>
           </Card>
           <Card>
-            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Scale size={12} className="text-blue-500" /> Saldo</span>
+            <span className="text-5xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Scale size={12} className="text-blue-500" /> Saldo</span>
             <p className={`text-sm font-black mt-1 font-mono ${totales.saldo >= 0 ? 'text-blue-400' : 'text-rose-400'}`}>{fmt(totales.saldo)} €</p>
           </Card>
         </div>

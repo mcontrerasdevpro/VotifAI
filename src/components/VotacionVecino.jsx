@@ -100,7 +100,7 @@ export default function VotacionVecino({ entityId, onJuntaEnCurso }) {
     <div className="space-y-3">
       <div className="flex items-center justify-between bg-slate-900 border border-slate-800 rounded-xl p-3">
         <div>
-          <span className="block text-[8px] font-mono text-blue-400 font-bold uppercase tracking-wider">Junta en curso</span>
+          <span className="block text-5xs font-mono text-blue-400 font-bold uppercase tracking-wider">Junta en curso</span>
           <h3 className="text-xs font-black text-white">{meeting.titulo}</h3>
         </div>
         <Radio size={16} className="text-emerald-500 animate-pulse shrink-0" />

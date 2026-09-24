@@ -97,7 +97,7 @@ export default function PanelSala({ meetingId, censo, asistencia, votos, privado
           <p className="text-4xs text-slate-400">Registrando votos del <strong className="text-slate-200">punto {puntoAbierto.orden}</strong>. Se suman a los de la app.</p>
           <button
             type="button" onClick={restoAFavor} disabled={enviando || pendientesDeVoto.length === 0}
-            className="text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-md border border-emerald-500/30 text-emerald-300 disabled:opacity-40"
+            className="text-5xs font-black uppercase tracking-wider px-2 py-1 rounded-md border border-emerald-500/30 text-emerald-300 disabled:opacity-40"
           >
             Resto de asistentes a favor ({pendientesDeVoto.length})
           </button>
@@ -156,12 +156,12 @@ export default function PanelSala({ meetingId, censo, asistencia, votos, privado
                     <button
                       key={opcion} type="button" disabled={enviando}
                       onClick={() => votar([{ propietario_id: p.id, voto: voto?.voto === opcion && voto.origen !== 'app' ? null : opcion }])}
-                      className={`flex-1 py-1 rounded-md text-[9px] font-black uppercase tracking-wider border transition-colors ${voto?.voto === opcion ? COLOR_VOTO[opcion] : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'}`}
+                      className={`flex-1 py-1 rounded-md text-5xs font-black uppercase tracking-wider border transition-colors ${voto?.voto === opcion ? COLOR_VOTO[opcion] : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'}`}
                     >
                       {ETIQUETA_VOTO[opcion]}
                     </button>
                   ))}
-                  {voto && <span className="text-[9px] text-slate-500 w-14 text-right">{voto.origen === 'app' ? 'por app' : voto.origen === 'representacion' ? 'represent.' : 'en sala'}</span>}
+                  {voto && <span className="text-5xs text-slate-500 w-14 text-right">{voto.origen === 'app' ? 'por app' : voto.origen === 'representacion' ? 'represent.' : 'en sala'}</span>}
                 </div>
               )}
             </li>
