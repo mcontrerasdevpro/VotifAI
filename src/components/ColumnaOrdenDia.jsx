@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Vote, ChevronUp, ChevronDown, Info } from 'lucide-react';
 import StatusBadge from './ui/StatusBadge.jsx';
 import Card from './ui/Card.jsx';
+import { ETIQUETA_MAYORIA, ESTADO_RESULTADO } from '../lib/mayorias.js';
 
 const TONO_ESTADO = { votando: 'warning', cerrado: 'success', pendiente: 'neutral' };
 const LABEL_ESTADO = { votando: 'Votando', cerrado: 'Cerrado', pendiente: 'Pendiente' };
@@ -59,10 +60,20 @@ export default function ColumnaOrdenDia({ puntos, puntoActivoId, setPuntoActivoI
               </AnimatePresence>
 
               <div className="px-3 pb-2.5 pt-1.5 flex justify-between items-center text-5xs font-black uppercase tracking-wider bg-slate-950/20 border-t border-slate-900/20 shrink-0">
-                <span className={esElActivo ? 'text-blue-400' : 'text-slate-600'}>EXP-{String(punto.orden).padStart(3, '0')}</span>
-                <StatusBadge tone={TONO_ESTADO[punto.estado] || 'neutral'} className={punto.estado === 'votando' ? 'animate-pulse' : ''}>
-                  {LABEL_ESTADO[punto.estado] || punto.estado}
-                </StatusBadge>
+                {/* La mayoría exigida se ve antes de abrir la votación; al cerrar
+                    el punto, su resultado según la LPH. */}
+                <span className={esElActivo ? 'text-blue-400' : 'text-slate-600'}>
+                  EXP-{String(punto.orden).padStart(3, '0')} · {punto.tipo === 'votacion' ? ETIQUETA_MAYORIA[punto.mayoria] || 'Mayoría simple' : 'Informativo'}
+                </span>
+                {punto.estado === 'cerrado' && punto.resultado ? (
+                  <span className={`px-2 py-0.5 rounded border ${ESTADO_RESULTADO[punto.resultado.estado].clase}`}>
+                    {ESTADO_RESULTADO[punto.resultado.estado].texto}
+                  </span>
+                ) : (
+                  <StatusBadge tone={TONO_ESTADO[punto.estado] || 'neutral'} className={punto.estado === 'votando' ? 'animate-pulse' : ''}>
+                    {LABEL_ESTADO[punto.estado] || punto.estado}
+                  </StatusBadge>
+                )}
               </div>
             </div>
           );
