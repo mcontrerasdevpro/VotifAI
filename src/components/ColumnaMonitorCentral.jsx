@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Users, PieChart, Radio, ArrowLeft, Play, Scale, UserX } from 'lucide-react';
+import { Users, PieChart, Radio, ArrowLeft, Play, Scale, UserX, Send } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Card from './ui/Card.jsx';
 import { ETIQUETA_MAYORIA, ESTADO_RESULTADO } from '../lib/mayorias.js';
@@ -11,7 +11,7 @@ import { ETIQUETA_MAYORIA, ESTADO_RESULTADO } from '../lib/mayorias.js';
  * se genera aquí, este componente solo dispara las acciones del despacho
  * (iniciar junta, abrir/cerrar votación de un punto, clausurar asamblea).
  */
-export default function ColumnaMonitorCentral({ meeting, puntos, puntoActivoId, privadosVoto = [], onIniciarJunta, onHabilitarPrivado, onAbrirVotacion, onCerrarVotacion, onClausurarAsamblea, children }) {
+export default function ColumnaMonitorCentral({ meeting, puntos, puntoActivoId, privadosVoto = [], onIniciarJunta, onReenviarConvocatoria, onHabilitarPrivado, onAbrirVotacion, onCerrarVotacion, onClausurarAsamblea, children }) {
   const navigate = useNavigate();
   const puntoActual = puntos.find((p) => p.id === puntoActivoId);
 
@@ -177,6 +177,12 @@ export default function ColumnaMonitorCentral({ meeting, puntos, puntoActivoId, 
                 </button>
               </div>
               <p className="text-4xs text-slate-500 text-center">Segunda convocatoria si en la primera no concurrieron la mayoría de propietarios que representen la mayoría de las cuotas.</p>
+              <button
+                type="button" onClick={onReenviarConvocatoria}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-4xs font-black uppercase tracking-widest bg-slate-950 border border-slate-800 text-slate-300 hover:text-white"
+              >
+                <Send size={12} /> Reenviar convocatoria a los propietarios
+              </button>
             </div>
           ) : todosCerrados ? (
             <div className="space-y-3 w-full">

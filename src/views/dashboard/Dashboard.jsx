@@ -113,6 +113,14 @@ export default function Dashboard() {
     return data;
   };
 
+  // Reenviar la convocatoria a todo el censo (p. ej. si a alguien no le
+  // llegó, o tras corregir el censo). Recalcula la relación de morosos.
+  const handleReenviarConvocatoria = async () => {
+    if (!window.confirm('¿Reenviar la convocatoria a todos los propietarios del censo? Se volverá a incluir la relación actual de propietarios con deudas vencidas.')) return;
+    const data = await accionJunta(`${meetingId}/convocar`);
+    if (data?.mensaje) alert(data.mensaje);
+  };
+
   const handleIniciarJunta = (convocatoria) => accionJunta(`${meetingId}/iniciar`, {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ convocatoria })
@@ -268,6 +276,7 @@ export default function Dashboard() {
           puntoActivoId={puntoActivoId}
           privadosVoto={privadosVoto}
           onIniciarJunta={handleIniciarJunta}
+          onReenviarConvocatoria={handleReenviarConvocatoria}
           onHabilitarPrivado={handleHabilitarPrivado}
           onAbrirVotacion={handleAbrirVotacion}
           onCerrarVotacion={handleCerrarVotacion}
