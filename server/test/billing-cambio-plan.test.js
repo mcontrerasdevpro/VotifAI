@@ -28,7 +28,11 @@ class FakeStripe {
       update: async (id, datos) => { llamadas.push(['subscriptions.update', id, datos]); return {}; }
     };
     this.checkout = { sessions: { create: async (datos) => { llamadas.push(['checkout.create', datos]); return { url: 'https://checkout.stripe.test/s' }; } } };
-    this.customers = { create: async () => ({ id: 'cus_nuevo' }) };
+    this.customers = {
+      create: async () => ({ id: 'cus_nuevo' }),
+      // 'cus_de_test' simula un cliente guardado en el otro modo de Stripe.
+      retrieve: async (id) => { if (id === 'cus_de_test') throw new Error('No such customer'); return { id }; }
+    };
     this.billingPortal = { sessions: { create: async (datos) => { llamadas.push(['portal.create', datos]); return { url: 'https://portal.stripe.test/p' }; } } };
   }
 }
@@ -113,4 +117,13 @@ test('el portal se abre con el customer del despacho', async () => {
   const respuesta = await post('/api/billing/portal');
   assert.equal(respuesta.status, 201);
   assert.equal(llamadas.find(([tipo]) => tipo === 'portal.create')[1].customer, 'cus_1');
+});
+
+test('un cliente guardado de otro modo de Stripe (test -> live) se sustituye por uno nuevo', async () => {
+  statusSuscripcion = 'canceled';
+  tenant.proveedor_cliente_id = 'cus_de_test';
+  const respuesta = await post('/api/billing/checkout', { plan: 'starter' });
+  assert.equal(respuesta.status, 201);
+  assert.equal(llamadas.find(([tipo]) => tipo === 'checkout.create')[1].customer, 'cus_nuevo');
+  assert.equal(llamadas.some(([tipo, , params]) => tipo === 'db.update' && params?.[0] === 'cus_nuevo'), true);
 });

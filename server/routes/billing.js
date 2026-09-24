@@ -40,6 +40,23 @@ router.get('/billing/estado', requireAuth, async (req, res) => {
 });
 
 const ESTADOS_CON_SUSCRIPCION_VIVA = new Set(['active', 'past_due', 'trialing']);
+
+// Cliente de Stripe del despacho en el modo actual (test o live). Un id
+// guardado de otro modo, o de un cliente borrado, no existe para estas
+// claves: en ese caso se crea uno nuevo en vez de fallar el checkout.
+async function clienteStripeVigente(tenant) {
+  if (tenant.proveedor_cliente_id) {
+    const existente = await stripe.customers.retrieve(tenant.proveedor_cliente_id).catch(() => null);
+    if (existente && !existente.deleted) return existente.id;
+  }
+  const customer = await stripe.customers.create({
+    email: tenant.email_maestro,
+    name: tenant.nombre_entidad,
+    metadata: { tenantId: tenant.id }
+  });
+  await query('UPDATE tenants SET proveedor_cliente_id = $1 WHERE id = $2', [customer.id, tenant.id]);
+  return customer.id;
+}
 const urlBase = (req) => `${req.protocol}://${req.get('host')}`;
 
 // Un despacho con suscripción ya en marcha NO pasa por un checkout nuevo:
@@ -102,16 +119,7 @@ router.post('/billing/checkout', requireAuth, async (req, res) => {
       }
     }
 
-    let customerId = tenant.proveedor_cliente_id;
-    if (!customerId) {
-      const customer = await stripe.customers.create({
-        email: tenant.email_maestro,
-        name: tenant.nombre_entidad,
-        metadata: { tenantId: tenant.id }
-      });
-      customerId = customer.id;
-      await query('UPDATE tenants SET proveedor_cliente_id = $1 WHERE id = $2', [customerId, tenant.id]);
-    }
+    const customerId = await clienteStripeVigente(tenant);
 
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
@@ -151,7 +159,10 @@ router.post('/billing/portal', requireAuth, async (req, res) => {
 
   try {
     const tenantResult = await query('SELECT proveedor_cliente_id FROM tenants WHERE id = $1', [req.tenantId]);
-    const customerId = tenantResult.rows[0]?.proveedor_cliente_id;
+    const guardado = tenantResult.rows[0]?.proveedor_cliente_id;
+    // Un cliente de otro modo de Stripe (test/live) no existe con estas claves.
+    const cliente = guardado ? await stripe.customers.retrieve(guardado).catch(() => null) : null;
+    const customerId = cliente && !cliente.deleted ? cliente.id : null;
     if (!customerId) return res.status(409).json({ error: 'Todavía no tienes ninguna suscripción que gestionar.' });
 
     const session = await stripe.billingPortal.sessions.create({
