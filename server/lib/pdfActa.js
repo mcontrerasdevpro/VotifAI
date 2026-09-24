@@ -1,4 +1,5 @@
 import { crearDocumento, membrete, markdownSencillo, pie } from './pdfComun.js';
+import { fechaHoraES } from './fechas.js';
 
 // PDF del acta con membrete del despacho — pdfkit en vez de un motor HTML
 // (puppeteer, etc.) porque genera el documento en JS puro, sin necesitar
@@ -15,7 +16,7 @@ export function generarActaPdf({ despacho, finca, meeting, actaTexto }) {
   doc.fontSize(11).font('Helvetica-Bold').fillColor('#333333').text(finca?.nombre || '');
   doc.fontSize(10).font('Helvetica').fillColor('#555555').text(meeting?.titulo || '');
   if (meeting?.cerrada_en) {
-    doc.text(`Fecha de clausura: ${new Date(meeting.cerrada_en).toLocaleString('es-ES')}`);
+    doc.text(`Fecha de clausura: ${fechaHoraES(meeting.cerrada_en)}`);
   }
   doc.moveDown(1.5);
 

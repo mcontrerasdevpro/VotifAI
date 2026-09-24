@@ -1,4 +1,5 @@
 import PDFDocument from 'pdfkit';
+import { fechaES } from './fechas.js';
 
 // Piezas comunes de los PDF del despacho (acta, recibo, certificado de
 // deuda): documento A4 en memoria, membrete con los datos del despacho (no
@@ -81,7 +82,7 @@ export function markdownSencillo(doc, texto) {
 }
 
 export const eur = (n) => `${Number(n || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
-export const fecha = (f) => (f ? new Date(f).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—');
+export const fecha = (f) => (f ? fechaES(f) : '—');
 
 // Tabla simple: cabecera y filas con anchos relativos; salta de página si
 // no cabe la fila.

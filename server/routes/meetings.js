@@ -5,6 +5,7 @@ import { generarActaPdf } from '../lib/pdfActa.js';
 import { reservarJuntaIniciada } from '../lib/suscripciones.js';
 import { deudoresVencidos } from '../lib/morosidad.js';
 import { calcularResultado, TIPOS_MAYORIA } from '../lib/mayorias.js';
+import { fechaHoraES } from '../lib/fechas.js';
 import {
   requireAuth,
   requireVoterAuth,
@@ -286,7 +287,7 @@ router.post('/meetings/:meetingId/convocar', requireAuth, async (req, res) => {
       finca: { id: junta.entity_id, nombre: junta.finca_nombre },
       mensaje: {
         titulo: `Convocatoria — ${junta.titulo}`,
-        cuerpo: `Se convoca junta ${junta.tipo} "${junta.titulo}"${junta.fecha_hora_prevista ? ` para el ${new Date(junta.fecha_hora_prevista).toLocaleString('es-ES')}` : ''}. Consulta el orden del día en VotifAI.${avisoDeudores}`
+        cuerpo: `Se convoca junta ${junta.tipo} "${junta.titulo}"${junta.fecha_hora_prevista ? ` para el ${fechaHoraES(junta.fecha_hora_prevista)}` : ''}. Consulta el orden del día en VotifAI.${avisoDeudores}`
       },
       destinatarios: censoResultado.rows.map((p) => ({ nombre: p.nombre_completo, propiedad: p.propiedad_detalle, telefono: p.telefono, email: p.email, canal_preferido: p.canal_notificacion }))
     });

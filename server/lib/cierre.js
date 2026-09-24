@@ -1,4 +1,5 @@
 import { query } from '../db.js';
+import { fechaES } from './fechas.js';
 
 // Periodo cerrado: una liquidación vigente (no anulada) congela su periodo.
 // Devuelve la liquidación que cubre esa fecha, o null si el periodo está
@@ -14,7 +15,7 @@ export async function liquidacionQueCierra(entityId, fecha) {
   return r.rows[0] || null;
 }
 
-const fmt = (d) => new Date(d).toLocaleDateString('es-ES');
+const fmt = (d) => fechaES(d);
 
 export function mensajePeriodoCerrado(liq) {
   return `Esa fecha está dentro de un periodo ya liquidado (${fmt(liq.periodo_inicio)} – ${fmt(liq.periodo_fin)}). Para corregirlo, anula antes esa liquidación en Contabilidad y vuelve a generarla.`;
