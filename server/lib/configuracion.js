@@ -23,6 +23,7 @@ export const VARIABLES = [
   { nombre: 'STRIPE_PRICE_PREMIUM', para: 'Precio del plan Premium', imprescindible: true },
   { nombre: 'STRIPE_TAX_RATE_IVA', para: 'IVA 21 % en los cobros', imprescindible: true },
   { nombre: 'OPENAI_API_KEY', para: 'Transcripción de voz (planes Profesional y Premium)', imprescindible: true },
+  { nombre: 'CORREOS_CLAVE_CIFRADO', para: 'Cifrar las contraseñas de los buzones de correo de los despachos', imprescindible: true },
   { nombre: 'ADMIN_TOKEN', para: 'Página de estado y tareas programadas (recordatorios)', imprescindible: true },
   { nombre: 'ALERTAS_EMAIL', para: 'Email que recibe los avisos de negocio (por defecto contacto@nexuraia.com)', imprescindible: false },
   { nombre: 'DEMO_NOTIFICATION_EMAIL', para: 'Email que recibe las solicitudes de demo', imprescindible: false }

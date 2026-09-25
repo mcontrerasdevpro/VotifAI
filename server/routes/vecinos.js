@@ -155,7 +155,7 @@ router.post('/vecinos/olvide-password', async (req, res) => {
 
   try {
     const resultado = await query(
-      `SELECT id, nombre_completo, propiedad_detalle FROM propietarios WHERE LOWER(email) = $1 AND password_hash IS NOT NULL`,
+      `SELECT id, entity_id, nombre_completo, propiedad_detalle FROM propietarios WHERE LOWER(email) = $1 AND password_hash IS NOT NULL`,
       [email]
     );
     if (resultado.rows.length === 0) return res.status(200).json(respuestaGenerica);
@@ -170,6 +170,7 @@ router.post('/vecinos/olvide-password', async (req, res) => {
     const enlace = `${allowedOrigins[0]}/restablecer-password/comunidad?token=${token}`;
     await notificar({
       tipo: 'reset_password_vecino',
+      envio: { area: 'accesos', entityId: vecino.entity_id },
       finca: { nombre: vecino.propiedad_detalle },
       mensaje: { titulo: 'Restablecer tu contraseña de VotifAI', cuerpo: `Solicitaste restablecer tu contraseña. Este enlace caduca en 1 hora: ${enlace}` },
       destinatarios: [{ nombre: vecino.nombre_completo, propiedad: vecino.propiedad_detalle, email }]
@@ -196,7 +197,7 @@ router.post('/vecinos/activar-cuenta', async (req, res) => {
 
   try {
     const resultado = await query(
-      `SELECT p.id, p.nombre_completo, p.propiedad_detalle, (p.password_hash IS NOT NULL) AS tiene_cuenta, e.nombre AS finca
+      `SELECT p.id, p.entity_id, p.nombre_completo, p.propiedad_detalle, (p.password_hash IS NOT NULL) AS tiene_cuenta, e.nombre AS finca
        FROM propietarios p JOIN entities e ON e.id = p.entity_id
        WHERE LOWER(p.email) = $1`,
       [email]
@@ -216,6 +217,7 @@ router.post('/vecinos/activar-cuenta', async (req, res) => {
       : `Para activar tu cuenta de vecino en VotifAI de ${vecino.finca} (${vecino.propiedad_detalle}), crea tu contraseña con este enlace (caduca en 24 horas): ${enlace}\n\nDesde tu cuenta podrás votar en las juntas, delegar tu voto y consultar tus cuotas y el historial de juntas.`;
     await notificar({
       tipo: 'activar_cuenta_vecino',
+      envio: { area: 'accesos', entityId: vecino.entity_id },
       finca: { nombre: vecino.finca },
       mensaje: { titulo: vecino.tiene_cuenta ? 'Tu cuenta de VotifAI' : 'Activa tu cuenta de vecino en VotifAI', cuerpo },
       destinatarios: [{ nombre: vecino.nombre_completo, propiedad: vecino.propiedad_detalle, email, canal_preferido: 'email' }]

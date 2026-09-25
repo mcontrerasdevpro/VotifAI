@@ -24,6 +24,7 @@ import salaRouter from './routes/sala.js';
 import delegacionesRouter from './routes/delegaciones.js';
 import sistemaRouter from './routes/sistema.js';
 import censoRouter from './routes/censo.js';
+import correosRouter from './routes/correos.js';
 import { avisarSiFaltaConfiguracion } from './lib/configuracion.js';
 import { avisarRegistro } from './lib/avisosNegocio.js';
 import billingRouter, { stripeWebhookHandler } from './routes/billing.js';
@@ -134,6 +135,7 @@ app.use('/api', salaRouter);
 app.use('/api', delegacionesRouter);
 app.use('/api', sistemaRouter);
 app.use('/api', censoRouter);
+app.use('/api', correosRouter);
 
 app.post('/api/demo-solicitudes', demoLimiter, async (req, res) => {
   const nombre = String(req.body.nombre || '').trim();
@@ -200,7 +202,7 @@ app.post('/api/demo-solicitudes', demoLimiter, async (req, res) => {
 // Fecha de la versión vigente de Términos + Privacidad + Contrato de
 // Encargo. Se guarda con cada alta para saber qué texto aceptó cada despacho;
 // si los textos cambian de forma sustancial, se sube esta fecha.
-const VERSION_CONDICIONES = '2026-09-23';
+const VERSION_CONDICIONES = '2026-09-25';
 
 app.post('/api/auth/register', async (req, res) => {
   const { tipoOrganizacion, nombreEntidad, nombreResponsable, cif, telefono, direccion, password, aceptaCondiciones } = req.body;
@@ -817,6 +819,7 @@ app.post('/api/notifications/reenviar-individual', requireAuth, async (req, res)
 
     await notificar({
       tipo: 'reenvio_individual',
+      envio: { area: 'juntas', tenantId: req.tenantId },
       despacho: { id: req.tenantId, nombre: despachoResultado.rows[0]?.nombre_entidad || null },
       finca: { nombre: nombreFinca },
       mensaje: { titulo: `Copia del acta — ${nombreFinca}`, cuerpo: actaTexto },

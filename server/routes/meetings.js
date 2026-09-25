@@ -283,6 +283,7 @@ router.post('/meetings/:meetingId/convocar', requireAuth, async (req, res) => {
 
     const { resultadoEnvio, errorEnvio } = await intentarNotificar({
       tipo: 'convocatoria',
+      envio: { area: 'juntas', tenantId: req.tenantId },
       despacho: { id: req.tenantId, nombre: despachoResultado.rows[0]?.nombre_entidad || null },
       finca: { id: junta.entity_id, nombre: junta.finca_nombre },
       mensaje: {
@@ -520,6 +521,7 @@ router.post('/meetings/:meetingId/cerrar', requireAuth, async (req, res) => {
 
     const { resultadoEnvio, errorEnvio } = await intentarNotificar({
       tipo: 'acta_cierre',
+      envio: { area: 'juntas', tenantId: req.tenantId },
       despacho: { id: req.tenantId, nombre: despacho.nombre_entidad || null },
       finca: { id: junta.entity_id, nombre: junta.finca_nombre },
       mensaje: {

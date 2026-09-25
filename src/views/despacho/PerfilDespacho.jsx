@@ -4,6 +4,7 @@ import { ArrowLeft, Building2, Mail, Lock, User, Phone, MapPin, CreditCard, Load
 import { useVotifaiStore } from '../../store.jsx';
 import Card from '../../components/ui/Card.jsx';
 import Field from '../../components/ui/Field.jsx';
+import CorreosDespacho from '../../components/CorreosDespacho.jsx';
 
 /**
  * "Mi despacho": datos de la cuenta (los mismos que salen en el membrete
@@ -172,6 +173,8 @@ export default function PerfilDespacho() {
                 <BotonGuardar enviando={estadoDatos.enviando}>Guardar datos</BotonGuardar>
               </form>
             </Card>
+
+            <CorreosDespacho nombreDespacho={datos.nombreEntidad} emailAcceso={emailActual} />
 
             <Card padding="p-6">
               <form onSubmit={guardarEmail} className="space-y-5">

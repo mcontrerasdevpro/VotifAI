@@ -25,6 +25,7 @@ async function avisar(destinatario, finca, titulo, cuerpo) {
   try {
     await notificar({
       tipo: 'delegacion_voto',
+      envio: { area: 'juntas', entityId: destinatario.entity_id || finca?.id },
       finca,
       mensaje: { titulo, cuerpo },
       destinatarios: [{ nombre: destinatario.nombre_completo, propiedad: destinatario.propiedad_detalle, email: destinatario.email, telefono: destinatario.telefono, canal_preferido: destinatario.canal_notificacion }]

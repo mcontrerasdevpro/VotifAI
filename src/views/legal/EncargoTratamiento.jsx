@@ -8,7 +8,7 @@ export default function EncargoTratamiento() {
         Este contrato regula el tratamiento de datos personales que NexuraIA realiza por cuenta del despacho al
         prestarle el servicio VotifAI, conforme al artículo 28 del Reglamento (UE) 2016/679 (RGPD) y a la Ley
         Orgánica 3/2018 (LOPDGDD). Forma parte de los Términos y Condiciones y se acepta al registrar la cuenta del
-        despacho. Versión de 23 de septiembre de 2026.
+        despacho. Versión de 25 de septiembre de 2026.
       </p>
 
       <h2>1. Partes</h2>
@@ -74,7 +74,7 @@ export default function EncargoTratamiento() {
         Entre otras: cifrado en tránsito (HTTPS/TLS) en todas las comunicaciones; contraseñas almacenadas solo como
         hash (bcrypt), nunca en claro; aislamiento lógico estricto de los datos de cada despacho, comprobado en
         cada operación; sesiones con cookies seguras y limitación de intentos de acceso; acceso a la
-        infraestructura restringido al titular del servicio; y copias de seguridad diarias en almacenamiento
+        infraestructura restringido al titular del servicio; credenciales del buzón de correo que el Despacho conecte para enviar sus comunicaciones guardadas cifradas (AES-256), usadas solo para enviar los emails del propio Despacho y nunca mostradas; y copias de seguridad diarias en almacenamiento
         privado, con una retención de 30 días.
       </p>
 
@@ -89,7 +89,7 @@ export default function EncargoTratamiento() {
         <br /><strong>Backblaze</strong> — copias de seguridad, en centro de datos de la Unión Europea.
         <br /><strong>OpenAI</strong> — transcripción de las intervenciones de voz (EE. UU.; ver apartado 7). Según
         las condiciones de su API, los datos enviados no se usan para entrenar modelos.
-        <br /><strong>Brevo (Sendinblue SAS, Francia)</strong> — envío de notificaciones por correo electrónico.
+        <br /><strong>Brevo (Sendinblue SAS, Francia)</strong> — envío de notificaciones por correo electrónico cuando el Despacho no ha conectado su propio buzón. Si lo conecta, los emails a sus propietarios salen directamente desde el proveedor de correo que el Despacho haya elegido, que no es subencargado de NexuraIA.
         <br /><strong>WhatsApp / Meta</strong> — envío de notificaciones por WhatsApp, solo a los propietarios que
         hayan elegido ese canal y cuando esté activado.
       </p>
