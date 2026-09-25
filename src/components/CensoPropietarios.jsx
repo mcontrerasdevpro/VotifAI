@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Users, ArrowLeftRight, UserPlus, Scale, ClipboardList } from 'lucide-react';
+import { Users, ArrowLeftRight, UserPlus, Scale, ClipboardList, FileSpreadsheet } from 'lucide-react';
 import DataTable from './ui/DataTable.jsx';
 import StatusBadge from './ui/StatusBadge.jsx';
 import Modal from './ui/Modal.jsx';
 import Field from './ui/Field.jsx';
 import { porc } from '../lib/formato.js';
+import ImportarCenso from './ImportarCenso.jsx';
 
 const TONO_MOTIVO = {
     venta: 'success',
@@ -18,6 +19,7 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
     const [vistaActiva, setVistaActiva] = useState('censo');
 
     const [mostrarModalAlta, setMostrarModalAlta] = useState(false);
+    const [mostrarImportar, setMostrarImportar] = useState(false);
     const [altaNombre, setAltaNombre] = useState('');
     const [altaDireccion, setAltaDireccion] = useState('');
     const [altaTelefono, setAltaTelefono] = useState('');
@@ -217,13 +219,22 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
                         </button>
                     </div>
 
+                    <div className="flex gap-2 shrink-0 self-end sm:self-auto">
+                    <button
+                        type="button"
+                        onClick={() => setMostrarImportar(true)}
+                        className="bg-slate-950 hover:bg-slate-900 text-slate-300 hover:text-white border border-slate-800 text-5xs font-black uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5"
+                    >
+                        <FileSpreadsheet size={12} /> Importar Excel
+                    </button>
                     <button
                         type="button"
                         onClick={() => setMostrarModalAlta(true)}
-                        className="bg-blue-600 hover:bg-blue-500 text-white text-5xs font-black uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-md shadow-blue-600/10 shrink-0 self-end sm:self-auto"
+                        className="bg-blue-600 hover:bg-blue-500 text-white text-5xs font-black uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-md shadow-blue-600/10"
                     >
                         <UserPlus size={12} /> Añadir Propietario
                     </button>
+                    </div>
                 </div>
 
                 {/* CONTENEDOR CENTRAL INTERACTIVO CON CONMUTACIÓN DE VISTAS */}
@@ -312,6 +323,14 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
                     <Field as="textarea" label="Detalles Adicionales y Notas de Auditoría" value={detalles} onChange={(e) => setDetalles(e.target.value)} inputClassName="h-16" placeholder="Ej: Escritura firmada ante Notario..." />
                 </form>
             </Modal>
+
+            <ImportarCenso
+                open={mostrarImportar}
+                onClose={() => setMostrarImportar(false)}
+                fincaId={fincaId}
+                nombreFinca={nombreFinca}
+                onImportado={consultarCensoNeon}
+            />
 
             {/* MODAL: ALTA INICIAL DE VECINOS EN EL CENSO */}
             <Modal

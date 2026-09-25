@@ -23,6 +23,7 @@ import meetingsRouter from './routes/meetings.js';
 import salaRouter from './routes/sala.js';
 import delegacionesRouter from './routes/delegaciones.js';
 import sistemaRouter from './routes/sistema.js';
+import censoRouter from './routes/censo.js';
 import { avisarSiFaltaConfiguracion } from './lib/configuracion.js';
 import { avisarRegistro } from './lib/avisosNegocio.js';
 import billingRouter, { stripeWebhookHandler } from './routes/billing.js';
@@ -132,6 +133,7 @@ app.use('/api', meetingsRouter);
 app.use('/api', salaRouter);
 app.use('/api', delegacionesRouter);
 app.use('/api', sistemaRouter);
+app.use('/api', censoRouter);
 
 app.post('/api/demo-solicitudes', demoLimiter, async (req, res) => {
   const nombre = String(req.body.nombre || '').trim();
