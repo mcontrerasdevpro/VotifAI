@@ -243,7 +243,7 @@ export default function Asistencia() {
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col p-4 font-sans antialiased">
 
       <header className="w-full max-w-md mx-auto py-4 flex items-center gap-2.5 shrink-0">
-        <Brand className="h-7" />
+        <Brand className="h-12" />
         <div>
           <h1 className="text-4xs font-black tracking-widest text-slate-400 uppercase">Sala de Asistencia</h1>
           <p className="text-5xs font-mono text-slate-500 uppercase tracking-widest mt-0.5">Manos Alzadas y Transcripción de Intervenciones</p>

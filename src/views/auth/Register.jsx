@@ -94,7 +94,7 @@ export default function Register() {
             <ArrowLeft size={16} />
           </button>
           <div className="flex items-center gap-2">
-            <Brand className="h-9" />
+            <Brand className="h-14" />
           </div>
         </div>
 

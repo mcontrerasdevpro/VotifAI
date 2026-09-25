@@ -46,7 +46,7 @@ export default function AppShell() {
     <div className="h-screen w-screen flex bg-slate-950 overflow-hidden">
       <aside className="w-56 shrink-0 border-r border-slate-900 bg-slate-950 flex flex-col">
         <div className="h-16 px-4 flex items-center gap-2 border-b border-slate-900 shrink-0">
-          <Brand className="h-6" />
+          <Brand className="h-14" />
         </div>
 
         <button

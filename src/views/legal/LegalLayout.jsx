@@ -16,7 +16,7 @@ export default function LegalLayout({ titulo, children }) {
           >
             <ArrowLeft size={14} /> Volver
           </button>
-          <Brand className="h-5" />
+          <Brand className="h-16" />
         </div>
 
         <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-6 sm:p-10">

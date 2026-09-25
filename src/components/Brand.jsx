@@ -7,7 +7,7 @@ export default function Brand({ className = 'h-9' }) {
     <img
       src="/Logo%20VotifAI.png"
       alt="VotifAI"
-      className={`w-auto max-w-[220px] object-contain ${className}`}
+      className={`w-auto max-w-[320px] object-contain ${className}`}
     />
   );
 }

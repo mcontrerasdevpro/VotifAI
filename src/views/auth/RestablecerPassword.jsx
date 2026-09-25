@@ -61,7 +61,7 @@ export default function RestablecerPassword() {
       <div className="w-full max-w-md bg-slate-950 rounded-3xl shadow-2xl overflow-hidden border border-slate-800/60">
         <div className="p-6 text-center border-b border-slate-900 bg-slate-950">
           <div className="flex justify-center items-center gap-2 mb-1">
-            <Brand className="h-8" />
+            <Brand className="h-14" />
           </div>
           <p className="text-xs text-slate-400 mt-2">{esAlta ? 'Activa tu cuenta de vecino' : 'Crear una nueva contraseña'}</p>
         </div>

@@ -6,7 +6,7 @@ export default function SubNavContexto({ setMostrarModalConvocatoria }) {
   return (
     <nav className="border-b border-slate-900 bg-slate-950/80 backdrop-blur-md px-6 py-3 flex justify-between items-center shrink-0">
       <div className="flex items-center gap-3">
-        <Brand className="h-6" />
+        <Brand className="h-10" />
         <span className="text-4xs bg-slate-900 text-slate-400 font-bold px-2 py-0.5 rounded-full border border-slate-800 uppercase">
           Sala de Control
         </span>

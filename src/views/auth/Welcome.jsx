@@ -238,7 +238,7 @@ export default function Welcome() {
 
       <header className={`sticky top-0 z-40 border-b border-white/10 bg-[#0b1a33]/95 backdrop-blur-xl`}>
         <div className="mx-auto flex h-[4.5rem] max-w-7xl items-center justify-between px-5 sm:px-8">
-          <Link to="/" aria-label="VotifAI inicio"><Brand className="h-12" /></Link>
+          <Link to="/" aria-label="VotifAI inicio"><Brand className="h-14" /></Link>
           <nav className="hidden items-center gap-8 text-sm font-medium text-slate-300 lg:flex">
             <a href="#junta" className="transition hover:text-white">La junta</a>
             <a href="#lph" className="transition hover:text-white">LPH</a>
@@ -472,7 +472,7 @@ export default function Welcome() {
       <footer className={`${TINTA} py-10`}>
         <div className="mx-auto flex max-w-7xl flex-col gap-7 px-5 text-sm text-slate-400 sm:px-8 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <Brand />
+            <Brand className="h-12" />
             <p className="mt-4 max-w-xs text-xs leading-5 text-slate-500">Juntas y gestión de comunidades de propietarios para despachos de administración de fincas.</p>
           </div>
           <div className="flex flex-wrap gap-x-6 gap-y-3 text-xs">
