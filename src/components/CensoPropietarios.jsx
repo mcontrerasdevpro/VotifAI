@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Users, ArrowLeftRight, UserPlus, Scale, ClipboardList, FileSpreadsheet } from 'lucide-react';
+import { Users, ArrowLeftRight, UserPlus, Scale, ClipboardList, FileSpreadsheet, Landmark } from 'lucide-react';
 import DataTable from './ui/DataTable.jsx';
 import StatusBadge from './ui/StatusBadge.jsx';
 import Modal from './ui/Modal.jsx';
 import Field from './ui/Field.jsx';
 import { porc } from '../lib/formato.js';
 import ImportarCenso from './ImportarCenso.jsx';
+import { NOMBRES_CARGO } from '../lib/cargos.js';
 
 const TONO_MOTIVO = {
     venta: 'success',
     alquiler: 'warning'
 };
 
-export default function CensoPropietarios({ fincaId, nombreFinca }) {
+export default function CensoPropietarios({ fincaId, nombreFinca, versionCargos, onNombrarCargo }) {
     const [propietarios, setPropietarios] = useState([]);
     const [historial, setHistorial] = useState([]);
     const [cargando, setCargando] = useState(true);
@@ -54,7 +55,7 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
 
     useEffect(() => {
         consultarCensoNeon();
-    }, [fincaId]);
+    }, [fincaId, versionCargos]);
 
     const handleTramitarCambioTitular = async (e) => {
         e.preventDefault();
@@ -160,7 +161,14 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
         },
         {
             key: 'titular', header: 'Titular Activo',
-            render: (v) => <span className="text-slate-900 font-bold">{v.nombre_completo}</span>
+            render: (v) => (
+                <span className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-slate-900 font-bold">{v.nombre_completo}</span>
+                    {(v.cargos || []).map((c) => (
+                        <span key={c} className="rounded-full bg-blue-600/10 px-2 py-0.5 text-5xs font-black uppercase tracking-wider text-blue-700">{NOMBRES_CARGO[c] || c}</span>
+                    ))}
+                </span>
+            )
         },
         {
             key: 'contacto', header: 'Medios de Contacto',
@@ -178,6 +186,16 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
         {
             key: 'acciones', header: 'Acciones', align: 'center',
             render: (v) => (
+                <div className="flex items-center justify-center gap-1.5">
+                {onNombrarCargo && (
+                    <button
+                        type="button"
+                        onClick={() => onNombrarCargo(v)}
+                        className="bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 hover:text-white px-2 py-1 rounded-md text-5xs font-black uppercase tracking-wider transition-colors flex items-center gap-1 shadow-sm"
+                    >
+                        <Landmark size={10} /> Cargo
+                    </button>
+                )}
                 <button
                     type="button"
                     onClick={() => {
@@ -190,6 +208,7 @@ export default function CensoPropietarios({ fincaId, nombreFinca }) {
                 >
                     <ArrowLeftRight size={10} /> Traspasar
                 </button>
+                </div>
             )
         }
     ];

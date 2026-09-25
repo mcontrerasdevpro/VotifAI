@@ -25,6 +25,7 @@ import delegacionesRouter from './routes/delegaciones.js';
 import sistemaRouter from './routes/sistema.js';
 import censoRouter from './routes/censo.js';
 import correosRouter from './routes/correos.js';
+import cargosRouter from './routes/cargos.js';
 import { avisarSiFaltaConfiguracion } from './lib/configuracion.js';
 import { avisarRegistro } from './lib/avisosNegocio.js';
 import billingRouter, { stripeWebhookHandler } from './routes/billing.js';
@@ -136,6 +137,7 @@ app.use('/api', delegacionesRouter);
 app.use('/api', sistemaRouter);
 app.use('/api', censoRouter);
 app.use('/api', correosRouter);
+app.use('/api', cargosRouter);
 
 app.post('/api/demo-solicitudes', demoLimiter, async (req, res) => {
   const nombre = String(req.body.nombre || '').trim();
@@ -565,11 +567,14 @@ app.put('/api/entities/update', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'No autorizado para modificar esta entidad.' });
     }
 
-    const metadatosLegales = { presidente, tesorero };
+    // Solo se tocan las claves que llegan: el resto de metadatos de la finca
+    // se conservan. Los cargos viven ya en cargos_comunidad (Junta de
+    // gobierno); presidente/tesorero aquí quedan por compatibilidad.
+    const metadatosLegales = Object.fromEntries(Object.entries({ presidente, tesorero }).filter(([, v]) => v !== undefined));
 
     const resultado = await query(
       `UPDATE entities 
-       SET nombre = $1, cif = $2, direccion = $3, metadatos_legales = $4
+       SET nombre = $1, cif = $2, direccion = $3, metadatos_legales = COALESCE(metadatos_legales, '{}'::jsonb) || $4::jsonb
        WHERE id = $5 
        RETURNING id, nombre, cif, direccion, metadatos_legales`,
       [nombre, cif, direccion, JSON.stringify(metadatosLegales), String(id).trim()]
@@ -667,6 +672,14 @@ app.post('/api/propietarios/cambio-titular', requireAuth, async (req, res) => {
         [nuevo_nombre, nuevo_telefono || null, nuevo_email || null, propietario_id]
       );
 
+      // Los cargos son de la persona, no de la vivienda: el nuevo titular no
+      // hereda la presidencia ni ningún otro cargo del anterior.
+      await tx(
+        `UPDATE cargos_comunidad SET cesado_en = CURRENT_DATE, motivo_cese = 'Dejó de ser propietario (cambio de titularidad)'
+         WHERE propietario_id = $1 AND cesado_en IS NULL`,
+        [propietario_id]
+      );
+
       await tx(
         `INSERT INTO historial_titularidad (propietario_id, anterior_titular, nuevo_titular, motivo_cambio, detalles)
          VALUES ($1, $2, $3, $4, $5)`,
@@ -749,10 +762,12 @@ app.get('/api/propietarios/lista/:entityId', requireAuth, async (req, res) => {
     }
 
     const censoResultado = await query(
-      `SELECT id, nombre_completo, propiedad_detalle, telefono, email, coeficiente, es_moroso 
-       FROM propietarios 
-       WHERE entity_id = $1::uuid 
-       ORDER BY propiedad_detalle ASC`,
+      `SELECT p.id, p.nombre_completo, p.propiedad_detalle, p.telefono, p.email, p.coeficiente, p.es_moroso,
+              COALESCE((SELECT array_agg(c.cargo ORDER BY c.cargo) FROM cargos_comunidad c
+                        WHERE c.propietario_id = p.id AND c.cesado_en IS NULL), '{}') AS cargos
+       FROM propietarios p
+       WHERE p.entity_id = $1::uuid
+       ORDER BY p.propiedad_detalle ASC`,
       [cleanId]
     );
 

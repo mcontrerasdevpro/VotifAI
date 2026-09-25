@@ -5,6 +5,7 @@ import { Building2, MapPin, Hash, Users, Pencil, Save, X, FileUp, Trash2, KeyRou
 import Card from '../../components/ui/Card.jsx';
 import Field from '../../components/ui/Field.jsx';
 import CensoPropietarios from '../../components/CensoPropietarios.jsx';
+import JuntaGobierno from '../../components/JuntaGobierno.jsx';
 
 /**
  * Ficha de la entidad activa: datos generales + número de propietarios +
@@ -12,7 +13,7 @@ import CensoPropietarios from '../../components/CensoPropietarios.jsx';
  * entraba directo a "Junta en Vivo", ahora eso es un módulo más.
  *
  * También es donde vive la edición del expediente (nombre/CIF/dirección/
- * presidente/tesorero), la subida del PDF original y la baja de la
+ * ), la subida del PDF original y la baja de la
  * entidad — antes duplicado en el Hub (ClientSelector) operando sobre un
  * censo de mentira; aquí opera sobre los datos reales de la propia finca.
  */
@@ -33,8 +34,10 @@ export default function ResumenFinca() {
   const [editNombre, setEditNombre] = useState('');
   const [editCif, setEditCif] = useState('');
   const [editDireccion, setEditDireccion] = useState('');
-  const [editPresidente, setEditPresidente] = useState('');
-  const [editTesorero, setEditTesorero] = useState('');
+  // La junta de gobierno y el censo se avisan: nombrar un cargo refresca
+  // las etiquetas del censo, y el botón "Cargo" del censo abre el alta.
+  const [peticionCargo, setPeticionCargo] = useState(null);
+  const [versionCargos, setVersionCargos] = useState(0);
   const [codigoCopiado, setCodigoCopiado] = useState(false);
 
   const cargarResumen = async () => {
@@ -74,16 +77,6 @@ export default function ResumenFinca() {
     setEditCif(entidad.cif || '');
     setEditDireccion(entidad.direccion || '');
 
-    let metadatos = {};
-    if (entidad.metadatos_legales) {
-      try {
-        metadatos = typeof entidad.metadatos_legales === 'string'
-          ? JSON.parse(entidad.metadatos_legales)
-          : entidad.metadatos_legales;
-      } catch (e) { console.error(e); }
-    }
-    setEditPresidente(metadatos.presidente || '');
-    setEditTesorero(metadatos.tesorero || '');
   }, [entidad]);
 
   const handleGuardarCambios = async () => {
@@ -97,9 +90,7 @@ export default function ResumenFinca() {
           id: entidadIdActiva,
           nombre: editNombre,
           cif: editCif,
-          direccion: editDireccion,
-          presidente: editPresidente,
-          tesorero: editTesorero
+          direccion: editDireccion
         })
       });
       if (respuesta.ok) {
@@ -222,8 +213,7 @@ export default function ResumenFinca() {
           <Field className="sm:col-span-2" label="Nombre Comercial" value={editNombre} onChange={(e) => setEditNombre(e.target.value)} />
           <Field label="CIF" value={editCif} onChange={(e) => setEditCif(e.target.value)} inputClassName="font-mono uppercase" />
           <Field label="Dirección" value={editDireccion} onChange={(e) => setEditDireccion(e.target.value)} />
-          <Field label="Presidente" value={editPresidente} onChange={(e) => setEditPresidente(e.target.value)} placeholder="Ej: D. Manuel Contreras Jaén" />
-          <Field label="Tesorero" value={editTesorero} onChange={(e) => setEditTesorero(e.target.value)} placeholder="Ej: Dª. Carmen Ortiz Sanz" />
+          <p className="sm:col-span-2 text-3xs text-slate-500">El presidente, el tesorero y el resto de cargos se nombran en "Junta de gobierno", debajo.</p>
         </Card>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 shrink-0">
@@ -251,12 +241,16 @@ export default function ResumenFinca() {
         </div>
       )}
 
-      <Card className="flex-grow overflow-hidden flex flex-col min-h-0" padding="p-5">
+      {entidad && (
+        <JuntaGobierno fincaId={entidadIdActiva} peticion={peticionCargo} onCambio={() => setVersionCargos((v) => v + 1)} />
+      )}
+
+      <Card className="flex-grow overflow-hidden flex flex-col min-h-[420px]" padding="p-5">
         <h2 className="text-xs font-black text-white uppercase tracking-wide flex items-center gap-2 mb-4 shrink-0">
           <Users size={16} className="text-blue-500" /> Censo de Propietarios
         </h2>
         <div className="flex-grow overflow-hidden min-h-0">
-          <CensoPropietarios fincaId={entidadIdActiva} nombreFinca={entidad?.nombre} />
+          <CensoPropietarios fincaId={entidadIdActiva} nombreFinca={entidad?.nombre} versionCargos={versionCargos} onNombrarCargo={(p) => setPeticionCargo({ propietarioId: p.id, n: Date.now() })} />
         </div>
       </Card>
     </div>
